@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SmartAttend — Classroom Attendance System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ── SIDEBAR ─────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-icon">⬡</span>
+      <span class="logo-text">SmartAttend</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-page="dashboard" onclick="showPage('dashboard',this)">
+        <span class="nav-icon">▣</span> Dashboard
+      </a>
+      <a href="#" class="nav-item" data-page="live" onclick="showPage('live',this)">
+        <span class="nav-icon">◉</span> Live Scan
+      </a>
+      <a href="#" class="nav-item" data-page="students" onclick="showPage('students',this)">
+        <span class="nav-icon">◈</span> Students
+      </a>
+      <a href="#" class="nav-item" data-page="reports" onclick="showPage('reports',this)">
+        <span class="nav-icon">◧</span> Reports
+      </a>
+      <a href="#" class="nav-item" data-page="sessions" onclick="showPage('sessions',this)">
+        <span class="nav-icon">◷</span> Sessions
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-pill">
+        <span class="user-avatar">PS</span>
+        <div>
+          <div class="user-name">Dr. Priya Sharma</div>
+          <div class="user-role">Admin</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── MAIN CONTENT ────────────────────────────────────── -->
+  <main class="main-content">
+
+    <!-- Top bar -->
+    <header class="topbar">
+      <button class="hamburger" onclick="toggleSidebar()">☰</button>
+      <div class="topbar-title" id="page-title">Dashboard</div>
+      <div class="topbar-right">
+        <button class="btn btn-icon theme-toggle" onclick="toggleTheme()" id="theme-toggle-btn" title="Toggle Dark Mode">🌙</button>
+        <span class="date-badge" id="live-date"></span>
+        <button class="btn btn-primary" onclick="showPage('live', null)">+ New Session</button>
+      </div>
+    </header>
+
+    <!-- ───────── PAGE: DASHBOARD ───────── -->
+    <section class="page active" id="page-dashboard">
+      <div class="section-heading">Overview</div>
+
+      <!-- Stats row -->
+      <div class="stats-grid">
+        <div class="stat-card accent-green">
+          <div class="stat-label">Total Students</div>
+          <div class="stat-value" id="stat-students">248</div>
+          <div class="stat-sub">enrolled this semester</div>
+        </div>
+        <div class="stat-card accent-blue">
+          <div class="stat-label">Today's Sessions</div>
+          <div class="stat-value" id="stat-sessions">6</div>
+          <div class="stat-sub">3 active · 3 scheduled</div>
+        </div>
+        <div class="stat-card accent-amber">
+          <div class="stat-label">Avg Attendance</div>
+          <div class="stat-value" id="stat-avg">82%</div>
+          <div class="stat-sub">across all courses</div>
+        </div>
+        <div class="stat-card accent-red">
+          <div class="stat-label">Below 75%</div>
+          <div class="stat-value" id="stat-low">14</div>
+          <div class="stat-sub">students at risk</div>
+        </div>
+      </div>
+
+      <!-- Charts row -->
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-title">Weekly Attendance Trend</div>
+          <canvas id="weekChart" height="180"></canvas>
+        </div>
+        <div class="chart-card narrow">
+          <div class="chart-title">By Department</div>
+          <canvas id="deptChart" height="180"></canvas>
+        </div>
+      </div>
+
+      <!-- Recent activity -->
+      <div class="chart-card" style="margin-top:24px">
+        <div class="chart-title">Recent Scans</div>
+        <table class="data-table" id="recent-table">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Roll No.</th>
+              <th>Course</th>
+              <th>Time</th>
+              <th>Method</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="recent-body">
+            <!-- populated by JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ───────── PAGE: LIVE SCAN ───────── -->
+    <section class="page" id="page-live">
+      <div class="section-heading">Live Attendance Scanner</div>
+
+      <div class="live-layout">
+        <div class="scan-panel">
+          <div class="scan-ring" id="scan-ring">
+            <div class="scan-pulse"></div>
+            <div class="scan-icon">⬡</div>
+            <div class="scan-label">Waiting for card…</div>
+          </div>
+
+          <div class="rfid-input-group">
+            <label>Simulate RFID / Enter UID</label>
+            <input type="text" id="rfid-input" placeholder="e.g. A1B2C3D4" maxlength="20"/>
+            <button class="btn btn-primary full-w" onclick="simulateScan()">Mark Attendance</button>
+          </div>
+
+          <div class="session-select-group">
+            <label>Active Session</label>
+            <select id="session-select">
+              <option value="1">CSE301 — Data Structures (Room 204)</option>
+              <option value="2">CSE401 — Computer Networks (Room 101)</option>
+              <option value="3">ECE302 — DSP (Lab 3)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="live-log-panel">
+          <div class="log-header">
+            <span>Session Log</span>
+            <span class="log-count" id="log-count">0 present</span>
+          </div>
+          <div class="log-list" id="log-list">
+            <div class="log-empty">No scans yet. Tap a card to begin.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── PAGE: STUDENTS ───────── -->
+    <section class="page" id="page-students">
+      <div class="section-heading">Student Registry</div>
+
+      <div class="toolbar">
+        <input type="text" class="search-box" placeholder="Search by name or roll number…" oninput="filterStudents(this.value)"/>
+        <button class="btn btn-primary" onclick="openAddModal()">+ Enroll Student</button>
+      </div>
+
+      <table class="data-table" id="students-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Roll No.</th>
+            <th>Department</th>
+            <th>Semester</th>
+            <th>RFID UID</th>
+            <th>Attendance %</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="students-body">
+          <!-- populated by JS -->
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ───────── PAGE: REPORTS ───────── -->
+    <section class="page" id="page-reports">
+      <div class="section-heading">Attendance Reports</div>
+
+      <div class="filter-row">
+        <select id="report-course">
+          <option>CSE301 — Data Structures</option>
+          <option>CSE401 — Computer Networks</option>
+          <option>ECE302 — DSP</option>
+        </select>
+        <input type="date" id="report-from"/>
+        <input type="date" id="report-to"/>
+        <button class="btn btn-primary" onclick="generateReport()">Generate</button>
+        <button class="btn btn-outline" onclick="exportCSV()">⬇ CSV</button>
+      </div>
+
+      <table class="data-table" id="report-table">
+        <thead>
+          <tr>
+            <th>Roll No.</th>
+            <th>Student Name</th>
+            <th>Total Sessions</th>
+            <th>Attended</th>
+            <th>Attendance %</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="report-body">
+          <!-- populated by JS -->
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ───────── PAGE: SESSIONS ───────── -->
+    <section class="page" id="page-sessions">
+      <div class="section-heading">Session Management</div>
+
+      <div class="toolbar">
+        <button class="btn btn-primary" onclick="createSession()">+ Schedule Session</button>
+      </div>
+
+      <div class="sessions-grid" id="sessions-grid">
+        <!-- populated by JS -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ── ADD STUDENT MODAL ────────────────────────────────── -->
+  <div class="modal-overlay" id="modal-overlay" onclick="closeModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <span>Enroll New Student</span>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <label>Full Name</label>
+        <input type="text" id="m-name" placeholder="Student full name"/>
+
+        <label>Roll Number</label>
+        <input type="text" id="m-roll" placeholder="e.g. 21CSE005"/>
+
+        <label>Email</label>
+        <input type="email" id="m-email" placeholder="student@college.edu"/>
+
+        <label>Department</label>
+        <select id="m-dept">
+          <option>Computer Science & Engineering</option>
+          <option>Electronics & Communication</option>
+          <option>Mechanical Engineering</option>
+        </select>
+
+        <label>Semester</label>
+        <select id="m-sem">
+          <option>1</option><option>2</option><option>3</option>
+          <option>4</option><option>5</option><option>6</option>
+          <option>7</option><option>8</option>
+        </select>
+
+        <label>RFID UID</label>
+        <input type="text" id="m-rfid" placeholder="Scan card or enter manually"/>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveStudent()">Enroll</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TOAST NOTIFICATION ──────────────────────────────── -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Chart.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+﻿# IDE & Editor files
+.vscode/
+.idea/
+*.iml
+*.iws
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Java & Build Output
+target/
+bin/
+*.class
+*.jar
+*.war
+*.ear
+
+# Logs
+*.log
