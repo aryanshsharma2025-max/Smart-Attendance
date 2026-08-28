@@ -50,7 +50,7 @@ spring.jpa.hibernate.ddl-auto=validate
 spring.jpa.show-sql=true
 spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQL8Dialect
 
-jwt.secret=SmartAttendance_SecretKey_2024!
+jwt.secret=${JWT_SECRET:your_jwt_secret_key_here}
 jwt.expiration=86400000
 
 server.port=8080

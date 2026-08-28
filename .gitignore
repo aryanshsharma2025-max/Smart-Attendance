@@ -1,8 +1,19 @@
-﻿# IDE & Editor files
+# Environment variables & local secrets
+.env
+.env.*
+.env.local
+!.env.example
+
+# Private documents & PDFs
+*.pdf
+
+# IDE & Editor files
 .vscode/
 .idea/
 *.iml
 *.iws
+*.swp
+*.swo
 
 # OS generated files
 .DS_Store
