@@ -35,7 +35,7 @@
       <div class="landing-header-actions">
         <span class="institutional-badge">
           <i data-lucide="building-2" class="icon-xs"></i>
-          <span>Institutional Portal</span>
+          <span>Academic Operations &amp; Attendance</span>
         </span>
         <button class="btn btn-icon theme-toggle" onclick="toggleTheme()" title="Toggle Theme" aria-label="Toggle theme">
           <i data-lucide="moon" class="theme-icon-landing"></i>
@@ -52,30 +52,31 @@
       <section class="landing-hero">
         <div class="landing-eyebrow">
           <i data-lucide="shield-check" class="icon-xs"></i>
-          <span>Department of Computer Science &amp; Engineering &middot; Academic Year 2025&ndash;2026</span>
+          <span>Department of Computer Science &amp; Engineering &middot; Academic Session 2025&ndash;2026</span>
         </div>
         <h1 class="landing-headline">
           SmartAttend<br />
           <span class="landing-headline-accent">Department Academic &amp; Attendance Platform</span>
         </h1>
         <p class="landing-description">
-          Attendance, student insights and academic intelligence &mdash; unified for your department.
+          Centralized attendance management, student compliance monitoring, and course session tracking built for departmental faculty, leadership, and students.
         </p>
       </section>
 
-      <!-- Role Cards Showcase -->
+      <!-- Role Pathways Showcase -->
       <section class="landing-roles-grid">
         <!-- Student Role Card -->
         <div class="landing-role-card">
           <div class="role-card-icon">
             <i data-lucide="graduation-cap"></i>
           </div>
+          <div class="role-card-badge">Student Pathway</div>
           <h3 class="role-card-title">Students</h3>
           <p class="role-card-desc">
-            Monitor personal attendance records, subject-wise analytics, 75% examination compliance, and automated eligibility warnings.
+            Review subject-wise attendance percentages, verify 75% examination eligibility compliance, track personal session history, and receive proactive shortfall alerts.
           </p>
           <button class="role-card-btn" onclick="selectRoleAndScroll('student')">
-            <span>Sign In as Student &rarr;</span>
+            <span>Enter Student Portal &rarr;</span>
           </button>
         </div>
 
@@ -84,12 +85,13 @@
           <div class="role-card-icon">
             <i data-lucide="clipboard-check"></i>
           </div>
+          <div class="role-card-badge">Faculty Pathway</div>
           <h3 class="role-card-title">Faculty</h3>
           <p class="role-card-desc">
-            Record classroom attendance sessions, manage enrolled class rosters, view attendance trends, and support students at risk.
+            Record classroom attendance sessions, manage section rosters, review teaching schedules, and track students requiring attendance intervention.
           </p>
           <button class="role-card-btn" onclick="selectRoleAndScroll('faculty')">
-            <span>Sign In as Faculty &rarr;</span>
+            <span>Enter Faculty Workspace &rarr;</span>
           </button>
         </div>
 
@@ -98,12 +100,13 @@
           <div class="role-card-icon">
             <i data-lucide="building"></i>
           </div>
+          <div class="role-card-badge">Leadership Pathway</div>
           <h3 class="role-card-title">HOD / Administration</h3>
           <p class="role-card-desc">
-            Oversee department-wide attendance rates, faculty session performance, at-risk compliance governance, and accreditation reporting.
+            Oversee department-wide attendance compliance, audit curriculum course health, review flagged students at risk, and monitor session completion.
           </p>
           <button class="role-card-btn" onclick="selectRoleAndScroll('hod')">
-            <span>Sign In as HOD &rarr;</span>
+            <span>Enter Department Overview &rarr;</span>
           </button>
         </div>
       </section>
@@ -113,18 +116,18 @@
         <div class="login-card">
           <div class="login-card-header">
             <h2 class="login-card-title">Sign in to SmartAttend</h2>
-            <p class="login-card-subtitle">Access your departmental role dashboard</p>
+            <p class="login-card-subtitle">Departmental Authentication Portal</p>
           </div>
 
           <!-- Role Selector Segmented Tabs -->
-          <div class="role-selector-tabs" id="login-role-tabs">
-            <button type="button" class="role-tab-btn" data-role="student" onclick="setLoginRole('student')">
+          <div class="role-selector-tabs" id="login-role-tabs" role="tablist" aria-label="Portal Role Selector">
+            <button type="button" class="role-tab-btn" data-role="student" role="tab" onclick="setLoginRole('student')">
               Student
             </button>
-            <button type="button" class="role-tab-btn active" data-role="faculty" onclick="setLoginRole('faculty')">
+            <button type="button" class="role-tab-btn active" data-role="faculty" role="tab" onclick="setLoginRole('faculty')">
               Faculty
             </button>
-            <button type="button" class="role-tab-btn" data-role="hod" onclick="setLoginRole('hod')">
+            <button type="button" class="role-tab-btn" data-role="hod" role="tab" onclick="setLoginRole('hod')">
               HOD
             </button>
           </div>
@@ -134,59 +137,65 @@
             <!-- Error message container -->
             <div id="login-error-msg" class="field-error" style="display: none; margin-bottom: 14px; padding: 10px 12px; background: var(--danger-subtle); color: var(--danger); border: 1px solid var(--danger-border); border-radius: var(--radius-sm); font-size: 13px;"></div>
 
-            <div class="login-field-wrap">
-              <i data-lucide="user" class="login-field-icon icon-sm"></i>
-              <input type="text" id="login-username" class="login-input" placeholder="ID / Username (e.g. faculty001)" autocomplete="username" required />
+            <div class="form-group" style="margin-bottom: 14px;">
+              <label class="form-label" for="login-username" style="font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; display: block;">Institutional User ID</label>
+              <div class="login-field-wrap">
+                <i data-lucide="user" class="login-field-icon icon-sm"></i>
+                <input type="text" id="login-username" class="login-input" placeholder="Enter ID (e.g. faculty001)" autocomplete="username" required />
+              </div>
             </div>
 
-            <div class="login-field-wrap">
-              <i data-lucide="lock" class="login-field-icon icon-sm"></i>
-              <input type="password" id="login-password" class="login-input" placeholder="Password" autocomplete="current-password" required />
-              <button type="button" class="login-pass-toggle" onclick="toggleLoginPassword()" title="Toggle password visibility">
-                <i data-lucide="eye" id="login-pass-eye" class="icon-xs"></i>
-              </button>
+            <div class="form-group" style="margin-bottom: 14px;">
+              <label class="form-label" for="login-password" style="font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; display: block;">Password</label>
+              <div class="login-field-wrap">
+                <i data-lucide="lock" class="login-field-icon icon-sm"></i>
+                <input type="password" id="login-password" class="login-input" placeholder="Enter password" autocomplete="current-password" required />
+                <button type="button" class="login-pass-toggle" onclick="toggleLoginPassword()" title="Toggle password visibility" aria-label="Toggle password visibility">
+                  <i data-lucide="eye" id="login-pass-eye" class="icon-xs"></i>
+                </button>
+              </div>
             </div>
 
             <div class="login-options-row">
               <label class="remember-me-label">
                 <input type="checkbox" id="login-remember" checked />
-                <span>Remember me</span>
+                <span>Remember this device</span>
               </label>
               <a href="#" class="forgot-pass-link" onclick="handleForgotPassword(event)">Forgot password?</a>
             </div>
 
             <button type="submit" class="btn btn-primary login-submit-btn" id="login-submit-btn">
               <i data-lucide="log-in" class="icon-sm"></i>
-              <span>Sign In</span>
+              <span>Sign In to Portal</span>
             </button>
           </form>
 
-          <!-- Demo Accounts Helper Box -->
+          <!-- Demo Accounts Helper Box (No Passwords Exposed in UI) -->
           <div class="demo-helper-box">
-            <div class="demo-helper-title">Demo Credentials (Click to Quick-Fill)</div>
+            <div class="demo-helper-title">Evaluation Accounts (Click to Pre-fill)</div>
             <div class="demo-chips-grid">
               <button type="button" class="demo-chip-btn" onclick="quickFillDemo('student')">
-                <span class="demo-chip-role">Student</span>
-                <span class="demo-chip-creds">student001 / demo123</span>
+                <span class="demo-chip-role">Student Account</span>
+                <span class="demo-chip-creds">ID: student001</span>
               </button>
               <button type="button" class="demo-chip-btn" onclick="quickFillDemo('faculty')">
-                <span class="demo-chip-role">Faculty</span>
-                <span class="demo-chip-creds">faculty001 / demo123</span>
+                <span class="demo-chip-role">Faculty Account</span>
+                <span class="demo-chip-creds">ID: faculty001</span>
               </button>
               <button type="button" class="demo-chip-btn" onclick="quickFillDemo('hod')">
-                <span class="demo-chip-role">HOD</span>
-                <span class="demo-chip-creds">hod001 / demo123</span>
+                <span class="demo-chip-role">HOD Account</span>
+                <span class="demo-chip-creds">ID: hod001</span>
               </button>
             </div>
             <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 10px; text-align: center;">
-              Mock frontend authentication for testing. Real Spring Boot authentication will replace this interface.
+              Pre-configured departmental accounts for evaluation. Credentials apply securely to the input fields.
             </div>
           </div>
         </div>
       </section>
 
       <footer class="landing-footer">
-        <p>SmartAttend Department Academic &amp; Attendance Platform &middot; Academic Year 2025&ndash;2026</p>
+        <p>SmartAttend Department Academic &amp; Attendance Platform &middot; Academic Session 2025&ndash;2026</p>
       </footer>
     </div>
   </div>
@@ -343,19 +352,27 @@
         <div class="page-subtitle">Department attendance overview &middot; Computer Science &amp; Engineering</div>
       </div>
 
-      <!-- Class Academic Intelligence (Future AI Placeholder) -->
-      <div class="intelligence-banner">
-        <div class="intelligence-icon-wrap">
-          <i data-lucide="sparkles" class="icon-sm"></i>
-        </div>
-        <div class="intelligence-content">
-          <div class="intelligence-header">
-            <span class="intelligence-title">Class Academic Intelligence</span>
-            <span class="intelligence-badge">Class Intelligence &middot; AI Ready</span>
+      <!-- Faculty Teaching Schedule & Attendance Action Banner -->
+      <div class="card teaching-briefing-card" style="margin-bottom: 20px; border-left: 4px solid var(--primary); background: var(--surface);">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: flex-start; gap: 14px; flex: 1; min-width: 280px;">
+            <div style="width: 36px; height: 36px; border-radius: var(--radius-md); background: var(--primary-subtle); color: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;">
+              <i data-lucide="clock" class="icon-sm"></i>
+            </div>
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span style="font-weight: 700; font-size: 14.5px; color: var(--text-primary);">Faculty Teaching Schedule &middot; Active Session Briefing</span>
+                <span class="badge" style="background: var(--primary-subtle); color: var(--primary); border: 1px solid var(--primary-border); font-size: 11px;">TODAY'S TIMETABLE</span>
+              </div>
+              <div style="font-size: 13px; color: var(--text-secondary); margin-top: 4px; line-height: 1.5;">
+                3 of 6 departmental sessions completed today. Next scheduled session: <strong>CSE301 — Data Structures &amp; Algorithms</strong> (Semester 2, Section A) at <strong>11:30 AM</strong> in Room 204.
+              </div>
+            </div>
           </div>
-          <div class="intelligence-desc">
-            Session engagement analysis indicates high mid-week attendance consistency (90.2%). 14 students across departmental modules are flagged below the 75% threshold and require attendance warnings prior to internal assessments.
-          </div>
+          <button class="btn btn-primary" onclick="showPage('take-attendance', null)" style="white-space: nowrap;">
+            <i data-lucide="check-square" class="icon-sm"></i>
+            <span>+ Record Attendance for Current Session</span>
+          </button>
         </div>
       </div>
 
@@ -996,18 +1013,20 @@
         </div>
       </div>
 
-      <!-- Attendance Intelligence (Future AI Placeholder) -->
-      <div class="intelligence-banner">
-        <div class="intelligence-icon-wrap">
-          <i data-lucide="sparkles" class="icon-sm"></i>
-        </div>
-        <div class="intelligence-content">
-          <div class="intelligence-header">
-            <span class="intelligence-title">Attendance Intelligence</span>
-            <span class="intelligence-badge">Attendance Intelligence &middot; AI Ready</span>
+      <!-- Academic Attendance Advisory & Insights -->
+      <div class="card" style="margin-bottom: 20px; border-left: 4px solid var(--primary); background: var(--surface);">
+        <div style="display: flex; align-items: flex-start; gap: 14px;">
+          <div style="width: 36px; height: 36px; border-radius: var(--radius-md); background: var(--primary-subtle); color: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;">
+            <i data-lucide="lightbulb" class="icon-sm"></i>
           </div>
-          <div class="intelligence-desc">
-            AI Attendance Projection: At your current attendance pace, you are forecast to complete Semester 2 at <strong>86.8%</strong> overall attendance. Attending the next 2 scheduled sessions in Mathematics (MAT105) will elevate subject attendance safely above the 75% threshold.
+          <div style="flex: 1;">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span style="font-weight: 700; font-size: 14.5px; color: var(--text-primary);">Academic Attendance Insights &amp; Trajectory</span>
+              <span class="badge" style="background: var(--primary-subtle); color: var(--primary); border: 1px solid var(--primary-border); font-size: 11px;">TERM ADVISORY</span>
+            </div>
+            <div style="font-size: 13px; color: var(--text-secondary); margin-top: 4px; line-height: 1.5;" id="stu-advisory-desc">
+              Based on your attendance consistency over 39 completed instructional sessions, you are projected to conclude Semester 2 at <strong>86.8%</strong> overall attendance. <strong>Action Advisory:</strong> Engineering Mathematics (MAT105) is currently at 74% (1 class below the required 75% threshold). Attending the next 2 scheduled sessions will elevate this course to the compliant band.
+            </div>
           </div>
         </div>
       </div>
@@ -1108,18 +1127,20 @@
         <div class="page-subtitle">Department of Computer Science &amp; Engineering &middot; Academic Overview &amp; Compliance Audit</div>
       </div>
 
-      <!-- Department Intelligence (Future AI Placeholder) -->
-      <div class="intelligence-banner">
-        <div class="intelligence-icon-wrap">
-          <i data-lucide="sparkles" class="icon-sm"></i>
-        </div>
-        <div class="intelligence-content">
-          <div class="intelligence-header">
-            <span class="intelligence-title">Department Intelligence</span>
-            <span class="intelligence-badge">Department Intelligence &middot; AI Ready</span>
+      <!-- Department Academic Oversight & Attendance Governance Briefing -->
+      <div class="card" style="margin-bottom: 20px; border-left: 4px solid var(--primary); background: var(--surface);">
+        <div style="display: flex; align-items: flex-start; gap: 14px;">
+          <div style="width: 36px; height: 36px; border-radius: var(--radius-md); background: var(--primary-subtle); color: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;">
+            <i data-lucide="shield" class="icon-sm"></i>
           </div>
-          <div class="intelligence-desc">
-            Accreditation &amp; Governance Forecast: Department-wide attendance stands at <strong>84.2%</strong>, an improvement of <strong>+2.1%</strong> over the previous term. 14 students are currently flagged across all sections; automated early-intervention advisories have reduced potential examination ineligibility by 40%.
+          <div style="flex: 1;">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span style="font-weight: 700; font-size: 14.5px; color: var(--text-primary);">Department Academic Oversight &amp; Attendance Governance</span>
+              <span class="badge" style="background: var(--primary-subtle); color: var(--primary); border: 1px solid var(--primary-border); font-size: 11px;">TERM AUDIT BRIEFING</span>
+            </div>
+            <div style="font-size: 13px; color: var(--text-secondary); margin-top: 4px; line-height: 1.5;">
+              Department-wide aggregate attendance stands at <strong>84.2%</strong> across 142 completed sessions. 14 students are currently flagged under the 75% threshold across CSE (Sections A &amp; B) and IT (Section A). Scheduled faculty reviews and advisory notices have stabilized attendance retention across all 5 core curriculum modules.
+            </div>
           </div>
         </div>
       </div>
@@ -1152,9 +1173,9 @@
           <div class="hod-kpi-sub">Completed this term</div>
         </div>
         <div class="hod-kpi-card">
-          <div class="hod-kpi-lbl">Accreditation Rate</div>
-          <div class="hod-kpi-val" style="color: var(--success);">91.2%</div>
-          <div class="hod-kpi-sub">Audit compliant</div>
+          <div class="hod-kpi-lbl">Record Coverage</div>
+          <div class="hod-kpi-val" style="color: var(--success);">98.4%</div>
+          <div class="hod-kpi-sub">Sessions logged on time</div>
         </div>
       </div>
 
@@ -1281,7 +1302,10 @@
         <div class="drawer-progress-container">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <span style="font-weight: 600; font-size: 13px;">Term Attendance</span>
-            <span style="font-weight: 700; font-size: 15px;" id="d-pct-text">85%</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-weight: 700; font-size: 15px;" id="d-pct-text">85%</span>
+              <span class="badge badge-ok" id="d-status-badge">REGULAR</span>
+            </div>
           </div>
           <div class="drawer-progress-bar">
             <div class="drawer-progress-fill" id="d-pct-bar" style="width: 85%;"></div>
@@ -1305,6 +1329,11 @@
             <div class="drawer-info-label">Absence Streak</div>
             <div class="drawer-info-val" id="d-streak">0 Classes</div>
           </div>
+        </div>
+
+        <!-- Concise Academic Attendance Advisory -->
+        <div class="drawer-advisory" id="d-advisory" style="margin-top: 12px; padding: 10px 12px; border-radius: var(--radius-md); background: var(--surface-muted); border: 1px solid var(--border); font-size: 12px; color: var(--text-secondary); line-height: 1.45;">
+          Student is currently maintaining a compliant attendance buffer above the 75% threshold.
         </div>
       </div>
 

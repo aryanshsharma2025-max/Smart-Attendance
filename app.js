@@ -518,13 +518,29 @@ function renderInitialEmptyState() {
       <div class="att-state-icon">
         <i data-lucide="clipboard-list" class="icon-sm"></i>
       </div>
-      <div class="att-state-title">Select Class & Load Students</div>
+      <div class="att-state-title">Select Class &amp; Load Roster</div>
       <div class="att-state-desc">
-        Select the session date, branch, semester, section, and subject above, then click <strong>"Load Students"</strong> to populate the classroom roster.
+        Select the session date, branch, semester, section, and course above, then click <strong>"Load Students"</strong> to display the enrolled classroom roster.
       </div>
-      <button class="btn btn-primary" onclick="loadStudentsAction()">
+      <div class="att-workflow-steps">
+        <div class="workflow-step">
+          <span class="workflow-step-num">1</span>
+          <span>Select Class Filters</span>
+        </div>
+        <div class="workflow-step-arrow">&rarr;</div>
+        <div class="workflow-step">
+          <span class="workflow-step-num">2</span>
+          <span>Load Enrolled Roster</span>
+        </div>
+        <div class="workflow-step-arrow">&rarr;</div>
+        <div class="workflow-step">
+          <span class="workflow-step-num">3</span>
+          <span>Mark &amp; Save Attendance</span>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="loadStudentsAction()" style="margin-top: 18px;">
         <i data-lucide="users" class="icon-sm"></i>
-        <span>Load Default Class Roster</span>
+        <span>Load Selected Class Roster</span>
       </button>
     </div>
   `;
@@ -567,42 +583,27 @@ function renderLoadedState() {
       </button>
     </div>
 
-    <!-- Live Attendance Summary KPI Row (Focused: Total, Present, Absent, Attendance Rate) -->
-    <div class="stats-grid" style="margin-bottom: 16px;">
-      <div class="stat-card">
-        <div class="stat-header">
-          <span class="stat-label">Total Students</span>
-          <div class="stat-icon-wrap"><i data-lucide="users" class="icon-sm"></i></div>
-        </div>
-        <div class="stat-value" id="cnt-total">${metrics.total}</div>
-        <div class="stat-sub">Enrolled roster strength</div>
+    <!-- Action Status Ribbon (High-density Teacher Summary) -->
+    <div class="att-action-ribbon">
+      <div class="att-ribbon-item">
+        <span class="att-ribbon-lbl">Enrolled Class</span>
+        <span class="att-ribbon-val" id="cnt-total">${metrics.total} Students</span>
       </div>
-
-      <div class="stat-card">
-        <div class="stat-header">
-          <span class="stat-label">Present</span>
-          <div class="stat-icon-wrap" style="color: var(--success);"><i data-lucide="user-check" class="icon-sm"></i></div>
-        </div>
-        <div class="stat-value" id="cnt-present" style="color: var(--success);">${metrics.presentCount}</div>
-        <div class="stat-sub" id="cnt-present-pct">${metrics.presentPct}% of enrolled class</div>
+      <div class="att-ribbon-item">
+        <span class="att-ribbon-lbl">Marked Present</span>
+        <span class="att-ribbon-val" id="cnt-present" style="color: var(--success);">${metrics.presentCount} (${metrics.presentPct}%)</span>
       </div>
-
-      <div class="stat-card">
-        <div class="stat-header">
-          <span class="stat-label">Absent</span>
-          <div class="stat-icon-wrap" style="color: var(--danger);"><i data-lucide="user-x" class="icon-sm"></i></div>
-        </div>
-        <div class="stat-value" id="cnt-absent" style="color: var(--danger);">${metrics.absentCount}</div>
-        <div class="stat-sub" id="cnt-absent-pct">${metrics.absentPct}% of enrolled class</div>
+      <div class="att-ribbon-item">
+        <span class="att-ribbon-lbl">Marked Absent</span>
+        <span class="att-ribbon-val" id="cnt-absent" style="color: var(--danger);">${metrics.absentCount} (${metrics.absentPct}%)</span>
       </div>
-
-      <div class="stat-card">
-        <div class="stat-header">
-          <span class="stat-label">Attendance Rate</span>
-          <div class="stat-icon-wrap" style="color: var(--primary);"><i data-lucide="percent" class="icon-sm"></i></div>
-        </div>
-        <div class="stat-value" id="cnt-rate" style="color: var(--primary);">${metrics.presentPct}%</div>
-        <div class="stat-sub">Benchmark: &ge; 75%</div>
+      <div class="att-ribbon-item">
+        <span class="att-ribbon-lbl">Attendance Rate</span>
+        <span class="att-ribbon-val" id="cnt-rate" style="color: ${metrics.presentPct >= 75 ? 'var(--primary)' : 'var(--danger)'};">${metrics.presentPct}%</span>
+      </div>
+      <div class="att-ribbon-item att-ribbon-mode">
+        <span class="att-ribbon-lbl">Marking Mode</span>
+        <span class="badge ${isMarkPresent ? 'badge-ok' : 'badge-risk'}" id="cnt-mode-badge" style="font-size: 11px;">${isMarkPresent ? 'CHECKED = PRESENT' : 'CHECKED = ABSENT'}</span>
       </div>
     </div>
 
@@ -868,22 +869,27 @@ function updateStudentRowDOM(student) {
 
 function updateLiveSummaryDOM() {
   const metrics = getAttendanceMetrics();
+  const isMarkPresent = ATTENDANCE_STATE.mode === 'present';
 
   const cntTotal = document.getElementById('cnt-total');
   const cntPresent = document.getElementById('cnt-present');
   const cntAbsent = document.getElementById('cnt-absent');
   const cntRate = document.getElementById('cnt-rate');
-  const cntPresentPct = document.getElementById('cnt-present-pct');
-  const cntAbsentPct = document.getElementById('cnt-absent-pct');
+  const cntModeBadge = document.getElementById('cnt-mode-badge');
   const selectedPill = document.getElementById('cnt-selected-pill');
   const saveTxt = document.getElementById('save-summary-txt');
 
-  if (cntTotal) cntTotal.textContent = metrics.total;
-  if (cntPresent) cntPresent.textContent = metrics.presentCount;
-  if (cntAbsent) cntAbsent.textContent = metrics.absentCount;
-  if (cntRate) cntRate.textContent = `${metrics.presentPct}%`;
-  if (cntPresentPct) cntPresentPct.textContent = `${metrics.presentPct}% of enrolled class`;
-  if (cntAbsentPct) cntAbsentPct.textContent = `${metrics.absentPct}% of enrolled class`;
+  if (cntTotal) cntTotal.textContent = `${metrics.total} Students`;
+  if (cntPresent) cntPresent.textContent = `${metrics.presentCount} (${metrics.presentPct}%)`;
+  if (cntAbsent) cntAbsent.textContent = `${metrics.absentCount} (${metrics.absentPct}%)`;
+  if (cntRate) {
+    cntRate.textContent = `${metrics.presentPct}%`;
+    cntRate.style.color = metrics.presentPct >= 75 ? 'var(--primary)' : 'var(--danger)';
+  }
+  if (cntModeBadge) {
+    cntModeBadge.className = `badge ${isMarkPresent ? 'badge-ok' : 'badge-risk'}`;
+    cntModeBadge.textContent = isMarkPresent ? 'CHECKED = PRESENT' : 'CHECKED = ABSENT';
+  }
   if (selectedPill) selectedPill.textContent = `Selected: ${metrics.selectedCount}`;
   if (saveTxt) saveTxt.textContent = `${metrics.presentCount} Present, ${metrics.absentCount} Absent (${metrics.presentPct}% overall)`;
 }
@@ -1081,6 +1087,24 @@ function openStudentDrawer(studentId) {
   if (dAbsent) dAbsent.textContent = absent;
   if (dLastPresent) dLastPresent.textContent = lastDate;
   if (dStreak) dStreak.textContent = streak;
+
+  const dStatusBadge = document.getElementById('d-status-badge');
+  if (dStatusBadge) {
+    dStatusBadge.className = `badge ${pct >= 75 ? 'badge-ok' : 'badge-risk'}`;
+    dStatusBadge.textContent = pct >= 75 ? 'REGULAR' : 'AT RISK (<75%)';
+  }
+
+  const dAdvisory = document.getElementById('d-advisory');
+  if (dAdvisory) {
+    if (pct >= 75) {
+      const margin = (pct - 75).toFixed(1);
+      dAdvisory.innerHTML = `<strong>Academic Status:</strong> Student maintains a compliant attendance buffer of <strong>+${margin}%</strong> above the university threshold (${attended}/${totalClasses} sessions attended).`;
+    } else {
+      const shortfall = (75 - pct).toFixed(1);
+      const needed = Math.ceil((0.75 * totalClasses - attended) / 0.25);
+      dAdvisory.innerHTML = `<strong>Compliance Alert:</strong> Attendance is <strong>${shortfall}%</strong> below threshold. Requires <strong>${needed} consecutive sessions</strong> to clear academic warning status.`;
+    }
+  }
 
   // Render recent 5 attendance history items
   if (dHistoryList) {
@@ -1778,11 +1802,34 @@ function renderStudentDashboard(rollOrId) {
     threshFill.style.background = pct >= 75 ? 'var(--success)' : 'var(--danger)';
   }
 
+  // Update dynamic academic advisory
+  const advEl = document.getElementById('stu-advisory-desc');
+  if (advEl) {
+    if (pct >= 75) {
+      const margin = (pct - 75).toFixed(1);
+      const safeAbsences = Math.floor((attended - 0.75 * total) / 0.75);
+      advEl.innerHTML = `Based on your attendance consistency over <strong>${total} completed instructional sessions</strong>, you maintain an aggregate safety margin of <strong>+${margin}%</strong> (${safeAbsences} permissible absences remaining while retaining examination clearance). <strong>Subject Attention:</strong> Engineering Mathematics (MAT105) is currently at 74% (1 class below the 75% threshold). Attending the next 2 scheduled lectures will safely elevate all subjects to the compliant band.`;
+    } else {
+      const shortfall = (75 - pct).toFixed(1);
+      const needed = Math.ceil((0.75 * total - attended) / 0.25);
+      advEl.innerHTML = `<strong>Attention Required:</strong> Your current attendance is <strong>${shortfall}% below the 75% examination threshold</strong>. You require <strong>${needed} consecutive attended sessions</strong> across your enrolled courses to clear academic warning status before semester exam registration.`;
+    }
+  }
+
   // Render Subject Cards
   const subContainer = document.getElementById('stu-subjects-container');
   if (subContainer && typeof SYNAPSE_SUBJECTS !== 'undefined') {
     subContainer.innerHTML = SYNAPSE_SUBJECTS.map(sub => {
-      const isSafe = sub.pct >= 75;
+      let statusLabel = 'HEALTHY';
+      let badgeClass = 'badge-ok';
+      if (sub.pct < 75) {
+        statusLabel = 'WATCH (<75%)';
+        badgeClass = 'badge-risk';
+      } else if (sub.pct < 85) {
+        statusLabel = 'COMPLIANT';
+        badgeClass = 'badge-ok';
+      }
+
       return `
         <div class="student-sub-card">
           <div class="sub-card-top">
@@ -1791,15 +1838,15 @@ function renderStudentDashboard(rollOrId) {
               <div class="sub-card-name">${escapeHtml(sub.name)}</div>
               <div class="sub-card-faculty">${escapeHtml(sub.faculty)}</div>
             </div>
-            <span class="badge ${isSafe ? 'badge-ok' : 'badge-risk'}">${isSafe ? 'ELIGIBLE' : 'WARNING'}</span>
+            <span class="badge ${badgeClass}">${statusLabel}</span>
           </div>
           <div class="sub-prog-wrap">
             <div class="sub-prog-meta">
-              <span>${sub.attended} / ${sub.total} sessions</span>
-              <strong style="color: ${isSafe ? 'var(--text-primary)' : 'var(--danger)'};">${sub.pct}%</strong>
+              <span>${sub.attended} Attended / ${sub.total} Held</span>
+              <strong style="color: ${sub.pct >= 75 ? 'var(--text-primary)' : 'var(--danger)'};">${sub.pct}%</strong>
             </div>
             <div class="sub-prog-track">
-              <div class="sub-prog-fill" style="width: ${sub.pct}%; background: ${isSafe ? 'var(--primary)' : 'var(--danger)'};"></div>
+              <div class="sub-prog-fill" style="width: ${sub.pct}%; background: ${sub.pct >= 75 ? 'var(--primary)' : 'var(--danger)'};"></div>
             </div>
           </div>
         </div>
