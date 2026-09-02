@@ -21,8 +21,8 @@
       <a href="#" class="nav-item active" data-page="dashboard" onclick="showPage('dashboard',this)">
         <span class="nav-icon">▣</span> Dashboard
       </a>
-      <a href="#" class="nav-item" data-page="live" onclick="showPage('live',this)">
-        <span class="nav-icon">◉</span> Live Scan
+      <a href="#" class="nav-item" data-page="attendance" onclick="showPage('attendance',this)">
+        <span class="nav-icon">☑</span> Attendance
       </a>
       <a href="#" class="nav-item" data-page="students" onclick="showPage('students',this)">
         <span class="nav-icon">◈</span> Students
@@ -56,7 +56,7 @@
       <div class="topbar-right">
         <button class="btn btn-icon theme-toggle" onclick="toggleTheme()" id="theme-toggle-btn" title="Toggle Dark Mode">🌙</button>
         <span class="date-badge" id="live-date"></span>
-        <button class="btn btn-primary" onclick="showPage('live', null)">+ New Session</button>
+        <button class="btn btn-primary" onclick="showPage('attendance', null)">+ Take Attendance</button>
       </div>
     </header>
 
@@ -121,43 +121,83 @@
       </div>
     </section>
 
-    <!-- ───────── PAGE: LIVE SCAN ───────── -->
-    <section class="page" id="page-live">
-      <div class="section-heading">Live Attendance Scanner</div>
+    <!-- ───────── PAGE: ATTENDANCE RECORDING ───────── -->
+    <section class="page" id="page-attendance">
+      <div class="section-heading">Attendance Recording</div>
 
-      <div class="live-layout">
-        <div class="scan-panel">
-          <div class="scan-ring" id="scan-ring">
-            <div class="scan-pulse"></div>
-            <div class="scan-icon">⬡</div>
-            <div class="scan-label">Waiting for card…</div>
+      <!-- Class & Session Filter Card -->
+      <div class="attendance-filter-card">
+        <div class="filter-header">
+          <div class="filter-title-wrap">
+            <span class="filter-header-icon">📋</span>
+            <div>
+              <div class="filter-title">Session Roster Filters</div>
+              <div class="filter-subtitle">Select date, department, semester, section, and subject to load students</div>
+            </div>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="setQuickDefaultFilters()">
+            ↺ Reset Filters
+          </button>
+        </div>
+
+        <div class="attendance-filters-grid">
+          <div class="form-group">
+            <label for="att-date">Date</label>
+            <input type="date" id="att-date" class="form-control" />
           </div>
 
-          <div class="rfid-input-group">
-            <label>Simulate RFID / Enter UID</label>
-            <input type="text" id="rfid-input" placeholder="e.g. A1B2C3D4" maxlength="20"/>
-            <button class="btn btn-primary full-w" onclick="simulateScan()">Mark Attendance</button>
-          </div>
-
-          <div class="session-select-group">
-            <label>Active Session</label>
-            <select id="session-select">
-              <option value="1">CSE301 — Data Structures (Room 204)</option>
-              <option value="2">CSE401 — Computer Networks (Room 101)</option>
-              <option value="3">ECE302 — DSP (Lab 3)</option>
+          <div class="form-group">
+            <label for="att-dept">Branch / Department</label>
+            <select id="att-dept" class="form-control" onchange="onDepartmentOrSemChange()">
+              <option value="CSE" selected>Computer Science & Engineering</option>
+              <option value="ECE">Electronics & Communication</option>
+              <option value="ME">Mechanical Engineering</option>
+              <option value="IT">Information Technology</option>
             </select>
           </div>
-        </div>
 
-        <div class="live-log-panel">
-          <div class="log-header">
-            <span>Session Log</span>
-            <span class="log-count" id="log-count">0 present</span>
+          <div class="form-group">
+            <label for="att-sem">Semester</label>
+            <select id="att-sem" class="form-control" onchange="onDepartmentOrSemChange()">
+              <option value="1">Semester 1</option>
+              <option value="2">Semester 2</option>
+              <option value="3" selected>Semester 3</option>
+              <option value="4">Semester 4</option>
+              <option value="5">Semester 5</option>
+              <option value="6">Semester 6</option>
+              <option value="7">Semester 7</option>
+              <option value="8">Semester 8</option>
+            </select>
           </div>
-          <div class="log-list" id="log-list">
-            <div class="log-empty">No scans yet. Tap a card to begin.</div>
+
+          <div class="form-group">
+            <label for="att-section">Section</label>
+            <select id="att-section" class="form-control">
+              <option value="A" selected>Section A</option>
+              <option value="B">Section B</option>
+              <option value="C">Section C</option>
+            </select>
+          </div>
+
+          <div class="form-group att-subject-group">
+            <label for="att-subject">Subject / Course</label>
+            <select id="att-subject" class="form-control">
+              <!-- Dynamically populated -->
+            </select>
+          </div>
+
+          <div class="form-group att-action-group">
+            <label class="invisible-label">&nbsp;</label>
+            <button class="btn btn-primary full-w" id="btn-load-students" onclick="loadStudentsAction()">
+              <span>⚡</span> Load Students
+            </button>
           </div>
         </div>
+      </div>
+
+      <!-- Dynamic Attendance Workspace Container -->
+      <div id="attendance-content" class="attendance-content-area">
+        <!-- Rendered by JS: empty state, loading state, table state, or saved state -->
       </div>
     </section>
 
