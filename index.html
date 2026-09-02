@@ -3,161 +3,695 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>SmartAttend — Classroom Attendance System</title>
+  <title>SmartAttend — Department Attendance Platform</title>
+  
+  <!-- Typography: Inter + DM Sans -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Stylesheet -->
   <link rel="stylesheet" href="style.css" />
+  
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
 
-  <!-- ── SIDEBAR ─────────────────────────────────────────── -->
-  <aside class="sidebar" id="sidebar">
-    <div class="sidebar-logo">
-      <span class="logo-icon">⬡</span>
-      <span class="logo-text">SmartAttend</span>
-    </div>
-
-    <nav class="sidebar-nav">
-      <a href="#" class="nav-item active" data-page="dashboard" onclick="showPage('dashboard',this)">
-        <span class="nav-icon">▣</span> Dashboard
-      </a>
-      <a href="#" class="nav-item" data-page="attendance" onclick="showPage('attendance',this)">
-        <span class="nav-icon">☑</span> Attendance
-      </a>
-      <a href="#" class="nav-item" data-page="students" onclick="showPage('students',this)">
-        <span class="nav-icon">◈</span> Students
-      </a>
-      <a href="#" class="nav-item" data-page="reports" onclick="showPage('reports',this)">
-        <span class="nav-icon">◧</span> Reports
-      </a>
-      <a href="#" class="nav-item" data-page="sessions" onclick="showPage('sessions',this)">
-        <span class="nav-icon">◷</span> Sessions
-      </a>
-    </nav>
-
-    <div class="sidebar-footer">
-      <div class="user-pill">
-        <span class="user-avatar">PS</span>
+  <!-- ═══════════════════════════════════════════════════════
+       SMARTATTEND PUBLIC LANDING & ROLE ENTRY SCREEN
+       ═══════════════════════════════════════════════════════ -->
+  <div id="landing-screen" class="landing-screen">
+    <header class="landing-header">
+      <div class="landing-brand">
+        <div class="logo-mark">
+          <i data-lucide="graduation-cap" class="icon-sm"></i>
+        </div>
         <div>
-          <div class="user-name">Dr. Priya Sharma</div>
-          <div class="user-role">Admin</div>
+          <span class="landing-brand-title">SmartAttend</span>
+          <span class="landing-brand-subtitle">Department Academic &amp; Attendance Platform</span>
         </div>
       </div>
+      <div class="landing-header-actions">
+        <span class="institutional-badge">
+          <i data-lucide="building-2" class="icon-xs"></i>
+          <span>Institutional Portal</span>
+        </span>
+        <button class="btn btn-icon theme-toggle" onclick="toggleTheme()" title="Toggle Theme" aria-label="Toggle theme">
+          <i data-lucide="moon" class="theme-icon-landing"></i>
+        </button>
+        <button class="btn btn-primary btn-sm" onclick="scrollToLogin()">
+          <i data-lucide="log-in" class="icon-xs"></i>
+          <span>Sign In</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="landing-container">
+      <!-- Hero Section -->
+      <section class="landing-hero">
+        <div class="landing-eyebrow">
+          <i data-lucide="shield-check" class="icon-xs"></i>
+          <span>Department of Computer Science &amp; Engineering &middot; Academic Year 2025&ndash;2026</span>
+        </div>
+        <h1 class="landing-headline">
+          SmartAttend<br />
+          <span class="landing-headline-accent">Department Academic &amp; Attendance Platform</span>
+        </h1>
+        <p class="landing-description">
+          Attendance, student insights and academic intelligence &mdash; unified for your department.
+        </p>
+      </section>
+
+      <!-- Role Cards Showcase -->
+      <section class="landing-roles-grid">
+        <!-- Student Role Card -->
+        <div class="landing-role-card">
+          <div class="role-card-icon">
+            <i data-lucide="graduation-cap"></i>
+          </div>
+          <h3 class="role-card-title">Students</h3>
+          <p class="role-card-desc">
+            Monitor personal attendance records, subject-wise analytics, 75% examination compliance, and automated eligibility warnings.
+          </p>
+          <button class="role-card-btn" onclick="selectRoleAndScroll('student')">
+            <span>Sign In as Student &rarr;</span>
+          </button>
+        </div>
+
+        <!-- Faculty Role Card -->
+        <div class="landing-role-card">
+          <div class="role-card-icon">
+            <i data-lucide="clipboard-check"></i>
+          </div>
+          <h3 class="role-card-title">Faculty</h3>
+          <p class="role-card-desc">
+            Record classroom attendance sessions, manage enrolled class rosters, view attendance trends, and support students at risk.
+          </p>
+          <button class="role-card-btn" onclick="selectRoleAndScroll('faculty')">
+            <span>Sign In as Faculty &rarr;</span>
+          </button>
+        </div>
+
+        <!-- HOD Role Card -->
+        <div class="landing-role-card">
+          <div class="role-card-icon">
+            <i data-lucide="building"></i>
+          </div>
+          <h3 class="role-card-title">HOD / Administration</h3>
+          <p class="role-card-desc">
+            Oversee department-wide attendance rates, faculty session performance, at-risk compliance governance, and accreditation reporting.
+          </p>
+          <button class="role-card-btn" onclick="selectRoleAndScroll('hod')">
+            <span>Sign In as HOD &rarr;</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Institutional Login Section -->
+      <section class="landing-login-section" id="login-section">
+        <div class="login-card">
+          <div class="login-card-header">
+            <h2 class="login-card-title">Sign in to SmartAttend</h2>
+            <p class="login-card-subtitle">Access your departmental role dashboard</p>
+          </div>
+
+          <!-- Role Selector Segmented Tabs -->
+          <div class="role-selector-tabs" id="login-role-tabs">
+            <button type="button" class="role-tab-btn" data-role="student" onclick="setLoginRole('student')">
+              Student
+            </button>
+            <button type="button" class="role-tab-btn active" data-role="faculty" onclick="setLoginRole('faculty')">
+              Faculty
+            </button>
+            <button type="button" class="role-tab-btn" data-role="hod" onclick="setLoginRole('hod')">
+              HOD
+            </button>
+          </div>
+
+          <!-- Login Form -->
+          <form id="login-form" onsubmit="handleLoginSubmit(event)">
+            <!-- Error message container -->
+            <div id="login-error-msg" class="field-error" style="display: none; margin-bottom: 14px; padding: 10px 12px; background: var(--danger-subtle); color: var(--danger); border: 1px solid var(--danger-border); border-radius: var(--radius-sm); font-size: 13px;"></div>
+
+            <div class="login-field-wrap">
+              <i data-lucide="user" class="login-field-icon icon-sm"></i>
+              <input type="text" id="login-username" class="login-input" placeholder="ID / Username (e.g. faculty001)" autocomplete="username" required />
+            </div>
+
+            <div class="login-field-wrap">
+              <i data-lucide="lock" class="login-field-icon icon-sm"></i>
+              <input type="password" id="login-password" class="login-input" placeholder="Password" autocomplete="current-password" required />
+              <button type="button" class="login-pass-toggle" onclick="toggleLoginPassword()" title="Toggle password visibility">
+                <i data-lucide="eye" id="login-pass-eye" class="icon-xs"></i>
+              </button>
+            </div>
+
+            <div class="login-options-row">
+              <label class="remember-me-label">
+                <input type="checkbox" id="login-remember" checked />
+                <span>Remember me</span>
+              </label>
+              <a href="#" class="forgot-pass-link" onclick="handleForgotPassword(event)">Forgot password?</a>
+            </div>
+
+            <button type="submit" class="btn btn-primary login-submit-btn" id="login-submit-btn">
+              <i data-lucide="log-in" class="icon-sm"></i>
+              <span>Sign In</span>
+            </button>
+          </form>
+
+          <!-- Demo Accounts Helper Box -->
+          <div class="demo-helper-box">
+            <div class="demo-helper-title">Demo Credentials (Click to Quick-Fill)</div>
+            <div class="demo-chips-grid">
+              <button type="button" class="demo-chip-btn" onclick="quickFillDemo('student')">
+                <span class="demo-chip-role">Student</span>
+                <span class="demo-chip-creds">student001 / demo123</span>
+              </button>
+              <button type="button" class="demo-chip-btn" onclick="quickFillDemo('faculty')">
+                <span class="demo-chip-role">Faculty</span>
+                <span class="demo-chip-creds">faculty001 / demo123</span>
+              </button>
+              <button type="button" class="demo-chip-btn" onclick="quickFillDemo('hod')">
+                <span class="demo-chip-role">HOD</span>
+                <span class="demo-chip-creds">hod001 / demo123</span>
+              </button>
+            </div>
+            <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 10px; text-align: center;">
+              Mock frontend authentication for testing. Real Spring Boot authentication will replace this interface.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="landing-footer">
+        <p>SmartAttend Department Academic &amp; Attendance Platform &middot; Academic Year 2025&ndash;2026</p>
+      </footer>
     </div>
-  </aside>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       AUTHENTICATED APPLICATION SHELL
+       ═══════════════════════════════════════════════════════ -->
+  <div id="app-shell" class="app-shell">
+
+    <!-- ── SIDEBAR ─────────────────────────────────────────── -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-mark">
+          <i data-lucide="graduation-cap" class="icon-sm"></i>
+        </div>
+        <div class="logo-details">
+          <span class="logo-text">SmartAttend</span>
+          <span class="logo-subtext" id="sidebar-portal-label">Department Portal</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav" id="sidebar-nav">
+        <!-- Faculty Navigation Group -->
+        <div class="nav-role-group" id="nav-group-faculty">
+          <div class="nav-section-label">Overview</div>
+          <a href="#" class="nav-item active" data-page="dashboard" onclick="showPage('dashboard',this)">
+            <i data-lucide="layout-dashboard" class="nav-icon"></i>
+            <span>Dashboard</span>
+          </a>
+
+          <div class="nav-section-label">Academic</div>
+          <a href="#" class="nav-item" data-page="attendance" onclick="showPage('attendance',this)">
+            <i data-lucide="clipboard-check" class="nav-icon"></i>
+            <span>Attendance</span>
+          </a>
+          <a href="#" class="nav-item" data-page="students" onclick="showPage('students',this)">
+            <i data-lucide="users" class="nav-icon"></i>
+            <span>Students</span>
+          </a>
+          <a href="#" class="nav-item" data-page="analytics" onclick="showPage('analytics',this)">
+            <i data-lucide="bar-chart-3" class="nav-icon"></i>
+            <span>Analytics</span>
+          </a>
+          <a href="#" class="nav-item" data-page="reports" onclick="showPage('reports',this)">
+            <i data-lucide="file-text" class="nav-icon"></i>
+            <span>Reports</span>
+          </a>
+
+          <div class="nav-section-label">Management</div>
+          <a href="#" class="nav-item" data-page="sessions" onclick="showPage('sessions',this)">
+            <i data-lucide="calendar" class="nav-icon"></i>
+            <span>Sessions</span>
+          </a>
+        </div>
+
+        <!-- Student Navigation Group -->
+        <div class="nav-role-group" id="nav-group-student" style="display: none;">
+          <div class="nav-section-label">My Academic</div>
+          <a href="#" class="nav-item active" data-page="student-dashboard" onclick="showPage('student-dashboard',this)">
+            <i data-lucide="layout-dashboard" class="nav-icon"></i>
+            <span>My Attendance</span>
+          </a>
+          <a href="#" class="nav-item" data-page="student-dashboard" onclick="showPage('student-dashboard',this); scrollToId('stu-subjects-container');">
+            <i data-lucide="book-open" class="nav-icon"></i>
+            <span>Subject Breakdown</span>
+          </a>
+          <a href="#" class="nav-item" data-page="student-dashboard" onclick="showPage('student-dashboard',this); scrollToId('stu-history-body');">
+            <i data-lucide="history" class="nav-icon"></i>
+            <span>Attendance History</span>
+          </a>
+          <a href="#" class="nav-item" data-page="student-dashboard" onclick="showPage('student-dashboard',this); openStudentDrawer(32);">
+            <i data-lucide="user" class="nav-icon"></i>
+            <span>My Profile</span>
+          </a>
+        </div>
+
+        <!-- HOD Navigation Group -->
+        <div class="nav-role-group" id="nav-group-hod" style="display: none;">
+          <div class="nav-section-label">Governance</div>
+          <a href="#" class="nav-item active" data-page="hod-overview" onclick="showPage('hod-overview',this)">
+            <i data-lucide="shield-check" class="nav-icon"></i>
+            <span>Department Overview</span>
+          </a>
+          <a href="#" class="nav-item" data-page="hod-overview" onclick="showPage('hod-overview',this); scrollToId('hod-health-body');">
+            <i data-lucide="book-open" class="nav-icon"></i>
+            <span>Curriculum Health</span>
+          </a>
+          <a href="#" class="nav-item" data-page="hod-overview" onclick="showPage('hod-overview',this); scrollToId('hod-risk-body');">
+            <i data-lucide="alert-triangle" class="nav-icon"></i>
+            <span>Students At Risk</span>
+          </a>
+          <a href="#" class="nav-item" data-page="reports" onclick="showPage('reports',this)">
+            <i data-lucide="file-check" class="nav-icon"></i>
+            <span>Reports &amp; Audit</span>
+          </a>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-profile">
+          <div class="user-avatar" id="sidebar-user-avatar">AT</div>
+          <div class="user-info">
+            <div class="user-name" id="sidebar-user-name">Dr. Anand Tamrakar</div>
+            <div class="user-role" id="sidebar-user-role">Department Faculty</div>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="doSignOut()" title="Sign Out of SmartAttend" style="margin-top: 10px; width: 100%; justify-content: flex-start; color: var(--text-muted); gap: 8px;">
+          <i data-lucide="log-out" class="icon-sm"></i>
+          <span>Sign Out</span>
+        </button>
+      </div>
+    </aside>
 
   <!-- ── MAIN CONTENT ────────────────────────────────────── -->
   <main class="main-content">
 
     <!-- Top bar -->
     <header class="topbar">
-      <button class="hamburger" onclick="toggleSidebar()">☰</button>
-      <div class="topbar-title" id="page-title">Dashboard</div>
+      <div class="topbar-left">
+        <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Toggle navigation menu">
+          <i data-lucide="menu"></i>
+        </button>
+        <div class="topbar-breadcrumb">
+          <span class="breadcrumb-prefix">Computer Science & Engineering</span>
+          <span class="breadcrumb-separator">/</span>
+          <h1 class="topbar-title" id="page-title">Dashboard</h1>
+        </div>
+      </div>
       <div class="topbar-right">
-        <button class="btn btn-icon theme-toggle" onclick="toggleTheme()" id="theme-toggle-btn" title="Toggle Dark Mode">🌙</button>
-        <span class="date-badge" id="live-date"></span>
-        <button class="btn btn-primary" onclick="showPage('attendance', null)">+ Take Attendance</button>
+        <div class="date-badge">
+          <i data-lucide="calendar" class="icon-sm"></i>
+          <span id="live-date"></span>
+        </div>
+        <button class="btn btn-icon theme-toggle" onclick="toggleTheme()" id="theme-toggle-btn" title="Toggle Theme" aria-label="Toggle theme">
+          <i data-lucide="moon" id="theme-icon"></i>
+        </button>
+        <!-- TOP-RIGHT "+ TAKE ATTENDANCE" OPENS DEDICATED TAKE ATTENDANCE WORKSPACE -->
+        <button class="btn btn-primary topbar-cta" id="topbar-take-att-btn" onclick="showPage('take-attendance', null)">
+          <i data-lucide="check-square" class="icon-sm"></i>
+          <span>Take Attendance</span>
+        </button>
+        <!-- SIGN OUT ACTION -->
+        <button class="btn btn-outline btn-sm topbar-signout-btn" onclick="doSignOut()" title="Sign Out of SmartAttend" style="display: inline-flex; align-items: center; gap: 6px;">
+          <i data-lucide="log-out" class="icon-sm"></i>
+          <span>Sign Out</span>
+        </button>
       </div>
     </header>
 
-    <!-- ───────── PAGE: DASHBOARD ───────── -->
+    <!-- ───────── PAGE 1: DASHBOARD ───────── -->
     <section class="page active" id="page-dashboard">
-      <div class="section-heading">Overview</div>
+      <div class="page-header">
+        <h2 class="page-title-main" id="dash-greeting-title">Good morning, Dr. Anand</h2>
+        <div class="page-subtitle">Department attendance overview &middot; Computer Science &amp; Engineering</div>
+      </div>
 
-      <!-- Stats row -->
-      <div class="stats-grid">
-        <div class="stat-card accent-green">
-          <div class="stat-label">Total Students</div>
-          <div class="stat-value" id="stat-students">248</div>
-          <div class="stat-sub">enrolled this semester</div>
+      <!-- Class Academic Intelligence (Future AI Placeholder) -->
+      <div class="intelligence-banner">
+        <div class="intelligence-icon-wrap">
+          <i data-lucide="sparkles" class="icon-sm"></i>
         </div>
-        <div class="stat-card accent-blue">
-          <div class="stat-label">Today's Sessions</div>
-          <div class="stat-value" id="stat-sessions">6</div>
-          <div class="stat-sub">3 active · 3 scheduled</div>
-        </div>
-        <div class="stat-card accent-amber">
-          <div class="stat-label">Avg Attendance</div>
-          <div class="stat-value" id="stat-avg">82%</div>
-          <div class="stat-sub">across all courses</div>
-        </div>
-        <div class="stat-card accent-red">
-          <div class="stat-label">Below 75%</div>
-          <div class="stat-value" id="stat-low">14</div>
-          <div class="stat-sub">students at risk</div>
+        <div class="intelligence-content">
+          <div class="intelligence-header">
+            <span class="intelligence-title">Class Academic Intelligence</span>
+            <span class="intelligence-badge">Class Intelligence &middot; AI Ready</span>
+          </div>
+          <div class="intelligence-desc">
+            Session engagement analysis indicates high mid-week attendance consistency (90.2%). 14 students across departmental modules are flagged below the 75% threshold and require attendance warnings prior to internal assessments.
+          </div>
         </div>
       </div>
 
-      <!-- Charts row -->
+      <!-- KPI Stats row -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-label">Total Students</span>
+            <div class="stat-icon-wrap"><i data-lucide="users" class="icon-sm"></i></div>
+          </div>
+          <div class="stat-value" id="stat-students">169</div>
+          <div class="stat-sub">Enrolled across department batches</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-label">Today's Sessions</span>
+            <div class="stat-icon-wrap"><i data-lucide="calendar-check" class="icon-sm"></i></div>
+          </div>
+          <div class="stat-value" id="stat-sessions">6</div>
+          <div class="stat-sub">3 completed &middot; 3 scheduled today</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-label">Average Attendance</span>
+            <div class="stat-icon-wrap"><i data-lucide="trending-up" class="icon-sm"></i></div>
+          </div>
+          <div class="stat-value" id="stat-avg">84.2%</div>
+          <div class="stat-sub"><span class="stat-delta up">+1.4%</span> vs. previous week</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-label">Students At Risk</span>
+            <div class="stat-icon-wrap"><i data-lucide="alert-triangle" class="icon-sm"></i></div>
+          </div>
+          <div class="stat-value" id="stat-low">14</div>
+          <div class="stat-sub"><span class="stat-delta down">Critical</span> below 75% threshold</div>
+        </div>
+      </div>
+
+      <!-- Charts & Academic Insights row (Section-to-section comparison removed) -->
       <div class="charts-row">
         <div class="chart-card">
-          <div class="chart-title">Weekly Attendance Trend</div>
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Weekly Attendance Trend</div>
+              <div class="chart-sub">Average percentage per instructional day</div>
+            </div>
+          </div>
           <canvas id="weekChart" height="180"></canvas>
         </div>
-        <div class="chart-card narrow">
-          <div class="chart-title">By Department</div>
-          <canvas id="deptChart" height="180"></canvas>
+
+        <!-- Academic Insights Card (Replaces removed section comparison chart) -->
+        <div class="chart-card academic-insights-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Class Academic Insights</div>
+              <div class="chart-sub">Actionable intelligence &amp; attendance compliance</div>
+            </div>
+          </div>
+          <div class="insights-content">
+            <div class="insight-stat-row">
+              <div class="insight-mini-stat">
+                <span class="insight-mini-label">Roster Compliance</span>
+                <span class="insight-mini-val" style="color: var(--success);">91.7%</span>
+                <span class="insight-mini-sub">&ge; 75% threshold</span>
+              </div>
+              <div class="insight-mini-stat">
+                <span class="insight-mini-label">At-Risk Shortfall</span>
+                <span class="insight-mini-val" style="color: var(--danger);">14</span>
+                <span class="insight-mini-sub">Notice required</span>
+              </div>
+              <div class="insight-mini-stat">
+                <span class="insight-mini-label">Peak Session</span>
+                <span class="insight-mini-val" style="color: var(--primary);">09:00 AM</span>
+                <span class="insight-mini-sub">94% average</span>
+              </div>
+            </div>
+
+            <div class="insight-notes-list">
+              <div class="insight-note-item">
+                <i data-lucide="check-circle-2" class="icon-sm" style="color: var(--success); flex-shrink: 0; margin-top: 2px;"></i>
+                <div>
+                  <strong>High Subject Engagement:</strong>
+                  <span>Data Structures and Python laboratory sessions maintain steady &gt;88% attendance across instructional weeks.</span>
+                </div>
+              </div>
+              <div class="insight-note-item">
+                <i data-lucide="alert-circle" class="icon-sm" style="color: var(--warning); flex-shrink: 0; margin-top: 2px;"></i>
+                <div>
+                  <strong>Threshold Follow-up Needed:</strong>
+                  <span>14 flagged students across department batches are currently between 58%–73%. Direct notices can be dispatched from Reports.</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="insight-action-bar">
+              <button class="btn btn-outline btn-sm" onclick="showPage('students', null)">
+                <i data-lucide="users" class="icon-sm"></i>
+                <span>Review Student Roster</span>
+              </button>
+              <button class="btn btn-primary btn-sm" onclick="showPage('reports', null)">
+                <i data-lucide="file-text" class="icon-sm"></i>
+                <span>View Compliance Notices</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- Recent activity -->
-      <div class="chart-card" style="margin-top:24px">
-        <div class="chart-title">Recent Scans</div>
-        <table class="data-table" id="recent-table">
-          <thead>
-            <tr>
-              <th>Student</th>
-              <th>Roll No.</th>
-              <th>Course</th>
-              <th>Time</th>
-              <th>Method</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="recent-body">
-            <!-- populated by JS -->
-          </tbody>
-        </table>
+      <!-- Recent Attendance Activity -->
+      <div class="card" style="margin-top: 20px;">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Recent Attendance Activity</div>
+            <div class="chart-sub">Latest recorded classroom sessions and attendance logs</div>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="showPage('attendance', null)">
+            <span>View Attendance Overview</span>
+            <i data-lucide="arrow-right" class="icon-sm"></i>
+          </button>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table" id="recent-table">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Roll No.</th>
+                <th>Class / Subject</th>
+                <th>Marked At</th>
+                <th>Status</th>
+                <th>Recorded By</th>
+              </tr>
+            </thead>
+            <tbody id="recent-body">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
 
-    <!-- ───────── PAGE: ATTENDANCE RECORDING ───────── -->
+    <!-- ───────── PAGE 2: SIDEBAR "ATTENDANCE" (OVERVIEW & MANAGEMENT) ───────── -->
     <section class="page" id="page-attendance">
-      <div class="section-heading">Attendance Recording</div>
+      <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+        <div>
+          <h2 class="page-title-main">Attendance Overview</h2>
+          <div class="page-subtitle">Department attendance tracking, class session summaries, and compliance records</div>
+        </div>
+        <button class="btn btn-primary" onclick="showPage('take-attendance', null)">
+          <i data-lucide="check-square" class="icon-sm"></i>
+          <span>+ Take Attendance</span>
+        </button>
+      </div>
+
+      <!-- Launch Action Callout Card -->
+      <div class="card" style="margin-bottom: 20px; background: var(--primary-subtle); border-color: var(--primary-border);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+          <div>
+            <div style="font-weight: 600; font-size: 15px; color: var(--text-primary);">Record Classroom Attendance</div>
+            <div style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">
+              Launch the dedicated, focused attendance workspace to record or review a class session.
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="showPage('take-attendance', null)">
+            <i data-lucide="plus-circle" class="icon-sm"></i>
+            <span>Launch Take Attendance</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Department Overview KPI Row -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-label">Today's Avg Attendance</span>
+            <div class="stat-icon-wrap" style="color: var(--primary);"><i data-lucide="percent" class="icon-sm"></i></div>
+          </div>
+          <div class="stat-value" style="color: var(--primary);">84.6%</div>
+          <div class="stat-sub">Across 6 conducted lectures</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-label">Students Present Today</span>
+            <div class="stat-icon-wrap" style="color: var(--success);"><i data-lucide="user-check" class="icon-sm"></i></div>
+          </div>
+          <div class="stat-value" style="color: var(--success);">214</div>
+          <div class="stat-sub">Out of 248 enrolled students</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-label">Students Absent Today</span>
+            <div class="stat-icon-wrap" style="color: var(--danger);"><i data-lucide="user-x" class="icon-sm"></i></div>
+          </div>
+          <div class="stat-value" style="color: var(--danger);">34</div>
+          <div class="stat-sub">Across all department sections</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-label">Students At Risk</span>
+            <div class="stat-icon-wrap" style="color: var(--warning);"><i data-lucide="alert-triangle" class="icon-sm"></i></div>
+          </div>
+          <div class="stat-value" style="color: var(--danger);">14</div>
+          <div class="stat-sub">Below 75% statutory threshold</div>
+        </div>
+      </div>
+
+      <!-- Class / Session Attendance Summaries -->
+      <div class="card" style="margin-bottom: 24px;">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Class / Session Attendance Summaries</div>
+            <div class="chart-sub">Recent lecture compliance rates and faculty session logs</div>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="showPage('take-attendance', null)">
+            <i data-lucide="plus" class="icon-sm"></i>
+            <span>Record Session</span>
+          </button>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Class / Section</th>
+                <th>Subject</th>
+                <th>Instructor</th>
+                <th>Time & Room</th>
+                <th>Attendance %</th>
+                <th>Status</th>
+                <th style="text-align: right;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="overview-sessions-body">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Recent Records & At-Risk Watchlist Row -->
+      <div class="charts-row">
+        <!-- Recent Attendance Log -->
+        <div class="card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Recent Attendance Records</div>
+              <div class="chart-sub">Latest individual student attendance entries</div>
+            </div>
+            <button class="btn btn-outline btn-sm" onclick="showPage('reports', null)">Full Reports</button>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>Roll No.</th>
+                  <th>Subject</th>
+                  <th>Status</th>
+                  <th>Marked At</th>
+                </tr>
+              </thead>
+              <tbody id="overview-records-body">
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- At-Risk Compliance Watchlist -->
+        <div class="card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">At-Risk Students Watchlist</div>
+              <div class="chart-sub">Students requiring counseling (&lt; 75%)</div>
+            </div>
+            <span class="badge badge-risk">Compliance</span>
+          </div>
+          <div class="attention-list" id="overview-atrisk-list">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── PAGE 2B: DEDICATED "TAKE ATTENDANCE" WORKSPACE (FOCUSED & DISTRACTION-FREE) ───────── -->
+    <section class="page" id="page-take-attendance">
+      <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px;">
+        <div>
+          <h2 class="page-title-main">Take Attendance</h2>
+          <div class="page-subtitle">Record attendance for a class session</div>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="showPage('attendance', null)">
+          <i data-lucide="arrow-left" class="icon-sm"></i>
+          <span>Back to Attendance Overview</span>
+        </button>
+      </div>
 
       <!-- Class & Session Filter Card -->
       <div class="attendance-filter-card">
         <div class="filter-header">
           <div class="filter-title-wrap">
-            <span class="filter-header-icon">📋</span>
+            <i data-lucide="filter" class="filter-header-icon"></i>
             <div>
-              <div class="filter-title">Session Roster Filters</div>
+              <div class="filter-title">Class Roster Filters</div>
               <div class="filter-subtitle">Select date, department, semester, section, and subject to load students</div>
             </div>
           </div>
           <button class="btn btn-outline btn-sm" onclick="setQuickDefaultFilters()">
-            ↺ Reset Filters
+            <i data-lucide="rotate-ccw" class="icon-sm"></i>
+            <span>Reset Filters</span>
           </button>
         </div>
 
         <div class="attendance-filters-grid">
           <div class="form-group">
-            <label for="att-date">Date</label>
+            <label for="att-date" class="form-label">Date</label>
             <input type="date" id="att-date" class="form-control" />
           </div>
 
           <div class="form-group">
-            <label for="att-dept">Branch / Department</label>
+            <label for="att-dept" class="form-label">Branch / Department</label>
             <select id="att-dept" class="form-control" onchange="onDepartmentOrSemChange()">
-              <option value="CSE" selected>Computer Science & Engineering</option>
-              <option value="ECE">Electronics & Communication</option>
-              <option value="ME">Mechanical Engineering</option>
-              <option value="IT">Information Technology</option>
+              <option value="CSE" selected>Computer Science & Engineering (CSE)</option>
+              <option value="ECE">Electronics & Communication (ECE)</option>
+              <option value="ME">Mechanical Engineering (ME)</option>
+              <option value="IT">Information Technology (IT)</option>
             </select>
           </div>
 
           <div class="form-group">
-            <label for="att-sem">Semester</label>
+            <label for="att-sem" class="form-label">Semester</label>
             <select id="att-sem" class="form-control" onchange="onDepartmentOrSemChange()">
               <option value="1">Semester 1</option>
               <option value="2">Semester 2</option>
@@ -171,7 +705,7 @@
           </div>
 
           <div class="form-group">
-            <label for="att-section">Section</label>
+            <label for="att-section" class="form-label">Section</label>
             <select id="att-section" class="form-control">
               <option value="A" selected>Section A</option>
               <option value="B">Section B</option>
@@ -180,148 +714,674 @@
           </div>
 
           <div class="form-group att-subject-group">
-            <label for="att-subject">Subject / Course</label>
+            <label for="att-subject" class="form-label">Subject / Course</label>
             <select id="att-subject" class="form-control">
-              <!-- Dynamically populated -->
+              <!-- Dynamically populated based on dept + sem -->
             </select>
           </div>
 
           <div class="form-group att-action-group">
-            <label class="invisible-label">&nbsp;</label>
+            <label class="form-label" style="visibility: hidden;">Action</label>
             <button class="btn btn-primary full-w" id="btn-load-students" onclick="loadStudentsAction()">
-              <span>⚡</span> Load Students
+              <i data-lucide="users" class="icon-sm"></i>
+              <span>Load Students</span>
             </button>
           </div>
         </div>
       </div>
 
-      <!-- Dynamic Attendance Workspace Container -->
+      <!-- Dynamic Attendance Workspace Container (Empty, Loading, Roster Table, Saved Card) -->
       <div id="attendance-content" class="attendance-content-area">
-        <!-- Rendered by JS: empty state, loading state, table state, or saved state -->
+        <!-- Rendered by JS -->
       </div>
     </section>
 
-    <!-- ───────── PAGE: STUDENTS ───────── -->
+    <!-- ───────── PAGE 3: STUDENTS REGISTRY ───────── -->
     <section class="page" id="page-students">
-      <div class="section-heading">Student Registry</div>
-
-      <div class="toolbar">
-        <input type="text" class="search-box" placeholder="Search by name or roll number…" oninput="filterStudents(this.value)"/>
-        <button class="btn btn-primary" onclick="openAddModal()">+ Enroll Student</button>
+      <div class="page-header">
+        <h2 class="page-title-main">Student Registry</h2>
+        <div class="page-subtitle">Departmental enrolled student roster and academic attendance records</div>
       </div>
 
-      <table class="data-table" id="students-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Roll No.</th>
-            <th>Department</th>
-            <th>Semester</th>
-            <th>RFID UID</th>
-            <th>Attendance %</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="students-body">
-          <!-- populated by JS -->
-        </tbody>
-      </table>
+      <div class="toolbar">
+        <div class="search-wrapper">
+          <i data-lucide="search" class="search-icon-inside"></i>
+          <input type="text" class="search-box" placeholder="Search by student name or roll number…" oninput="filterStudents(this.value)"/>
+        </div>
+        <button class="btn btn-primary" onclick="openAddModal()">
+          <i data-lucide="user-plus" class="icon-sm"></i>
+          <span>Enroll Student</span>
+        </button>
+      </div>
+
+      <div class="table-responsive">
+        <table class="data-table" id="students-table">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Roll Number</th>
+              <th>Department</th>
+              <th>Semester</th>
+              <th>Section</th>
+              <th>Attendance</th>
+              <th>Status</th>
+              <th style="text-align: right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="students-body">
+            <!-- Populated by JS -->
+          </tbody>
+        </table>
+      </div>
     </section>
 
-    <!-- ───────── PAGE: REPORTS ───────── -->
+    <!-- ───────── PAGE 4: ANALYTICS ───────── -->
+    <section class="page" id="page-analytics">
+      <div class="page-header">
+        <h2 class="page-title-main">Department Analytics</h2>
+        <div class="page-subtitle">Longitudinal attendance performance across departments and subjects</div>
+      </div>
+
+      <!-- Analytics KPI Row -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-label">Overall Attendance</span>
+            <div class="stat-icon-wrap"><i data-lucide="pie-chart" class="icon-sm"></i></div>
+          </div>
+          <div class="stat-value">84.2%</div>
+          <div class="stat-sub">Across 4 semesters</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-label">Average Class Strength</span>
+            <div class="stat-icon-wrap"><i data-lucide="users" class="icon-sm"></i></div>
+          </div>
+          <div class="stat-value">58</div>
+          <div class="stat-sub">Students per session</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-label">Sessions Conducted</span>
+            <div class="stat-icon-wrap"><i data-lucide="check-circle" class="icon-sm"></i></div>
+          </div>
+          <div class="stat-value">142</div>
+          <div class="stat-sub">Completed this term</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-label">At-Risk Students</span>
+            <div class="stat-icon-wrap"><i data-lucide="alert-triangle" class="icon-sm"></i></div>
+          </div>
+          <div class="stat-value" style="color: var(--danger);">14</div>
+          <div class="stat-sub">Requires faculty counseling</div>
+        </div>
+      </div>
+
+      <!-- Analytics Charts Row -->
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">30-Day Department Attendance Trend</div>
+              <div class="chart-sub">Daily attendance rate comparison</div>
+            </div>
+          </div>
+          <canvas id="analyticsTrendChart" height="180"></canvas>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Attendance by Subject</div>
+              <div class="chart-sub">Average percentage per course</div>
+            </div>
+          </div>
+          <canvas id="analyticsSubjectChart" height="180"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── PAGE 5: REPORTS ───────── -->
     <section class="page" id="page-reports">
-      <div class="section-heading">Attendance Reports</div>
-
-      <div class="filter-row">
-        <select id="report-course">
-          <option>CSE301 — Data Structures</option>
-          <option>CSE401 — Computer Networks</option>
-          <option>ECE302 — DSP</option>
-        </select>
-        <input type="date" id="report-from"/>
-        <input type="date" id="report-to"/>
-        <button class="btn btn-primary" onclick="generateReport()">Generate</button>
-        <button class="btn btn-outline" onclick="exportCSV()">⬇ CSV</button>
+      <div class="page-header">
+        <h2 class="page-title-main">Attendance Reports</h2>
+        <div class="page-subtitle">Exportable attendance records, session logs, and compliance analytics</div>
       </div>
 
-      <table class="data-table" id="report-table">
-        <thead>
-          <tr>
-            <th>Roll No.</th>
-            <th>Student Name</th>
-            <th>Total Sessions</th>
-            <th>Attended</th>
-            <th>Attendance %</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody id="report-body">
-          <!-- populated by JS -->
-        </tbody>
-      </table>
+      <!-- Reports Filter Card -->
+      <div class="card" style="margin-bottom: 20px;">
+        <div class="attendance-filters-grid">
+          <div class="form-group">
+            <label class="form-label">Course</label>
+            <select id="report-course" class="form-control">
+              <option>CSE301 — Data Structures & Algorithms</option>
+              <option>CSE401 — Computer Networks</option>
+              <option>ECE302 — Digital Signal Processing</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Semester</label>
+            <select class="form-control">
+              <option>Semester 3</option>
+              <option>Semester 4</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Section</label>
+            <select class="form-control">
+              <option>Section A</option>
+              <option>Section B</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">From Date</label>
+            <input type="date" id="report-from" class="form-control" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">To Date</label>
+            <input type="date" id="report-to" class="form-control" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" style="visibility: hidden;">Actions</label>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-primary" onclick="generateReport()">
+                <i data-lucide="filter" class="icon-sm"></i>
+                <span>Generate</span>
+              </button>
+              <button class="btn btn-outline" onclick="exportCSV()" title="Export CSV Spreadsheet">
+                <i data-lucide="download" class="icon-sm"></i>
+                <span>CSV</span>
+              </button>
+              <button class="btn btn-outline" onclick="showToast('PDF Export feature ready for backend integration')" title="Export PDF Document">
+                <i data-lucide="file-down" class="icon-sm"></i>
+                <span>PDF</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary KPI Row -->
+      <div class="stats-grid" style="margin-bottom: 20px;">
+        <div class="stat-card">
+          <div class="stat-label">Sessions Conducted</div>
+          <div class="stat-value">48</div>
+          <div class="stat-sub">Across selected date range</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Average Attendance</div>
+          <div class="stat-value" style="color: var(--primary);">83.4%</div>
+          <div class="stat-sub">Target: &ge; 75.0%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Highest Student</div>
+          <div class="stat-value" style="color: var(--success);">94%</div>
+          <div class="stat-sub">Arjun Mehta (21CSE007)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Lowest Student</div>
+          <div class="stat-value" style="color: var(--danger);">64%</div>
+          <div class="stat-sub">Suresh Verma (21CSE003)</div>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="data-table" id="report-table">
+          <thead>
+            <tr>
+              <th>Roll No.</th>
+              <th>Student Name</th>
+              <th>Total Sessions</th>
+              <th>Attended</th>
+              <th>Absent</th>
+              <th>Attendance %</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="report-body">
+            <!-- Populated by JS -->
+          </tbody>
+        </table>
+      </div>
     </section>
 
-    <!-- ───────── PAGE: SESSIONS ───────── -->
+    <!-- ───────── PAGE 6: SESSIONS ───────── -->
     <section class="page" id="page-sessions">
-      <div class="section-heading">Session Management</div>
+      <div class="page-header">
+        <h2 class="page-title-main">Session Management</h2>
+        <div class="page-subtitle">Classroom timetable, schedule tracking, and faculty session log</div>
+      </div>
 
       <div class="toolbar">
-        <button class="btn btn-primary" onclick="createSession()">+ Schedule Session</button>
+        <button class="btn btn-primary" onclick="createSession()">
+          <i data-lucide="calendar-plus" class="icon-sm"></i>
+          <span>Schedule Session</span>
+        </button>
       </div>
 
       <div class="sessions-grid" id="sessions-grid">
-        <!-- populated by JS -->
+        <!-- Populated by JS -->
+      </div>
+    </section>
+
+    <!-- ───────── PAGE: STUDENT DASHBOARD ───────── -->
+    <section class="page" id="page-student-dashboard">
+      <div class="page-header">
+        <h2 class="page-title-main" id="stu-welcome-title">Good morning, Aryansh</h2>
+        <div class="page-subtitle" id="stu-welcome-subtitle">Roll No: 21CSE032 &middot; Computer Science &amp; Engineering &middot; Semester 2 (Section A)</div>
+      </div>
+
+      <!-- Eligibility Compliance Banner -->
+      <div class="card" id="stu-compliance-banner" style="background: var(--success-subtle); border-color: var(--success-border); margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+          <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--success); color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <i data-lucide="check" class="icon-sm"></i>
+          </div>
+          <div style="flex: 1;">
+            <div style="font-weight: 700; font-size: 14.5px; color: var(--success-hover);">Examination Eligibility Status: Eligible (&ge; 75%)</div>
+            <div style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">
+              Your current aggregate attendance rate of <strong>84.6%</strong> complies with university examination criteria. You have an attendance safety margin of <strong>9.6%</strong>.
+            </div>
+          </div>
+          <span class="badge badge-ok" style="font-size: 12px; padding: 5px 10px;">IN COMPLIANCE</span>
+        </div>
+      </div>
+
+      <!-- Attendance Intelligence (Future AI Placeholder) -->
+      <div class="intelligence-banner">
+        <div class="intelligence-icon-wrap">
+          <i data-lucide="sparkles" class="icon-sm"></i>
+        </div>
+        <div class="intelligence-content">
+          <div class="intelligence-header">
+            <span class="intelligence-title">Attendance Intelligence</span>
+            <span class="intelligence-badge">Attendance Intelligence &middot; AI Ready</span>
+          </div>
+          <div class="intelligence-desc">
+            AI Attendance Projection: At your current attendance pace, you are forecast to complete Semester 2 at <strong>86.8%</strong> overall attendance. Attending the next 2 scheduled sessions in Mathematics (MAT105) will elevate subject attendance safely above the 75% threshold.
+          </div>
+        </div>
+      </div>
+
+      <!-- Hero Attendance Progress Ring / Meter Card -->
+      <div class="student-hero-card">
+        <div class="student-gauge-wrap">
+          <div class="student-gauge-circle">
+            <svg viewBox="0 0 36 36" style="width: 120px; height: 120px; transform: rotate(-90deg);">
+              <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--border)" stroke-width="3" />
+              <path id="stu-circle-prog" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--primary)" stroke-dasharray="84.6, 100" stroke-width="3" stroke-linecap="round" />
+            </svg>
+            <div style="position: absolute; text-align: center;">
+              <span class="student-gauge-val" id="stu-gauge-pct">84.6%</span>
+              <div class="student-gauge-lbl">Overall Rate</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h3 style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px;">Semester Attendance Overview</h3>
+          <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">Semester 2 Instructional Session Summary (Academic Year 2025&ndash;2026)</p>
+          
+          <div class="student-hero-stats">
+            <div class="student-hstat-box">
+              <div class="student-hstat-val" style="color: var(--success);" id="stu-attended-count">33</div>
+              <div class="student-hstat-lbl">Sessions Attended</div>
+            </div>
+            <div class="student-hstat-box">
+              <div class="student-hstat-val" style="color: var(--danger);" id="stu-missed-count">6</div>
+              <div class="student-hstat-lbl">Sessions Missed</div>
+            </div>
+            <div class="student-hstat-box">
+              <div class="student-hstat-val" style="color: var(--primary);" id="stu-total-count">39</div>
+              <div class="student-hstat-lbl">Total Conducted</div>
+            </div>
+          </div>
+
+          <!-- Threshold safety indicator -->
+          <div class="threshold-indicator-bar">
+            <div class="threshold-legend">
+              <span style="color: var(--text-secondary);">University Minimum Requirement: 75%</span>
+              <span style="color: var(--success);">&check; 84.6% Safe Margin</span>
+            </div>
+            <div class="threshold-track">
+              <div class="threshold-fill" id="stu-threshold-fill" style="width: 84.6%; background: var(--primary);"></div>
+              <div class="threshold-marker-line" style="left: 75%;" title="75% Minimum Threshold"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Subject-wise Attendance Breakdown -->
+      <div class="card" style="margin-bottom: 24px;" id="stu-subjects-container-wrap">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Subject-wise Attendance</div>
+            <div class="chart-sub">Extracted curriculum modules &amp; individual session breakdown</div>
+          </div>
+        </div>
+        <div class="student-subject-grid" id="stu-subjects-container">
+          <!-- Populated by JS from SYNAPSE_SUBJECTS -->
+        </div>
+      </div>
+
+      <!-- Personal Attendance History Table -->
+      <div class="card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Recent Attendance Activity</div>
+            <div class="chart-sub">Personal session records and faculty attendance logs</div>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Subject</th>
+                <th>Recorded By</th>
+                <th>Room / Lab</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="stu-history-body">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── PAGE: HOD / DEPARTMENT OVERVIEW ───────── -->
+    <section class="page" id="page-hod-overview">
+      <div class="page-header">
+        <h2 class="page-title-main">Department Administration &amp; Academic Governance</h2>
+        <div class="page-subtitle">Department of Computer Science &amp; Engineering &middot; Academic Overview &amp; Compliance Audit</div>
+      </div>
+
+      <!-- Department Intelligence (Future AI Placeholder) -->
+      <div class="intelligence-banner">
+        <div class="intelligence-icon-wrap">
+          <i data-lucide="sparkles" class="icon-sm"></i>
+        </div>
+        <div class="intelligence-content">
+          <div class="intelligence-header">
+            <span class="intelligence-title">Department Intelligence</span>
+            <span class="intelligence-badge">Department Intelligence &middot; AI Ready</span>
+          </div>
+          <div class="intelligence-desc">
+            Accreditation &amp; Governance Forecast: Department-wide attendance stands at <strong>84.2%</strong>, an improvement of <strong>+2.1%</strong> over the previous term. 14 students are currently flagged across all sections; automated early-intervention advisories have reduced potential examination ineligibility by 40%.
+          </div>
+        </div>
+      </div>
+
+      <!-- HOD 6-Metric KPI Grid -->
+      <div class="hod-kpi-grid">
+        <div class="hod-kpi-card">
+          <div class="hod-kpi-lbl">Total Enrolled</div>
+          <div class="hod-kpi-val" id="hod-stat-students">169</div>
+          <div class="hod-kpi-sub">CSE (A, B) &amp; IT (A)</div>
+        </div>
+        <div class="hod-kpi-card">
+          <div class="hod-kpi-lbl">Faculty Members</div>
+          <div class="hod-kpi-val">18</div>
+          <div class="hod-kpi-sub">Active instructors</div>
+        </div>
+        <div class="hod-kpi-card">
+          <div class="hod-kpi-lbl">Overall Attendance</div>
+          <div class="hod-kpi-val" style="color: var(--primary);">84.2%</div>
+          <div class="hod-kpi-sub">&ge; 75% department target</div>
+        </div>
+        <div class="hod-kpi-card">
+          <div class="hod-kpi-lbl">Students At Risk</div>
+          <div class="hod-kpi-val" style="color: var(--danger);">14</div>
+          <div class="hod-kpi-sub">&lt; 75% threshold</div>
+        </div>
+        <div class="hod-kpi-card">
+          <div class="hod-kpi-lbl">Sessions Held</div>
+          <div class="hod-kpi-val">142</div>
+          <div class="hod-kpi-sub">Completed this term</div>
+        </div>
+        <div class="hod-kpi-card">
+          <div class="hod-kpi-lbl">Accreditation Rate</div>
+          <div class="hod-kpi-val" style="color: var(--success);">91.2%</div>
+          <div class="hod-kpi-sub">Audit compliant</div>
+        </div>
+      </div>
+
+      <!-- Department Attendance Trend Chart -->
+      <div class="card" style="margin-bottom: 24px;">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Department Attendance Trend</div>
+            <div class="chart-sub">Weekly aggregate percentage across all departmental classroom sessions</div>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="showToast('Department trend report exported', 'info')">
+            <i data-lucide="download" class="icon-sm"></i>
+            <span>Export Trend</span>
+          </button>
+        </div>
+        <canvas id="hodTrendChart" height="160"></canvas>
+      </div>
+
+      <!-- Subject & Academic Health Overview Table -->
+      <div class="card" style="margin-bottom: 24px;">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Curriculum Module Health &amp; Faculty Sessions</div>
+            <div class="chart-sub">Department course compliance, average attendance, and instructor tracking</div>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Course / Module</th>
+                <th>Faculty In-Charge</th>
+                <th>Sessions Conducted</th>
+                <th>Average Attendance</th>
+                <th>Students At Risk</th>
+                <th>Compliance Status</th>
+              </tr>
+            </thead>
+            <tbody id="hod-health-body">
+              <!-- Populated by JS from HOD_SUBJECT_HEALTH -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Flagged Students At Risk Department Governance -->
+      <div class="card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Flagged Students Below 75% Attendance</div>
+            <div class="chart-sub">Academic warning review &amp; examination eligibility intervention</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="showToast('Formal attendance notices dispatched to all 14 students', 'success')">
+            <i data-lucide="send" class="icon-sm"></i>
+            <span>Dispatch Notices to All Flagged</span>
+          </button>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Roll Number</th>
+                <th>Branch / Section</th>
+                <th>Attendance %</th>
+                <th>Shortfall Sessions</th>
+                <th>Risk Level</th>
+                <th style="text-align: right;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="hod-risk-body">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
 
   </main>
 
-  <!-- ── ADD STUDENT MODAL ────────────────────────────────── -->
+  <!-- ── STUDENT DETAIL DRAWER ────────────────────────────── -->
+  <div class="drawer-overlay" id="drawer-overlay" onclick="closeStudentDrawer()"></div>
+  <aside class="student-drawer" id="student-drawer" aria-label="Student details drawer">
+    <div class="drawer-header">
+      <div class="drawer-title-group">
+        <div class="drawer-avatar" id="d-avatar">AS</div>
+        <div>
+          <div class="drawer-name" id="d-name">Aarav Sharma</div>
+          <div class="drawer-sub" id="d-roll">21CSE001 · Computer Science</div>
+        </div>
+      </div>
+      <button class="drawer-close-btn" onclick="closeStudentDrawer()" aria-label="Close drawer">
+        <i data-lucide="x" class="icon-sm"></i>
+      </button>
+    </div>
+
+    <div class="drawer-body">
+      <!-- Identity Card -->
+      <div class="drawer-section">
+        <div class="drawer-section-title">Academic Details</div>
+        <div class="drawer-info-grid">
+          <div class="drawer-info-card">
+            <div class="drawer-info-label">Department</div>
+            <div class="drawer-info-val" id="d-dept">CSE</div>
+          </div>
+          <div class="drawer-info-card">
+            <div class="drawer-info-label">Semester & Section</div>
+            <div class="drawer-info-val" id="d-sem-sec">Sem 3 · Sec A</div>
+          </div>
+          <div class="drawer-info-card">
+            <div class="drawer-info-label">Roll Number</div>
+            <div class="drawer-info-val" id="d-roll-detail">21CSE001</div>
+          </div>
+          <div class="drawer-info-card">
+            <div class="drawer-info-label">Email</div>
+            <div class="drawer-info-val" id="d-email">aarav@student.edu</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Attendance Overview -->
+      <div class="drawer-section">
+        <div class="drawer-section-title">Attendance Performance</div>
+        <div class="drawer-progress-container">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 600; font-size: 13px;">Term Attendance</span>
+            <span style="font-weight: 700; font-size: 15px;" id="d-pct-text">85%</span>
+          </div>
+          <div class="drawer-progress-bar">
+            <div class="drawer-progress-fill" id="d-pct-bar" style="width: 85%;"></div>
+          </div>
+        </div>
+
+        <div class="drawer-info-grid" style="margin-top: 4px;">
+          <div class="drawer-info-card">
+            <div class="drawer-info-label">Attended Classes</div>
+            <div class="drawer-info-val" id="d-attended" style="color: var(--success);">34</div>
+          </div>
+          <div class="drawer-info-card">
+            <div class="drawer-info-label">Absent Classes</div>
+            <div class="drawer-info-val" id="d-absent" style="color: var(--danger);">6</div>
+          </div>
+          <div class="drawer-info-card">
+            <div class="drawer-info-label">Last Present Date</div>
+            <div class="drawer-info-val" id="d-last-present">02 Sep 2026</div>
+          </div>
+          <div class="drawer-info-card">
+            <div class="drawer-info-label">Absence Streak</div>
+            <div class="drawer-info-val" id="d-streak">0 Classes</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Attendance History -->
+      <div class="drawer-section">
+        <div class="drawer-section-title">Recent Session Records</div>
+        <div class="drawer-history-list" id="d-history-list">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── ENROLL STUDENT MODAL ─────────────────────────────── -->
   <div class="modal-overlay" id="modal-overlay" onclick="closeModal()">
     <div class="modal" onclick="event.stopPropagation()">
       <div class="modal-header">
         <span>Enroll New Student</span>
-        <button class="modal-close" onclick="closeModal()">✕</button>
+        <button class="modal-close" onclick="closeModal()" aria-label="Close modal">
+          <i data-lucide="x" class="icon-sm"></i>
+        </button>
       </div>
       <div class="modal-body">
-        <label>Full Name</label>
-        <input type="text" id="m-name" placeholder="Student full name"/>
+        <div class="form-group">
+          <label class="form-label" for="m-name">Full Name</label>
+          <input type="text" id="m-name" class="form-control" placeholder="e.g. Aarav Sharma"/>
+        </div>
 
-        <label>Roll Number</label>
-        <input type="text" id="m-roll" placeholder="e.g. 21CSE005"/>
+        <div class="form-group">
+          <label class="form-label" for="m-roll">Roll Number</label>
+          <input type="text" id="m-roll" class="form-control" placeholder="e.g. 21CSE025"/>
+        </div>
 
-        <label>Email</label>
-        <input type="email" id="m-email" placeholder="student@college.edu"/>
+        <div class="form-group">
+          <label class="form-label" for="m-email">College Email</label>
+          <input type="email" id="m-email" class="form-control" placeholder="student@college.edu"/>
+        </div>
 
-        <label>Department</label>
-        <select id="m-dept">
-          <option>Computer Science & Engineering</option>
-          <option>Electronics & Communication</option>
-          <option>Mechanical Engineering</option>
-        </select>
+        <div class="form-group">
+          <label class="form-label" for="m-dept">Department</label>
+          <select id="m-dept" class="form-control">
+            <option value="CSE">Computer Science & Engineering</option>
+            <option value="ECE">Electronics & Communication</option>
+            <option value="ME">Mechanical Engineering</option>
+            <option value="IT">Information Technology</option>
+          </select>
+        </div>
 
-        <label>Semester</label>
-        <select id="m-sem">
-          <option>1</option><option>2</option><option>3</option>
-          <option>4</option><option>5</option><option>6</option>
-          <option>7</option><option>8</option>
-        </select>
-
-        <label>RFID UID</label>
-        <input type="text" id="m-rfid" placeholder="Scan card or enter manually"/>
+        <div class="form-group">
+          <label class="form-label" for="m-sem">Semester</label>
+          <select id="m-sem" class="form-control">
+            <option value="1">Semester 1</option>
+            <option value="2">Semester 2</option>
+            <option value="3" selected>Semester 3</option>
+            <option value="4">Semester 4</option>
+            <option value="5">Semester 5</option>
+            <option value="6">Semester 6</option>
+            <option value="7">Semester 7</option>
+            <option value="8">Semester 8</option>
+          </select>
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="saveStudent()">Enroll</button>
+        <button class="btn btn-primary" onclick="saveStudent()">Enroll Student</button>
       </div>
     </div>
   </div>
 
-  <!-- ── TOAST NOTIFICATION ──────────────────────────────── -->
-  <div class="toast" id="toast"></div>
+  </div> <!-- /#app-shell -->
 
-  <!-- Chart.js -->
+  <!-- ── TOAST NOTIFICATION ──────────────────────────────── -->
+  <div class="toast" id="toast" role="alert" aria-live="polite"></div>
+
+  <!-- Chart.js, Synapse Extracted Data & Application JS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="synapse_data.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
