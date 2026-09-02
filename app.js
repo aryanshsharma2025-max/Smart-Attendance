@@ -245,7 +245,9 @@ function showPage(pageId, linkEl) {
     students: 'Student Registry',
     analytics: 'Department Analytics',
     reports: 'Attendance Reports',
-    sessions: 'Session Management'
+    sessions: 'Session Management',
+    'student-dashboard': 'My Attendance',
+    'hod-overview': 'Department Overview'
   };
   const titleEl = document.getElementById('page-title');
   if (titleEl) {
@@ -253,6 +255,10 @@ function showPage(pageId, linkEl) {
   }
 
   // Page lifecycle triggers
+  if (pageId === 'dashboard') {
+    initCharts();
+  }
+
   if (pageId === 'attendance') {
     renderAttendanceOverviewPage();
   }
@@ -263,6 +269,14 @@ function showPage(pageId, linkEl) {
 
   if (pageId === 'analytics') {
     initAnalyticsCharts();
+  }
+
+  if (pageId === 'student-dashboard') {
+    renderStudentDashboard();
+  }
+
+  if (pageId === 'hod-overview') {
+    renderHodOverview();
   }
 
   refreshIcons();
@@ -1127,18 +1141,19 @@ function renderStudents(data) {
   const tbody = document.getElementById('students-body');
   if (!tbody) return;
   tbody.innerHTML = data.map(s => `
-    <tr>
+    <tr onclick="openStudentDrawer(${s.id})" style="cursor: pointer;">
       <td><strong>${escapeHtml(s.name)}</strong></td>
       <td><code>${escapeHtml(s.roll)}</code></td>
       <td>${escapeHtml(s.dept)}</td>
       <td>Semester ${s.sem}</td>
+      <td><span class="badge" style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border);">Section ${escapeHtml(s.sec || 'A')}</span></td>
       <td>
         <span style="font-weight: 600; color: ${s.pct >= 75 ? 'var(--text-primary)' : 'var(--danger)'};">${s.pct}%</span>
       </td>
       <td>
         <span class="badge ${s.pct >= 75 ? 'badge-ok' : 'badge-risk'}">${s.pct >= 75 ? 'REGULAR' : 'AT RISK'}</span>
       </td>
-      <td style="text-align: right;">
+      <td style="text-align: right;" onclick="event.stopPropagation();">
         <button class="btn btn-outline btn-sm" onclick="openStudentDrawer(${s.id})" title="View Student Detail Drawer">
           <i data-lucide="eye" class="icon-sm"></i>
           <span>View</span>
@@ -1156,7 +1171,7 @@ renderStudents(STUDENTS);
 function filterStudents(query) {
   const q = query.toLowerCase().trim();
   const filtered = STUDENTS.filter(s =>
-    s.name.toLowerCase().includes(q) || s.roll.toLowerCase().includes(q) || s.dept.toLowerCase().includes(q)
+    s.name.toLowerCase().includes(q) || s.roll.toLowerCase().includes(q) || s.dept.toLowerCase().includes(q) || (s.sec && s.sec.toLowerCase() === q)
   );
   renderStudents(filtered);
 }
@@ -1286,9 +1301,7 @@ let analyticsChartsInitialized = false;
 
 function initCharts() {
   const weekEl = document.getElementById('weekChart');
-  const deptEl = document.getElementById('deptChart');
-
-  if (!weekEl || !deptEl || typeof Chart === 'undefined') return;
+  if (!weekEl || typeof Chart === 'undefined') return;
 
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
   const gridColor = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)';
@@ -1296,6 +1309,9 @@ function initCharts() {
 
   // Weekly bar chart
   const weekCtx = weekEl.getContext('2d');
+  if (window.myWeekChart) {
+    window.myWeekChart.destroy();
+  }
   window.myWeekChart = new Chart(weekCtx, {
     type: 'bar',
     data: {
@@ -1326,31 +1342,56 @@ function initCharts() {
     }
   });
 
-  // Dept doughnut chart
-  const deptCtx = deptEl.getContext('2d');
-  window.myDeptChart = new Chart(deptCtx, {
-    type: 'doughnut',
+  chartsInitialized = true;
+}
+
+let hodChartInitialized = false;
+
+function initHodChart() {
+  const chartEl = document.getElementById('hodTrendChart');
+  if (!chartEl || typeof Chart === 'undefined') return;
+
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const gridColor = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)';
+  const textColor = isDark ? '#94a3b8' : '#64748b';
+
+  const ctx = chartEl.getContext('2d');
+  if (window.myHodTrendChart) {
+    window.myHodTrendChart.destroy();
+  }
+  window.myHodTrendChart = new Chart(ctx, {
+    type: 'line',
     data: {
-      labels: ['CSE', 'ECE', 'ME', 'IT'],
+      labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5', 'Week 6', 'Week 7', 'Week 8'],
       datasets: [{
-        data: [84, 80, 71, 86],
-        backgroundColor: ['#2563eb', '#16a34a', '#d97706', '#0284c7'],
-        borderWidth: 0
+        label: 'Department Compliance %',
+        data: [81.5, 82.8, 83.2, 85.0, 84.1, 86.4, 85.2, 84.2],
+        borderColor: isDark ? '#3b82f6' : '#1d4ed8',
+        backgroundColor: isDark ? 'rgba(59, 130, 246, 0.1)' : 'rgba(29, 78, 216, 0.08)',
+        fill: true,
+        tension: 0.35,
+        borderWidth: 2,
+        pointRadius: 4,
+        pointBackgroundColor: isDark ? '#3b82f6' : '#1d4ed8'
       }]
     },
     options: {
       responsive: true,
-      cutout: '70%',
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels: { font: { family: 'Inter', size: 11.5 }, padding: 12, boxWidth: 10, color: textColor }
+      plugins: { legend: { display: false } },
+      scales: {
+        y: {
+          min: 65, max: 100,
+          grid: { color: gridColor },
+          ticks: { callback: v => v + '%', font: { family: 'Inter', size: 11 }, color: textColor }
+        },
+        x: {
+          grid: { display: false },
+          ticks: { font: { family: 'Inter', size: 11 }, color: textColor }
         }
       }
     }
   });
-
-  chartsInitialized = true;
+  hodChartInitialized = true;
 }
 
 function initAnalyticsCharts() {
@@ -1439,7 +1480,7 @@ function updateChartThemes(theme) {
   const gridColor = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)';
   const textColor = isDark ? '#94a3b8' : '#64748b';
 
-  [window.myWeekChart, window.myAnalyticsTrendChart, window.myAnalyticsSubjectChart].forEach(chart => {
+  [window.myWeekChart, window.myAnalyticsTrendChart, window.myAnalyticsSubjectChart, window.myHodTrendChart].forEach(chart => {
     if (chart && chart.options && chart.options.scales) {
       if (chart.options.scales.y) {
         chart.options.scales.y.grid.color = gridColor;
@@ -1480,9 +1521,356 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
+// ── AUTHENTICATION & DEMO ACCOUNTS STATE (PHASE 3) ────────────
+
+const DEMO_ACCOUNTS = {
+  student: {
+    id: 'student001',
+    pass: 'demo123',
+    name: 'Aryansh Sharma',
+    role: 'student',
+    roll: '21CSE032',
+    dept: 'CSE',
+    sem: 2,
+    sec: 'A',
+    email: 'aryansh.sharma@student.edu'
+  },
+  faculty: {
+    id: 'faculty001',
+    pass: 'demo123',
+    name: 'Dr. Anand Tamrakar',
+    role: 'faculty',
+    dept: 'CSE',
+    email: 'anand.tamrakar@faculty.edu'
+  },
+  hod: {
+    id: 'hod001',
+    pass: 'demo123',
+    name: 'Dr. K. R. Ramanathan',
+    role: 'hod',
+    dept: 'CSE',
+    email: 'hod.cse@institution.edu'
+  }
+};
+
+let currentLoginRole = 'faculty';
+
+function setLoginRole(role) {
+  currentLoginRole = role;
+  document.querySelectorAll('#login-role-tabs .role-tab-btn').forEach(btn => {
+    const r = (btn.dataset && btn.dataset.role) || (btn.getAttribute && btn.getAttribute('data-role'));
+    btn.classList.toggle('active', r === role);
+  });
+  const uInput = document.getElementById('login-username');
+  if (uInput) {
+    if (role === 'student') uInput.placeholder = 'Student ID or Roll No. (e.g. student001 / 21CSE032)';
+    else if (role === 'faculty') uInput.placeholder = 'Faculty ID (e.g. faculty001)';
+    else if (role === 'hod') uInput.placeholder = 'HOD ID (e.g. hod001)';
+  }
+  const errEl = document.getElementById('login-error-msg');
+  if (errEl) errEl.style.display = 'none';
+}
+
+function quickFillDemo(role) {
+  setLoginRole(role);
+  const demo = DEMO_ACCOUNTS[role];
+  const uInput = document.getElementById('login-username');
+  const pInput = document.getElementById('login-password');
+  if (uInput) uInput.value = demo.id;
+  if (pInput) pInput.value = demo.pass;
+  const errEl = document.getElementById('login-error-msg');
+  if (errEl) errEl.style.display = 'none';
+}
+
+function scrollToLogin() {
+  const el = document.getElementById('login-section');
+  if (el) el.scrollIntoView({ behavior: 'smooth' });
+}
+
+function selectRoleAndScroll(role) {
+  setLoginRole(role);
+  quickFillDemo(role);
+  scrollToLogin();
+}
+
+function scrollToId(id) {
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: 'smooth' });
+}
+
+function toggleLoginPassword() {
+  const pInput = document.getElementById('login-password');
+  const eye = document.getElementById('login-pass-eye');
+  if (!pInput) return;
+  if (pInput.type === 'password') {
+    pInput.type = 'text';
+    if (eye) eye.setAttribute('data-lucide', 'eye-off');
+  } else {
+    pInput.type = 'password';
+    if (eye) eye.setAttribute('data-lucide', 'eye');
+  }
+  refreshIcons();
+}
+
+function handleForgotPassword(event) {
+  if (event) event.preventDefault();
+  showToast('Institutional password reset: please contact your departmental IT administrator or Dean of Academics.');
+}
+
+function handleLoginSubmit(event) {
+  if (event) event.preventDefault();
+  const username = (document.getElementById('login-username').value || '').trim();
+  const password = (document.getElementById('login-password').value || '').trim();
+  const errEl = document.getElementById('login-error-msg');
+
+  let authenticated = false;
+  let sessionData = null;
+
+  const demo = DEMO_ACCOUNTS[currentLoginRole];
+  if (demo && (username.toLowerCase() === demo.id.toLowerCase() || (currentLoginRole === 'student' && username.toUpperCase() === demo.roll)) && password === demo.pass) {
+    authenticated = true;
+    sessionData = {
+      role: currentLoginRole,
+      userId: demo.id,
+      displayName: demo.name,
+      dept: demo.dept,
+      roll: demo.roll || null,
+      sem: demo.sem || null,
+      sec: demo.sec || null
+    };
+  } else if (password === 'demo123') {
+    const foundStu = STUDENTS.find(s => s.roll.toUpperCase() === username.toUpperCase() || s.name.toLowerCase() === username.toLowerCase());
+    if (foundStu && currentLoginRole === 'student') {
+      authenticated = true;
+      sessionData = {
+        role: 'student',
+        userId: foundStu.roll,
+        displayName: foundStu.name,
+        dept: foundStu.dept,
+        roll: foundStu.roll,
+        sem: foundStu.sem,
+        sec: foundStu.sec
+      };
+    }
+  }
+
+  if (authenticated && sessionData) {
+    localStorage.setItem('smartattend_session', JSON.stringify(sessionData));
+    if (errEl) errEl.style.display = 'none';
+    applySessionUI(sessionData);
+    showToast(`Signed in as ${sessionData.displayName} (${sessionData.role.toUpperCase()})`);
+  } else {
+    if (errEl) {
+      errEl.textContent = `Invalid credentials for ${currentLoginRole.toUpperCase()} role. Use demo account: ${demo.id} / ${demo.pass}`;
+      errEl.style.display = 'block';
+    }
+  }
+}
+
+function doSignOut() {
+  localStorage.removeItem('smartattend_session');
+  document.body.classList.remove('app-mode');
+  document.body.classList.add('landing-mode');
+  showToast('Signed out of SmartAttend');
+  refreshIcons();
+}
+
+function applySessionUI(session) {
+  document.body.classList.remove('landing-mode');
+  document.body.classList.add('app-mode');
+
+  const facGroup = document.getElementById('nav-group-faculty');
+  const stuGroup = document.getElementById('nav-group-student');
+  const hodGroup = document.getElementById('nav-group-hod');
+  const takeAttBtn = document.getElementById('topbar-take-att-btn');
+  const portalLabel = document.getElementById('sidebar-portal-label');
+  const userAvatar = document.getElementById('sidebar-user-avatar');
+  const userName = document.getElementById('sidebar-user-name');
+  const userRole = document.getElementById('sidebar-user-role');
+  const breadcrumbPrefix = document.querySelector('.breadcrumb-prefix');
+
+  if (facGroup) facGroup.style.display = session.role === 'faculty' ? 'block' : 'none';
+  if (stuGroup) stuGroup.style.display = session.role === 'student' ? 'block' : 'none';
+  if (hodGroup) hodGroup.style.display = session.role === 'hod' ? 'block' : 'none';
+
+  if (takeAttBtn) takeAttBtn.style.display = session.role === 'faculty' ? 'inline-flex' : 'none';
+
+  if (session.role === 'student') {
+    if (portalLabel) portalLabel.textContent = 'Student Portal';
+    if (userAvatar) userAvatar.textContent = (session.displayName || 'Student').split(' ').map(w => w[0]).join('').slice(0, 2);
+    if (userName) userName.textContent = session.displayName;
+    if (userRole) userRole.textContent = `${session.roll || '21CSE032'} · Sem ${session.sem || 2}`;
+    if (breadcrumbPrefix) breadcrumbPrefix.textContent = 'Student Academic Portal';
+    showPage('student-dashboard', document.querySelector('#nav-group-student [data-page="student-dashboard"]'));
+    renderStudentDashboard(session.roll);
+  } else if (session.role === 'hod') {
+    if (portalLabel) portalLabel.textContent = 'HOD Administration';
+    if (userAvatar) userAvatar.textContent = 'KR';
+    if (userName) userName.textContent = session.displayName || 'Dr. K. R. Ramanathan';
+    if (userRole) userRole.textContent = 'Head of Department (CSE)';
+    if (breadcrumbPrefix) breadcrumbPrefix.textContent = 'Department Administration';
+    showPage('hod-overview', document.querySelector('#nav-group-hod [data-page="hod-overview"]'));
+    renderHodOverview();
+  } else {
+    // Faculty
+    if (portalLabel) portalLabel.textContent = 'Department Faculty';
+    if (userAvatar) userAvatar.textContent = (session.displayName || 'Dr. Anand').split(' ').map(w => w[0]).join('').slice(0, 2);
+    if (userName) userName.textContent = session.displayName || 'Dr. Anand Tamrakar';
+    if (userRole) userRole.textContent = 'Department Faculty';
+    if (breadcrumbPrefix) breadcrumbPrefix.textContent = 'Computer Science & Engineering';
+    showPage('dashboard', document.querySelector('#nav-group-faculty [data-page="dashboard"]'));
+    initCharts();
+  }
+  refreshIcons();
+}
+
+function initAuth() {
+  const sessionStr = localStorage.getItem('smartattend_session');
+  if (sessionStr) {
+    try {
+      const session = JSON.parse(sessionStr);
+      if (session && session.role) {
+        applySessionUI(session);
+        return;
+      }
+    } catch (e) {
+      localStorage.removeItem('smartattend_session');
+    }
+  }
+  document.body.classList.remove('app-mode');
+  document.body.classList.add('landing-mode');
+  setLoginRole('faculty');
+  refreshIcons();
+}
+
+// ── STUDENT DASHBOARD RENDERER ────────────────────────────────
+function renderStudentDashboard(rollOrId) {
+  let student = STUDENTS.find(s => s.roll === rollOrId || s.id === rollOrId) || STUDENTS.find(s => s.roll === '21CSE032') || STUDENTS[0];
+  if (!student) return;
+
+  const titleEl = document.getElementById('stu-welcome-title');
+  const subEl = document.getElementById('stu-welcome-subtitle');
+  if (titleEl) titleEl.textContent = `Good morning, ${student.name.split(' ')[0]}`;
+  if (subEl) subEl.textContent = `Roll No: ${student.roll} · Department of ${student.dept === 'IT' ? 'Information Technology' : 'Computer Science & Engineering'} · Semester ${student.sem} (Section ${student.sec || 'A'})`;
+
+  const pct = student.pct || 84.6;
+  const total = 39;
+  const attended = Math.round((pct / 100) * total);
+  const missed = total - attended;
+
+  const gaugePct = document.getElementById('stu-gauge-pct');
+  const gaugeCircle = document.getElementById('stu-circle-prog');
+  const attCount = document.getElementById('stu-attended-count');
+  const missCount = document.getElementById('stu-missed-count');
+  const totCount = document.getElementById('stu-total-count');
+  const threshFill = document.getElementById('stu-threshold-fill');
+
+  if (gaugePct) gaugePct.textContent = `${pct}%`;
+  if (gaugeCircle) {
+    gaugeCircle.setAttribute('stroke-dasharray', `${pct}, 100`);
+    gaugeCircle.setAttribute('stroke', pct >= 75 ? 'var(--primary)' : 'var(--danger)');
+  }
+  if (attCount) attCount.textContent = attended;
+  if (missCount) missCount.textContent = missed;
+  if (totCount) totCount.textContent = total;
+  if (threshFill) {
+    threshFill.style.width = `${pct}%`;
+    threshFill.style.background = pct >= 75 ? 'var(--success)' : 'var(--danger)';
+  }
+
+  // Render Subject Cards
+  const subContainer = document.getElementById('stu-subjects-container');
+  if (subContainer && typeof SYNAPSE_SUBJECTS !== 'undefined') {
+    subContainer.innerHTML = SYNAPSE_SUBJECTS.map(sub => {
+      const isSafe = sub.pct >= 75;
+      return `
+        <div class="student-sub-card">
+          <div class="sub-card-top">
+            <div>
+              <span class="sub-card-code">${escapeHtml(sub.code)}</span>
+              <div class="sub-card-name">${escapeHtml(sub.name)}</div>
+              <div class="sub-card-faculty">${escapeHtml(sub.faculty)}</div>
+            </div>
+            <span class="badge ${isSafe ? 'badge-ok' : 'badge-risk'}">${isSafe ? 'ELIGIBLE' : 'WARNING'}</span>
+          </div>
+          <div class="sub-prog-wrap">
+            <div class="sub-prog-meta">
+              <span>${sub.attended} / ${sub.total} sessions</span>
+              <strong style="color: ${isSafe ? 'var(--text-primary)' : 'var(--danger)'};">${sub.pct}%</strong>
+            </div>
+            <div class="sub-prog-track">
+              <div class="sub-prog-fill" style="width: ${sub.pct}%; background: ${isSafe ? 'var(--primary)' : 'var(--danger)'};"></div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Render Student History Table
+  const histBody = document.getElementById('stu-history-body');
+  if (histBody && typeof SYNAPSE_PERSONAL_HISTORY !== 'undefined') {
+    histBody.innerHTML = SYNAPSE_PERSONAL_HISTORY.map(h => `
+      <tr>
+        <td><strong>${escapeHtml(h.date)}</strong></td>
+        <td><code>${escapeHtml(h.time)}</code></td>
+        <td>${escapeHtml(h.subject)}</td>
+        <td>${escapeHtml(h.teacher)}</td>
+        <td>${escapeHtml(h.room)}</td>
+        <td><span class="badge badge-${h.status}">${h.status.toUpperCase()}</span></td>
+      </tr>
+    `).join('');
+  }
+  refreshIcons();
+}
+
+// ── HOD OVERVIEW RENDERER ────────────────────────────────────
+function renderHodOverview() {
+  const statStudents = document.getElementById('hod-stat-students');
+  if (statStudents) statStudents.textContent = STUDENTS.length;
+
+  const healthBody = document.getElementById('hod-health-body');
+  if (healthBody && typeof HOD_SUBJECT_HEALTH !== 'undefined') {
+    healthBody.innerHTML = HOD_SUBJECT_HEALTH.map(h => `
+      <tr>
+        <td><strong>${escapeHtml(h.name)}</strong> <span style="font-size:11px; color:var(--text-muted);">(${escapeHtml(h.code)})</span></td>
+        <td>${escapeHtml(h.faculty)}</td>
+        <td>${h.completed} / ${h.sessions} sessions</td>
+        <td><span style="font-weight:700; color: ${h.avgPct >= 75 ? 'var(--text-primary)' : 'var(--danger)'};">${h.avgPct}%</span></td>
+        <td><span class="badge ${h.atRisk > 2 ? 'badge-risk' : 'badge-ok'}">${h.atRisk} students</span></td>
+        <td><span class="badge ${h.status === 'Normal' ? 'badge-ok' : 'badge-risk'}">${h.status.toUpperCase()}</span></td>
+      </tr>
+    `).join('');
+  }
+
+  const riskBody = document.getElementById('hod-risk-body');
+  if (riskBody) {
+    const atRiskStudents = STUDENTS.filter(s => s.pct < 75);
+    riskBody.innerHTML = atRiskStudents.map(s => `
+      <tr>
+        <td><strong>${escapeHtml(s.name)}</strong></td>
+        <td><code>${escapeHtml(s.roll)}</code></td>
+        <td>${escapeHtml(s.dept)} &middot; Section ${escapeHtml(s.sec || 'A')}</td>
+        <td><span style="font-weight:700; color: var(--danger);">${s.pct}%</span></td>
+        <td>${Math.ceil((75 - s.pct) * 0.4)} sessions needed</td>
+        <td><span class="badge badge-risk">CRITICAL</span></td>
+        <td style="text-align: right;">
+          <button class="btn btn-outline btn-sm" onclick="showToast('Attendance notice sent to ${escapeHtml(s.name)} (${s.roll})', 'info')">
+            <i data-lucide="send" class="icon-sm"></i>
+            <span>Send Notice</span>
+          </button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  initHodChart();
+  refreshIcons();
+}
+
 // ── DOM READY INITIALIZATION ─────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
-  initCharts();
-  showPage('dashboard', document.querySelector('[data-page="dashboard"]'));
+  initAuth();
+  updateDate();
   refreshIcons();
 });
