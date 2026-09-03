@@ -37,6 +37,10 @@
           <i data-lucide="building-2" class="icon-xs"></i>
           <span>Academic Operations &amp; Attendance</span>
         </span>
+        <button class="btn btn-outline btn-sm" onclick="openFacultyArea()" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
+          <i data-lucide="users" class="icon-xs"></i>
+          <span>Faculty Area</span>
+        </button>
         <button class="btn btn-icon theme-toggle" onclick="toggleTheme()" title="Toggle Theme" aria-label="Toggle theme">
           <i data-lucide="moon" class="theme-icon-landing"></i>
         </button>
@@ -47,7 +51,7 @@
       </div>
     </header>
 
-    <div class="landing-container">
+    <div class="landing-container" id="landing-home-view">
       <!-- Hero Section -->
       <section class="landing-hero">
         <div class="landing-eyebrow">
@@ -81,32 +85,32 @@
         </div>
 
         <!-- Faculty Role Card -->
-        <div class="landing-role-card">
+        <div class="landing-role-card" style="border-top: 3px solid var(--primary);">
           <div class="role-card-icon">
-            <i data-lucide="clipboard-check"></i>
+            <i data-lucide="users"></i>
           </div>
           <div class="role-card-badge">Faculty Pathway</div>
-          <h3 class="role-card-title">Faculty</h3>
+          <h3 class="role-card-title">Faculty Area</h3>
           <p class="role-card-desc">
-            Record classroom attendance sessions, manage section rosters, review teaching schedules, and track students requiring attendance intervention.
+            Select among the five official departmental faculty profiles: Operating System, Discrete Mathematics, OOPS in C++, Web Technology, and Digital Electronics.
           </p>
-          <button class="role-card-btn" onclick="selectRoleAndScroll('faculty')">
-            <span>Enter Faculty Workspace &rarr;</span>
+          <button class="role-card-btn" onclick="openFacultyArea()">
+            <span>Enter Faculty Area &rarr;</span>
           </button>
         </div>
 
         <!-- HOD Role Card -->
-        <div class="landing-role-card">
-          <div class="role-card-icon">
-            <i data-lucide="building"></i>
+        <div class="landing-role-card" style="border-top: 3px solid var(--accent, #6366f1);">
+          <div class="role-card-icon" style="background: rgba(99, 102, 241, 0.12); color: #6366f1; border-color: rgba(99, 102, 241, 0.25);">
+            <i data-lucide="shield-check"></i>
           </div>
-          <div class="role-card-badge">Leadership Pathway</div>
-          <h3 class="role-card-title">HOD / Administration</h3>
+          <div class="role-card-badge">Department Leadership</div>
+          <h3 class="role-card-title">HOD &middot; Anand Sir</h3>
           <p class="role-card-desc">
-            Oversee department-wide attendance compliance, audit curriculum course health, review flagged students at risk, and monitor session completion.
+            Head of Department, Computer Science &amp; Engineering (SSIPMT, Raipur). Comprehensive oversight across all 252 students (Sections A, B, C, D) and 5 official faculty modules.
           </p>
           <button class="role-card-btn" onclick="selectRoleAndScroll('hod')">
-            <span>Enter Department Overview &rarr;</span>
+            <span>Enter HOD Portal &rarr;</span>
           </button>
         </div>
       </section>
@@ -124,11 +128,11 @@
             <button type="button" class="role-tab-btn" data-role="student" role="tab" onclick="setLoginRole('student')">
               Student
             </button>
-            <button type="button" class="role-tab-btn active" data-role="faculty" role="tab" onclick="setLoginRole('faculty')">
-              Faculty
+            <button type="button" class="role-tab-btn active" data-role="faculty" role="tab" onclick="openFacultyArea()">
+              Faculty Area
             </button>
             <button type="button" class="role-tab-btn" data-role="hod" role="tab" onclick="setLoginRole('hod')">
-              HOD
+              HOD (Anand Sir)
             </button>
           </div>
 
@@ -175,16 +179,16 @@
             <div class="demo-helper-title">Evaluation Accounts (Click to Pre-fill)</div>
             <div class="demo-chips-grid">
               <button type="button" class="demo-chip-btn" onclick="quickFillDemo('student')">
-                <span class="demo-chip-role">Student Account</span>
-                <span class="demo-chip-creds">ID: student001</span>
+                <span class="demo-chip-role">Student (Aryansh)</span>
+                <span class="demo-chip-creds">Roll: 303302225048</span>
               </button>
               <button type="button" class="demo-chip-btn" onclick="quickFillDemo('faculty')">
-                <span class="demo-chip-role">Faculty Account</span>
-                <span class="demo-chip-creds">ID: faculty001</span>
+                <span class="demo-chip-role">Faculty (Devbrat Sahu)</span>
+                <span class="demo-chip-creds">ID: faculty_os</span>
               </button>
               <button type="button" class="demo-chip-btn" onclick="quickFillDemo('hod')">
-                <span class="demo-chip-role">HOD Account</span>
-                <span class="demo-chip-creds">ID: hod001</span>
+                <span class="demo-chip-role">HOD (Anand Sir)</span>
+                <span class="demo-chip-creds">ID: hod_cse</span>
               </button>
             </div>
             <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 10px; text-align: center;">
@@ -197,6 +201,175 @@
       <footer class="landing-footer">
         <p>SmartAttend Department Academic &amp; Attendance Platform &middot; Academic Session 2025&ndash;2026</p>
       </footer>
+    </div>
+
+    <!-- ── FACULTY AREA SELECTION VIEW ────────────────────────── -->
+    <div class="landing-container" id="landing-faculty-view" style="display: none; max-width: 1040px; padding: 32px 20px 60px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="closeFacultyArea()" style="display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary);">
+          <i data-lucide="arrow-left" class="icon-xs"></i>
+          <span>Back to Portal Home</span>
+        </button>
+        <span class="badge" style="background: var(--primary-subtle); color: var(--primary); border: 1px solid var(--primary-border); font-size: 11.5px; font-weight: 600;">
+          <i data-lucide="shield-check" class="icon-xs"></i>
+          <span>5 Official Faculty Profiles</span>
+        </span>
+      </div>
+
+      <div style="text-align: center; margin-bottom: 32px;">
+        <div class="landing-eyebrow" style="display: inline-flex; margin-bottom: 10px;">
+          <i data-lucide="graduation-cap" class="icon-xs"></i>
+          <span>Department of Computer Science &amp; Engineering &middot; Faculty Directory</span>
+        </div>
+        <h1 style="font-size: 28px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px;">Faculty Area</h1>
+        <p style="font-size: 15px; color: var(--text-secondary); max-width: 540px; margin: 0 auto;">Select your faculty profile to continue.</p>
+      </div>
+
+      <div class="faculty-cards-grid" id="faculty-cards-grid">
+        <!-- Card 1: Devbrat Sahu -->
+        <div class="faculty-profile-card">
+          <div class="faculty-card-header">
+            <div class="faculty-card-avatar">DS</div>
+            <div>
+              <div class="faculty-card-name">Devbrat Sahu</div>
+              <div class="faculty-card-role">Faculty &middot; CSE</div>
+            </div>
+          </div>
+          <div class="faculty-card-meta">
+            <div class="faculty-card-meta-row">
+              <span class="faculty-card-meta-label">Curricular Subject</span>
+              <span class="faculty-card-meta-value" style="color: var(--primary);">Operating System</span>
+            </div>
+            <div class="faculty-card-meta-row">
+              <span class="faculty-card-meta-label">Role</span>
+              <span class="badge badge-secondary" style="font-size: 11px;">Faculty</span>
+            </div>
+            <div class="faculty-card-meta-row">
+              <span class="faculty-card-meta-label">Timetable Allocation</span>
+              <span class="faculty-card-meta-value" style="font-size: 11.5px; color: var(--success); font-weight: 700;">Assigned: Sec A, B</span>
+            </div>
+          </div>
+          <button type="button" class="btn btn-primary faculty-card-btn" onclick="selectFacultyProfile('faculty-os')">
+            <span>Enter Faculty Profile &rarr;</span>
+          </button>
+        </div>
+
+        <!-- Card 2: Pranjali Sharma -->
+        <div class="faculty-profile-card">
+          <div class="faculty-card-header">
+            <div class="faculty-card-avatar">PS</div>
+            <div>
+              <div class="faculty-card-name">Pranjali Sharma</div>
+              <div class="faculty-card-role">Faculty &middot; CSE</div>
+            </div>
+          </div>
+          <div class="faculty-card-meta">
+            <div class="faculty-card-meta-row">
+              <span class="faculty-card-meta-label">Curricular Subject</span>
+              <span class="faculty-card-meta-value" style="color: var(--primary);">Discrete Mathematics</span>
+            </div>
+            <div class="faculty-card-meta-row">
+              <span class="faculty-card-meta-label">Role</span>
+              <span class="badge badge-secondary" style="font-size: 11px;">Faculty</span>
+            </div>
+            <div class="faculty-card-meta-row">
+              <span class="faculty-card-meta-label">Timetable Allocation</span>
+              <span class="faculty-card-meta-value" style="font-size: 11.5px; color: var(--success); font-weight: 700;">Assigned: Sec A, B</span>
+            </div>
+          </div>
+          <button type="button" class="btn btn-primary faculty-card-btn" onclick="selectFacultyProfile('faculty-dm')">
+            <span>Enter Faculty Profile &rarr;</span>
+          </button>
+        </div>
+
+        <!-- Card 3: Vaibhav Chandrakar -->
+        <div class="faculty-profile-card">
+          <div class="faculty-card-header">
+            <div class="faculty-card-avatar">VC</div>
+            <div>
+              <div class="faculty-card-name">Vaibhav Chandrakar</div>
+              <div class="faculty-card-role">Faculty &middot; CSE</div>
+            </div>
+          </div>
+          <div class="faculty-card-meta">
+            <div class="faculty-card-meta-row">
+              <span class="faculty-card-meta-label">Curricular Subject</span>
+              <span class="faculty-card-meta-value" style="color: var(--primary);">OOPS in C++</span>
+            </div>
+            <div class="faculty-card-meta-row">
+              <span class="faculty-card-meta-label">Role</span>
+              <span class="badge badge-secondary" style="font-size: 11px;">Faculty</span>
+            </div>
+            <div class="faculty-card-meta-row">
+              <span class="faculty-card-meta-label">Timetable Allocation</span>
+              <span class="faculty-card-meta-value" style="font-size: 11.5px; color: var(--success); font-weight: 700;">Assigned: Sec A, B</span>
+            </div>
+          </div>
+          <button type="button" class="btn btn-primary faculty-card-btn" onclick="selectFacultyProfile('faculty-oops')">
+            <span>Enter Faculty Profile &rarr;</span>
+          </button>
+        </div>
+
+        <!-- Card 4: Suman K. Swarnkar -->
+        <div class="faculty-profile-card">
+          <div class="faculty-card-header">
+            <div class="faculty-card-avatar">SS</div>
+            <div>
+              <div class="faculty-card-name">Suman K. Swarnkar</div>
+              <div class="faculty-card-role">Faculty &middot; CSE</div>
+            </div>
+          </div>
+          <div class="faculty-card-meta">
+            <div class="faculty-card-meta-row">
+              <span class="faculty-card-meta-label">Curricular Subject</span>
+              <span class="faculty-card-meta-value" style="color: var(--primary);">Web Technology</span>
+            </div>
+            <div class="faculty-card-meta-row">
+              <span class="faculty-card-meta-label">Role</span>
+              <span class="badge badge-secondary" style="font-size: 11px;">Faculty</span>
+            </div>
+            <div class="faculty-card-meta-row">
+              <span class="faculty-card-meta-label">Timetable Allocation</span>
+              <span class="faculty-card-meta-value" style="font-size: 11.5px; color: var(--success); font-weight: 700;">Assigned: Sec A, B</span>
+            </div>
+          </div>
+          <button type="button" class="btn btn-primary faculty-card-btn" onclick="selectFacultyProfile('faculty-web')">
+            <span>Enter Faculty Profile &rarr;</span>
+          </button>
+        </div>
+
+        <!-- Card 5: Navdeep Khare -->
+        <div class="faculty-profile-card">
+          <div class="faculty-card-header">
+            <div class="faculty-card-avatar">NK</div>
+            <div>
+              <div class="faculty-card-name">Navdeep Khare</div>
+              <div class="faculty-card-role">Faculty &middot; CSE</div>
+            </div>
+          </div>
+          <div class="faculty-card-meta">
+            <div class="faculty-card-meta-row">
+              <span class="faculty-card-meta-label">Curricular Subject</span>
+              <span class="faculty-card-meta-value" style="color: var(--primary);">Digital Electronics</span>
+            </div>
+            <div class="faculty-card-meta-row">
+              <span class="faculty-card-meta-label">Role</span>
+              <span class="badge badge-secondary" style="font-size: 11px;">Faculty</span>
+            </div>
+            <div class="faculty-card-meta-row">
+              <span class="faculty-card-meta-label">Timetable Allocation</span>
+              <span class="faculty-card-meta-value" style="font-size: 11.5px; color: var(--success); font-weight: 700;">Assigned: Sec A, B</span>
+            </div>
+          </div>
+          <button type="button" class="btn btn-primary faculty-card-btn" onclick="selectFacultyProfile('faculty-de')">
+            <span>Enter Faculty Profile &rarr;</span>
+          </button>
+        </div>
+      </div>
+
+      <div style="font-size: 12px; color: var(--text-muted); margin-top: 24px; text-align: center;">
+        Institutional Faculty Selection &middot; Section assignments are pending formal departmental allocation &middot; Academic Session 2026
+      </div>
     </div>
   </div>
 
@@ -220,14 +393,18 @@
       <nav class="sidebar-nav" id="sidebar-nav">
         <!-- Faculty Navigation Group -->
         <div class="nav-role-group" id="nav-group-faculty">
-          <div class="nav-section-label">Overview</div>
+          <div class="nav-section-label">Faculty Workspace</div>
           <a href="#" class="nav-item active" data-page="dashboard" onclick="showPage('dashboard',this)">
             <i data-lucide="layout-dashboard" class="nav-icon"></i>
-            <span>Dashboard</span>
+            <span>Overview</span>
+          </a>
+          <a href="#" class="nav-item" data-page="faculty-subject" onclick="showPage('faculty-subject',this)">
+            <i data-lucide="book-open" class="nav-icon"></i>
+            <span>My Subject</span>
           </a>
 
           <div class="nav-section-label">Academic</div>
-          <a href="#" class="nav-item" data-page="attendance" onclick="showPage('attendance',this)">
+          <a href="#" class="nav-item" data-page="take-attendance" onclick="showPage('take-attendance',this)">
             <i data-lucide="clipboard-check" class="nav-icon"></i>
             <span>Attendance</span>
           </a>
@@ -235,19 +412,13 @@
             <i data-lucide="users" class="nav-icon"></i>
             <span>Students</span>
           </a>
-          <a href="#" class="nav-item" data-page="analytics" onclick="showPage('analytics',this)">
-            <i data-lucide="bar-chart-3" class="nav-icon"></i>
-            <span>Analytics</span>
+          <a href="#" class="nav-item" data-page="sessions" onclick="showPage('sessions',this)">
+            <i data-lucide="calendar" class="nav-icon"></i>
+            <span>Lectures</span>
           </a>
           <a href="#" class="nav-item" data-page="reports" onclick="showPage('reports',this)">
             <i data-lucide="file-text" class="nav-icon"></i>
             <span>Reports</span>
-          </a>
-
-          <div class="nav-section-label">Management</div>
-          <a href="#" class="nav-item" data-page="sessions" onclick="showPage('sessions',this)">
-            <i data-lucide="calendar" class="nav-icon"></i>
-            <span>Sessions</span>
           </a>
         </div>
 
@@ -296,13 +467,17 @@
 
       <div class="sidebar-footer">
         <div class="user-profile">
-          <div class="user-avatar" id="sidebar-user-avatar">AT</div>
+          <div class="user-avatar" id="sidebar-user-avatar">DS</div>
           <div class="user-info">
-            <div class="user-name" id="sidebar-user-name">Dr. Anand Tamrakar</div>
-            <div class="user-role" id="sidebar-user-role">Department Faculty</div>
+            <div class="user-name" id="sidebar-user-name">Devbrat Sahu</div>
+            <div class="user-role" id="sidebar-user-role">Faculty · Operating System</div>
           </div>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="doSignOut()" title="Sign Out of SmartAttend" style="margin-top: 10px; width: 100%; justify-content: flex-start; color: var(--text-muted); gap: 8px;">
+        <button class="btn btn-ghost btn-sm" id="sidebar-switch-faculty-btn" onclick="openFacultyArea()" title="Switch Faculty Profile" style="margin-top: 8px; width: 100%; justify-content: flex-start; color: var(--primary); gap: 8px; font-weight: 600;">
+          <i data-lucide="arrow-left-right" class="icon-sm"></i>
+          <span>Switch Faculty</span>
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="doSignOut()" title="Sign Out of SmartAttend" style="margin-top: 2px; width: 100%; justify-content: flex-start; color: var(--text-muted); gap: 8px;">
           <i data-lucide="log-out" class="icon-sm"></i>
           <span>Sign Out</span>
         </button>
@@ -337,6 +512,11 @@
           <i data-lucide="check-square" class="icon-sm"></i>
           <span>Take Attendance</span>
         </button>
+        <!-- SWITCH FACULTY ACTION -->
+        <button class="btn btn-outline btn-sm" id="topbar-switch-faculty-btn" onclick="openFacultyArea()" title="Switch Faculty Profile" style="display: inline-flex; align-items: center; gap: 6px;">
+          <i data-lucide="arrow-left-right" class="icon-sm"></i>
+          <span>Switch Faculty</span>
+        </button>
         <!-- SIGN OUT ACTION -->
         <button class="btn btn-outline btn-sm topbar-signout-btn" onclick="doSignOut()" title="Sign Out of SmartAttend" style="display: inline-flex; align-items: center; gap: 6px;">
           <i data-lucide="log-out" class="icon-sm"></i>
@@ -347,71 +527,305 @@
 
     <!-- ───────── PAGE 1: DASHBOARD ───────── -->
     <section class="page active" id="page-dashboard">
-      <div class="page-header">
-        <h2 class="page-title-main" id="dash-greeting-title">Good morning, Dr. Anand</h2>
-        <div class="page-subtitle">Department attendance overview &middot; Computer Science &amp; Engineering</div>
+      <!-- Faculty Identity Header Card -->
+      <div class="card faculty-profile-header-card" style="margin-bottom: 20px; padding: 20px 24px; border: 1px solid var(--border); background: var(--surface); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <div class="user-avatar" id="dash-fac-avatar" style="width: 52px; height: 52px; font-size: 20px; font-weight: 700; background: var(--primary-subtle); color: var(--primary); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; border: 1px solid var(--primary-border);">DS</div>
+          <div>
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <h2 id="dash-greeting-title" style="font-size: 22px; font-weight: 700; color: var(--text-primary); margin: 0;">Good morning, Devbrat Sahu</h2>
+              <span class="badge" style="background: var(--primary-subtle); color: var(--primary); border: 1px solid var(--primary-border); font-size: 12px; font-weight: 600;">Faculty</span>
+              <span class="badge badge-ok" id="dash-fac-sec-status" style="font-size: 11.5px; font-weight: 600;">Assigned Sections: A, B</span>
+              <span class="badge" id="dash-fac-cd-pending" style="background: var(--surface-muted); color: var(--text-muted); border: 1px solid var(--border); font-size: 11px;">Sections C, D Pending</span>
+            </div>
+            <div style="font-size: 13.5px; color: var(--text-secondary); margin-top: 4px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span>Assigned Subject: <strong id="dash-fac-subject" style="color: var(--text-primary);">Operating System</strong></span>
+              <span>&middot;</span>
+              <span>Department of Computer Science &amp; Engineering</span>
+            </div>
+          </div>
+        </div>
+        <button type="button" class="btn btn-outline btn-sm" onclick="openFacultyArea()" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600;">
+          <i data-lucide="arrow-left-right" class="icon-sm"></i>
+          <span>Switch Faculty</span>
+        </button>
       </div>
 
-      <!-- Faculty Teaching Schedule & Attendance Action Banner -->
-      <div class="card teaching-briefing-card" style="margin-bottom: 20px; border-left: 4px solid var(--primary); background: var(--surface);">
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+      <!-- ── PHASE 5: CURRENT / NEXT TIMETABLE CLASS BANNER ────────── -->
+      <div class="card current-next-class-card" id="dash-cnc-card" style="margin-bottom: 20px; padding: 18px 22px; border: 1px solid var(--border); border-left: 4px solid var(--primary); background: var(--surface);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
           <div style="display: flex; align-items: flex-start; gap: 14px; flex: 1; min-width: 280px;">
-            <div style="width: 36px; height: 36px; border-radius: var(--radius-md); background: var(--primary-subtle); color: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;">
+            <div style="width: 42px; height: 42px; border-radius: var(--radius-md); background: var(--primary-subtle); color: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;">
               <i data-lucide="clock" class="icon-sm"></i>
             </div>
             <div>
               <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                <span style="font-weight: 700; font-size: 14.5px; color: var(--text-primary);">Faculty Teaching Schedule &middot; Active Session Briefing</span>
-                <span class="badge" style="background: var(--primary-subtle); color: var(--primary); border: 1px solid var(--primary-border); font-size: 11px;">TODAY'S TIMETABLE</span>
+                <span style="font-weight: 700; font-size: 15px; color: var(--text-primary);" id="cnc-title">Current / Next Timetable Slot</span>
+                <span class="badge" id="cnc-status-badge" style="font-size: 11px; background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border);">Configured Timetable</span>
+                <span class="badge" style="background: var(--surface-muted); color: var(--text-muted); border: 1px solid var(--border); font-size: 10.5px;">W.E.F. 17/08/2026</span>
               </div>
-              <div style="font-size: 13px; color: var(--text-secondary); margin-top: 4px; line-height: 1.5;">
-                3 of 6 departmental sessions completed today. Next scheduled session: <strong>CSE301 — Data Structures &amp; Algorithms</strong> (Semester 2, Section A) at <strong>11:30 AM</strong> in Room 204.
+              <div style="font-size: 13.5px; color: var(--text-secondary); margin-top: 4px; line-height: 1.5;" id="cnc-description">
+                <!-- Computed dynamically by JS -->
               </div>
             </div>
           </div>
-          <button class="btn btn-primary" onclick="showPage('take-attendance', null)" style="white-space: nowrap;">
-            <i data-lucide="check-square" class="icon-sm"></i>
-            <span>+ Record Attendance for Current Session</span>
-          </button>
+          <div id="cnc-action-wrap">
+            <button class="btn btn-primary btn-sm" id="cnc-action-btn" onclick="showPage('take-attendance', null)">
+              <i data-lucide="check-square" class="icon-sm"></i>
+              <span>Take Attendance</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      <!-- KPI Stats row -->
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-header">
-            <span class="stat-label">Total Students</span>
-            <div class="stat-icon-wrap"><i data-lucide="users" class="icon-sm"></i></div>
+      <!-- ── PHASE 5: TODAY'S TEACHING SCHEDULE ──────────────────────── -->
+      <div class="card" style="margin-bottom: 24px; padding: 22px 24px; border: 1px solid var(--border); background: var(--surface);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <h3 style="font-size: 17px; font-weight: 700; color: var(--text-primary); margin: 0;">Today's Teaching Schedule</h3>
+              <span class="badge badge-ok" id="dash-sched-day-badge">Today</span>
+              <span class="badge" style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border); font-size: 11px;">Timetable W.E.F. 17/08/2026</span>
+            </div>
+            <div style="font-size: 13px; color: var(--text-secondary); margin-top: 3px;">
+              Scheduled classroom and laboratory slots for <strong id="dash-sched-fac-name">Devbrat Sahu</strong> (<span id="dash-sched-fac-subj">Operating System</span>)
+            </div>
           </div>
-          <div class="stat-value" id="stat-students">169</div>
-          <div class="stat-sub">Enrolled across department batches</div>
+
+          <!-- Day Tabs: Mon, Tue, Wed, Thu, Fri, Sat -->
+          <div class="schedule-day-tabs" style="display: flex; gap: 4px; background: var(--surface-muted); padding: 4px; border-radius: var(--radius-sm); border: 1px solid var(--border);" id="sched-day-tabs">
+            <button type="button" class="btn btn-ghost btn-xs sched-tab" data-day="Monday" onclick="selectScheduleDay('Monday')">Mon</button>
+            <button type="button" class="btn btn-ghost btn-xs sched-tab" data-day="Tuesday" onclick="selectScheduleDay('Tuesday')">Tue</button>
+            <button type="button" class="btn btn-ghost btn-xs sched-tab" data-day="Wednesday" onclick="selectScheduleDay('Wednesday')">Wed</button>
+            <button type="button" class="btn btn-ghost btn-xs sched-tab" data-day="Thursday" onclick="selectScheduleDay('Thursday')">Thu</button>
+            <button type="button" class="btn btn-ghost btn-xs sched-tab" data-day="Friday" onclick="selectScheduleDay('Friday')">Fri</button>
+            <button type="button" class="btn btn-ghost btn-xs sched-tab" data-day="Saturday" onclick="selectScheduleDay('Saturday')">Sat</button>
+          </div>
         </div>
 
-        <div class="stat-card">
-          <div class="stat-header">
-            <span class="stat-label">Today's Sessions</span>
-            <div class="stat-icon-wrap"><i data-lucide="calendar-check" class="icon-sm"></i></div>
+        <!-- Schedule List Container -->
+        <div id="dash-schedule-list" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
+          <!-- Populated by JS dynamically -->
+        </div>
+      </div>
+
+      <!-- ── SECTION 1: LECTURE & SESSION STATUS (PHASE 5A) ────────── -->
+      <div style="margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+          <div>
+            <h3 style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0;">Lecture &amp; Attendance Summary</h3>
+            <div style="font-size: 12.5px; color: var(--text-secondary); margin-top: 2px;">Subject-scoped instructional session tracking &middot; Real-time status</div>
           </div>
-          <div class="stat-value" id="stat-sessions">6</div>
-          <div class="stat-sub">3 completed &middot; 3 scheduled today</div>
+          <button class="btn btn-primary btn-sm" onclick="showPage('take-attendance', null)">
+            <i data-lucide="check-square" class="icon-sm"></i>
+            <span>+ Record Attendance Session</span>
+          </button>
         </div>
 
-        <div class="stat-card">
-          <div class="stat-header">
-            <span class="stat-label">Average Attendance</span>
-            <div class="stat-icon-wrap"><i data-lucide="trending-up" class="icon-sm"></i></div>
+        <div class="faculty-shell-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px;">
+          <!-- Card 1: LECTURES CONDUCTED -->
+          <div class="card" style="padding: 18px 20px; border: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px;">Lectures Conducted</div>
+              <div id="dash-lec-conducted" style="font-size: 26px; font-weight: 700; color: var(--text-primary); line-height: 1.2;">0</div>
+              <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Completed in this subject &amp; section</div>
+            </div>
+            <div style="margin-top: 12px;">
+              <span class="badge" style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border); font-size: 11px;">Subject &amp; Section Scoped</span>
+            </div>
           </div>
-          <div class="stat-value" id="stat-avg">84.2%</div>
-          <div class="stat-sub"><span class="stat-delta up">+1.4%</span> vs. previous week</div>
+
+          <!-- Card 2: CURRENT LECTURE -->
+          <div class="card" style="padding: 18px 20px; border: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px;">Current Lecture</div>
+              <div id="dash-lec-current" style="font-size: 22px; font-weight: 700; color: var(--text-primary); line-height: 1.2;">&mdash;</div>
+              <div id="dash-lec-current-sub" style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">No lecture currently running</div>
+            </div>
+            <div style="margin-top: 12px;">
+              <span id="dash-lec-current-badge" class="badge" style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border); font-size: 11px;">Status: Idle</span>
+            </div>
+          </div>
+
+          <!-- Card 3: NEXT LECTURE -->
+          <div class="card" style="padding: 18px 20px; border: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--primary); margin-bottom: 4px;">Next Lecture</div>
+              <div id="dash-lec-next" style="font-size: 26px; font-weight: 700; color: var(--primary); line-height: 1.2;">Lecture 1</div>
+              <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Sequential upcoming session</div>
+            </div>
+            <div style="margin-top: 12px;">
+              <span class="badge" style="background: var(--primary-subtle); color: var(--primary); border: 1px solid var(--primary-border); font-size: 11px;">Ready for Commencement</span>
+            </div>
+          </div>
+
+          <!-- Card 4: SESSION STATUS -->
+          <div class="card" style="padding: 18px 20px; border: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px;">Session Status</div>
+              <div id="dash-lec-status" style="font-size: 17px; font-weight: 700; color: var(--text-primary); line-height: 1.3; margin-top: 2px;">Ready to start</div>
+              <div id="dash-lec-status-sub" style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Awaiting lecture recording</div>
+            </div>
+            <div style="margin-top: 12px;">
+              <span id="dash-lec-status-badge" class="badge" style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border); font-size: 11px;">Pre-commencement</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SECTION 2: SUBJECT ATTENDANCE ANALYTICS (PHASE 5A) ───── -->
+      <div class="card" style="margin-bottom: 24px; padding: 22px 24px; border: 1px solid var(--border); background: var(--surface);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 14px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <h3 style="font-size: 17px; font-weight: 700; color: var(--text-primary); margin: 0;">Subject Attendance Analytics</h3>
+              <span class="badge" style="background: var(--primary-subtle); color: var(--primary); border: 1px solid var(--primary-border); font-size: 11.5px; font-weight: 600;" id="dash-active-subject-badge">Operating System</span>
+            </div>
+            <div style="font-size: 13px; color: var(--text-secondary); margin-top: 3px;">
+              Dynamic live compliance analytics calculated exclusively from completed instructional sessions
+            </div>
+          </div>
+
+          <!-- Section Selector for Faculty (with Allocation Pending indicator) -->
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <label for="dash-section-select" style="font-size: 12.5px; font-weight: 600; color: var(--text-secondary);">Section:</label>
+              <select id="dash-section-select" class="form-control" onchange="onDashboardSectionChange(this.value)" style="padding: 5px 10px; height: 34px; font-size: 13px; width: 180px;">
+                <option value="A" selected>Section A (Confirmed · 60)</option>
+                <option value="B">Section B (Confirmed · 59)</option>
+                <option value="C" disabled>Section C (Pending)</option>
+                <option value="D" disabled>Section D (Pending)</option>
+              </select>
+            </div>
+            <span class="badge" id="dash-sec-alloc-badge" style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border); font-size: 11px;">Section allocation pending</span>
+          </div>
         </div>
 
-        <div class="stat-card">
-          <div class="stat-header">
-            <span class="stat-label">Students At Risk</span>
-            <div class="stat-icon-wrap"><i data-lucide="alert-triangle" class="icon-sm"></i></div>
+        <!-- 6 KPI Grid for Selected Subject & Section -->
+        <div class="subject-kpis-grid">
+          <!-- KPI 1: Average Section Attendance -->
+          <div class="subject-kpi-card">
+            <div class="subject-kpi-label">Average Section Attendance</div>
+            <div class="subject-kpi-val" id="dash-stat-avg" style="color: var(--primary);">&mdash;</div>
+            <div class="subject-kpi-sub">Mean of student live %</div>
           </div>
-          <div class="stat-value" id="stat-low">14</div>
-          <div class="stat-sub"><span class="stat-delta down">Critical</span> below 75% threshold</div>
+
+          <!-- KPI 2: Present Today -->
+          <div class="subject-kpi-card">
+            <div class="subject-kpi-label">Present Today</div>
+            <div class="subject-kpi-val" id="dash-stat-present" style="color: var(--success);">&mdash;</div>
+            <div class="subject-kpi-sub">Latest lecture session</div>
+          </div>
+
+          <!-- KPI 3: Absent Today -->
+          <div class="subject-kpi-card">
+            <div class="subject-kpi-label">Absent Today</div>
+            <div class="subject-kpi-val" id="dash-stat-absent" style="color: var(--danger);">&mdash;</div>
+            <div class="subject-kpi-sub">Latest lecture session</div>
+          </div>
+
+          <!-- KPI 4: Students Below 75% -->
+          <div class="subject-kpi-card">
+            <div class="subject-kpi-label">Students Below 75%</div>
+            <div class="subject-kpi-val" id="dash-stat-risk" style="color: var(--warning);">&mdash;</div>
+            <div class="subject-kpi-sub">&lt; 75.0% threshold</div>
+          </div>
+
+          <!-- KPI 5: Highest Attendance -->
+          <div class="subject-kpi-card">
+            <div class="subject-kpi-label">Highest Attendance</div>
+            <div class="subject-kpi-val" id="dash-stat-high" style="color: var(--success);">&mdash;</div>
+            <div class="subject-kpi-sub">Top section student</div>
+          </div>
+
+          <!-- KPI 6: Lowest Attendance -->
+          <div class="subject-kpi-card">
+            <div class="subject-kpi-label">Lowest Attendance</div>
+            <div class="subject-kpi-val" id="dash-stat-low" style="color: var(--danger);">&mdash;</div>
+            <div class="subject-kpi-sub">Minimum live rate</div>
+          </div>
+        </div>
+
+        <!-- ── SECTION 3: ATTENDANCE TREND (CONDITIONAL) ───────────── -->
+        <div id="dash-trend-container" style="margin-top: 14px; padding-top: 16px; border-top: 1px solid var(--border);">
+          <div style="font-size: 13.5px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px;">Lecture Attendance Trend</div>
+          <div id="dash-trend-empty" style="padding: 24px; text-align: center; background: var(--surface-muted); border-radius: var(--radius-sm); border: 1px dashed var(--border); color: var(--text-muted); font-size: 13px;">
+            <i data-lucide="line-chart" class="icon-sm" style="margin-bottom: 6px; display: inline-block;"></i>
+            <div>No attendance trend available yet.</div>
+            <div style="font-size: 11.5px; margin-top: 2px;">Trend analytics activate after conducting multiple instructional sessions.</div>
+          </div>
+          <canvas id="dashTrendChart" height="140" style="display: none;"></canvas>
+        </div>
+      </div>
+
+      <!-- ── SECTION 4: STUDENT ATTENDANCE TABLE (SUBJECT & SECTION SCOPED) ── -->
+      <div class="card" style="margin-bottom: 24px; border: 1px solid var(--border); background: var(--surface);">
+        <div class="chart-header" style="flex-wrap: wrap; gap: 12px;">
+          <div>
+            <div class="chart-title" style="display: flex; align-items: center; gap: 8px;">
+              <span>Student Attendance Roster &middot; Section <span id="dash-roster-sec-title">A</span></span>
+              <span class="badge" style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border); font-size: 11px;" id="dash-roster-count-badge">60 Students</span>
+            </div>
+            <div class="chart-sub">Student live attendance calculated exclusively for active curricular subject</div>
+          </div>
+          <div style="min-width: 240px;">
+            <input type="text" id="dash-roster-search" class="search-box" style="padding: 6px 12px; font-size: 12.5px; height: 34px;" placeholder="Filter section students by name or roll..." oninput="filterDashboardStudents(this.value)"/>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 70px;">S.No.</th>
+                <th>Roll Number</th>
+                <th>Student Name</th>
+                <th>Subject &middot; Section</th>
+                <th>Lectures Attended</th>
+                <th>Live Attendance %</th>
+                <th>Examination Eligibility</th>
+              </tr>
+            </thead>
+            <tbody id="dash-student-table-body">
+              <!-- Populated by JS dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Section-A Historical Attendance Snapshot (Real Source-Backed Snapshot) -->
+      <div class="card" style="margin-bottom: 24px; padding: 20px; border: 1px solid var(--border); border-left: 4px solid var(--warning); background: var(--surface);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-weight: 700; font-size: 15px; color: var(--text-primary);">Section A &middot; Previous Attendance Snapshot</span>
+              <span class="badge" style="background: var(--warning-subtle); color: var(--warning); border: 1px solid var(--warning-border); font-size: 11px;">HISTORICAL SNAPSHOT</span>
+            </div>
+            <div style="font-size: 12.5px; color: var(--text-secondary); margin-top: 3px;">
+              Source: Section-A Attendance Sheet (JULY&ndash;AUG 2026) &middot; Printed Date: <strong>25-08-2025</strong> <span style="color: var(--text-muted);">(Date Discrepancy / Requires HOD Verification)</span>
+            </div>
+          </div>
+          <span class="badge" id="hist-secA-total" style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border);">Cohort: 60 Enrolled Students</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+          <div class="drawer-info-card" style="padding: 12px 16px;">
+            <div class="drawer-info-label">Section-A Snapshot Average</div>
+            <div class="drawer-info-val" id="hist-secA-avg" style="font-size: 20px; font-weight: 700; color: var(--primary);">64.8%</div>
+            <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">60 Students Recorded</div>
+          </div>
+          <div class="drawer-info-card" style="padding: 12px 16px;">
+            <div class="drawer-info-label">At or Above Threshold (&ge;75%)</div>
+            <div class="drawer-info-val" style="font-size: 20px; font-weight: 700; color: var(--success);">20 Students</div>
+            <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">33.3% of Section A</div>
+          </div>
+          <div class="drawer-info-card" style="padding: 12px 16px;">
+            <div class="drawer-info-label">Below Threshold (&lt;75%)</div>
+            <div class="drawer-info-val" style="font-size: 20px; font-weight: 700; color: var(--danger);">40 Students</div>
+            <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">Below Attendance Threshold &mdash; Historical Snapshot</div>
+          </div>
+        </div>
+        <div style="font-size: 12px; color: var(--text-muted); margin-top: 10px; font-style: italic;">
+          * Note: This historical percentage snapshot is isolated from live session attendance. Live lecture monitoring begins upon recording classroom sessions.
         </div>
       </div>
 
@@ -459,14 +873,14 @@
                 <i data-lucide="check-circle-2" class="icon-sm" style="color: var(--success); flex-shrink: 0; margin-top: 2px;"></i>
                 <div>
                   <strong>High Subject Engagement:</strong>
-                  <span>Data Structures and Python laboratory sessions maintain steady &gt;88% attendance across instructional weeks.</span>
+                  <span>Programming in Python and Physics laboratory sessions maintain steady &gt;85% attendance across instructional weeks.</span>
                 </div>
               </div>
               <div class="insight-note-item">
                 <i data-lucide="alert-circle" class="icon-sm" style="color: var(--warning); flex-shrink: 0; margin-top: 2px;"></i>
                 <div>
                   <strong>Threshold Follow-up Needed:</strong>
-                  <span>14 flagged students across department batches are currently between 58%–73%. Direct notices can be dispatched from Reports.</span>
+                  <span>12 flagged students in assigned CSE sections are currently between 59%–73%. Direct notices can be dispatched from Reports.</span>
                 </div>
               </div>
             </div>
@@ -517,6 +931,39 @@
       </div>
     </section>
 
+    <!-- ───────── PAGE: MY SUBJECT (FACULTY FOUNDATION) ───────── -->
+    <section class="page" id="page-faculty-subject">
+      <div class="page-header">
+        <h2 class="page-title-main" id="my-subject-title">My Subject &middot; Operating System</h2>
+        <div class="page-subtitle" id="my-subject-subtitle">Curricular module overview &middot; Faculty: Devbrat Sahu</div>
+      </div>
+
+      <div class="card" style="padding: 24px; border: 1px solid var(--border); background: var(--surface); margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+          <div>
+            <span class="badge" style="background: var(--primary-subtle); color: var(--primary); border: 1px solid var(--primary-border); margin-bottom: 8px;">CSVTU 3rd Semester CSE</span>
+            <h3 id="my-subject-card-name" style="font-size: 22px; font-weight: 700; color: var(--text-primary); margin: 0 0 6px;">Operating System</h3>
+            <p style="font-size: 13.5px; color: var(--text-secondary); margin: 0;">Assigned Faculty: <strong id="my-subject-card-faculty">Devbrat Sahu</strong> &middot; Department of Computer Science &amp; Engineering</p>
+          </div>
+          <span class="badge" style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border); font-size: 12px;">Section allocation pending</span>
+        </div>
+      </div>
+
+      <div class="card" style="padding: 40px 24px; text-align: center; border: 1px solid var(--border); background: var(--surface);">
+        <div style="width: 52px; height: 52px; border-radius: var(--radius-md); background: var(--primary-subtle); color: var(--primary); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 14px;">
+          <i data-lucide="book-open" class="icon-md"></i>
+        </div>
+        <h4 style="font-size: 17px; font-weight: 700; color: var(--text-primary); margin: 0 0 8px;">Curricular Module Workspace</h4>
+        <p style="font-size: 14px; color: var(--text-secondary); max-width: 500px; margin: 0 auto 20px; line-height: 1.55;">
+          Detailed syllabus breakdown, unit lecture planning, and learning resources for this subject are coming in the next stage.
+        </p>
+        <button type="button" class="btn btn-primary btn-sm" onclick="showPage('take-attendance', null)">
+          <i data-lucide="check-square" class="icon-sm"></i>
+          <span>Go to Attendance Recording Workspace</span>
+        </button>
+      </div>
+    </section>
+
     <!-- ───────── PAGE 2: SIDEBAR "ATTENDANCE" (OVERVIEW & MANAGEMENT) ───────── -->
     <section class="page" id="page-attendance">
       <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
@@ -553,8 +1000,8 @@
             <span class="stat-label">Today's Avg Attendance</span>
             <div class="stat-icon-wrap" style="color: var(--primary);"><i data-lucide="percent" class="icon-sm"></i></div>
           </div>
-          <div class="stat-value" style="color: var(--primary);">84.6%</div>
-          <div class="stat-sub">Across 6 conducted lectures</div>
+          <div class="stat-value" id="overview-stat-avg" style="color: var(--primary);">--</div>
+          <div class="stat-sub">No recorded sessions yet</div>
         </div>
 
         <div class="stat-card">
@@ -562,8 +1009,8 @@
             <span class="stat-label">Students Present Today</span>
             <div class="stat-icon-wrap" style="color: var(--success);"><i data-lucide="user-check" class="icon-sm"></i></div>
           </div>
-          <div class="stat-value" style="color: var(--success);">214</div>
-          <div class="stat-sub">Out of 248 enrolled students</div>
+          <div class="stat-value" id="overview-stat-present" style="color: var(--success);">0</div>
+          <div class="stat-sub" id="overview-stat-present-sub">Out of 252 enrolled CSE students</div>
         </div>
 
         <div class="stat-card">
@@ -571,8 +1018,8 @@
             <span class="stat-label">Students Absent Today</span>
             <div class="stat-icon-wrap" style="color: var(--danger);"><i data-lucide="user-x" class="icon-sm"></i></div>
           </div>
-          <div class="stat-value" style="color: var(--danger);">34</div>
-          <div class="stat-sub">Across all department sections</div>
+          <div class="stat-value" id="overview-stat-absent" style="color: var(--danger);">0</div>
+          <div class="stat-sub" id="overview-stat-absent-sub">Across Sections A (60), B (59), C (66), D (67)</div>
         </div>
 
         <div class="stat-card">
@@ -580,8 +1027,8 @@
             <span class="stat-label">Students At Risk</span>
             <div class="stat-icon-wrap" style="color: var(--warning);"><i data-lucide="alert-triangle" class="icon-sm"></i></div>
           </div>
-          <div class="stat-value" style="color: var(--danger);">14</div>
-          <div class="stat-sub">Below 75% statutory threshold</div>
+          <div class="stat-value" id="overview-stat-risk" style="color: var(--danger);">0</div>
+          <div class="stat-sub">Pre-commencement (no defaulters)</div>
         </div>
       </div>
 
@@ -667,12 +1114,65 @@
       <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px;">
         <div>
           <h2 class="page-title-main">Take Attendance</h2>
-          <div class="page-subtitle">Record attendance for a class session</div>
+          <div class="page-subtitle">Record attendance for a class session &middot; Real-time lecture counter</div>
         </div>
-        <button class="btn btn-outline btn-sm" onclick="showPage('attendance', null)">
+        <button class="btn btn-outline btn-sm" onclick="showPage('dashboard', null)">
           <i data-lucide="arrow-left" class="icon-sm"></i>
-          <span>Back to Attendance Overview</span>
+          <span>Back to Faculty Dashboard</span>
         </button>
+      </div>
+
+      <!-- Upgraded Phase 5A Live Lecture Header (Requirement 3) -->
+      <div class="take-attendance-lecture-header card" id="att-lecture-summary-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 16px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span class="badge" style="background: var(--primary-subtle); color: var(--primary); border: 1px solid var(--primary-border); font-size: 11px; font-weight: 600;">CLASSROOM ATTENDANCE SESSION</span>
+              <span class="badge" id="att-hdr-alloc-badge" style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border); font-size: 11px;">Section allocation pending</span>
+            </div>
+            <h3 id="att-hdr-subject" style="font-size: 20px; font-weight: 700; color: var(--text-primary); margin: 6px 0 2px;">Operating System</h3>
+            <div style="font-size: 13px; color: var(--text-secondary);">
+              Section: <strong id="att-hdr-section" style="color: var(--text-primary);">Section A</strong> &middot; Instructor: <strong id="att-hdr-faculty" style="color: var(--text-primary);">Devbrat Sahu</strong>
+            </div>
+          </div>
+          <div id="att-hdr-status-badge-wrap">
+            <span id="att-hdr-status-badge" class="badge" style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border); font-size: 12px; padding: 6px 14px; font-weight: 600;">
+              Status: Ready to start
+            </span>
+          </div>
+        </div>
+
+        <!-- Timetable Context Indicator -->
+        <div id="att-timetable-context-strip" style="background: var(--surface-muted); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 14px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 12.5px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="calendar" class="icon-xs" style="color: var(--primary);"></i>
+            <span>Timetable Context: <strong id="att-tt-slot-info">Period I &middot; 09:00 AM &ndash; 09:50 AM</strong></span>
+          </div>
+          <span class="badge" style="font-size: 11px; background: var(--surface); border: 1px solid var(--border);" id="att-tt-scheduled-count-badge">Scheduled: 7 slots/week</span>
+        </div>
+
+        <div class="take-att-hdr-grid">
+          <div class="hdr-kpi">
+            <div class="hdr-kpi-label">Lectures Conducted</div>
+            <div class="hdr-kpi-val" id="att-hdr-conducted">0</div>
+            <div class="hdr-kpi-sub">Completed sessions</div>
+          </div>
+          <div class="hdr-kpi">
+            <div class="hdr-kpi-label">Current Lecture</div>
+            <div class="hdr-kpi-val" id="att-hdr-current">&mdash;</div>
+            <div class="hdr-kpi-sub" id="att-hdr-current-sub">No active session</div>
+          </div>
+          <div class="hdr-kpi">
+            <div class="hdr-kpi-label" style="color: var(--primary);">Next Lecture</div>
+            <div class="hdr-kpi-val" id="att-hdr-next" style="color: var(--primary);">Lecture 1</div>
+            <div class="hdr-kpi-sub">Next sequential</div>
+          </div>
+          <div class="hdr-kpi">
+            <div class="hdr-kpi-label">Session Status</div>
+            <div class="hdr-kpi-val" id="att-hdr-status-text" style="font-size: 15px; margin-top: 4px;">Not Started</div>
+            <div class="hdr-kpi-sub" id="att-hdr-status-sub">Ready to load roster</div>
+          </div>
+        </div>
       </div>
 
       <!-- Class & Session Filter Card -->
@@ -723,17 +1223,22 @@
 
           <div class="form-group">
             <label for="att-section" class="form-label">Section</label>
-            <select id="att-section" class="form-control">
-              <option value="A" selected>Section A</option>
-              <option value="B">Section B</option>
-              <option value="C">Section C</option>
+            <select id="att-section" class="form-control" onchange="onAttendanceFilterChange()">
+              <option value="A" selected>Section A (Confirmed · 60 Students)</option>
+              <option value="B">Section B (Confirmed · 59 Students)</option>
+              <option value="C" disabled>Section C (Allocation Pending)</option>
+              <option value="D" disabled>Section D (Allocation Pending)</option>
             </select>
           </div>
 
           <div class="form-group att-subject-group">
-            <label for="att-subject" class="form-label">Subject / Course</label>
-            <select id="att-subject" class="form-control">
-              <!-- Dynamically populated based on dept + sem -->
+            <label for="att-subject" class="form-label">Subject / Course Module</label>
+            <select id="att-subject" class="form-control" onchange="onAttendanceFilterChange()">
+              <option value="Operating System" selected>Operating System (Devbrat Sahu)</option>
+              <option value="Discrete Mathematics">Discrete Mathematics (Pranjali Sharma)</option>
+              <option value="OOPS in C++">OOPS in C++ (Vaibhav Chandrakar)</option>
+              <option value="Web Technology">Web Technology (Suman K. Swarnkar)</option>
+              <option value="Digital Electronics">Digital Electronics (Navdeep Khare)</option>
             </select>
           </div>
 
@@ -757,25 +1262,55 @@
     <section class="page" id="page-students">
       <div class="page-header">
         <h2 class="page-title-main">Student Registry</h2>
-        <div class="page-subtitle">Departmental enrolled student roster and academic attendance records</div>
+        <div class="page-subtitle">Departmental enrolled student roster and academic attendance records &middot; 3rd Semester CSE (2026)</div>
       </div>
 
-      <div class="toolbar">
-        <div class="search-wrapper">
+      <div class="toolbar" style="flex-wrap: wrap; gap: 12px;">
+        <div class="search-wrapper" style="flex: 1; min-width: 260px;">
           <i data-lucide="search" class="search-icon-inside"></i>
-          <input type="text" class="search-box" placeholder="Search by student name or roll number…" oninput="filterStudents(this.value)"/>
+          <input type="text" id="student-search-input" class="search-box" placeholder="Search by student name, roll number, or S.No…" oninput="filterStudents(this.value)"/>
         </div>
-        <button class="btn btn-primary" onclick="openAddModal()">
-          <i data-lucide="user-plus" class="icon-sm"></i>
-          <span>Enroll Student</span>
-        </button>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+          <div class="form-group" style="margin-bottom: 0; min-width: 145px;">
+            <select id="filter-student-sec" class="form-control" onchange="applyStudentFilters()" style="padding: 6px 12px; height: 38px; font-size: 13px;">
+              <option value="All">All Sections (252)</option>
+              <option value="A">Section A (60)</option>
+              <option value="B">Section B (59)</option>
+              <option value="C">Section C (66)</option>
+              <option value="D">Section D (67)</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 0; min-width: 125px;">
+            <select id="filter-student-sem" class="form-control" onchange="applyStudentFilters()" style="padding: 6px 12px; height: 38px; font-size: 13px;">
+              <option value="3" selected>Semester 3</option>
+              <option value="All">All Semesters</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 0; min-width: 135px;">
+            <select id="sort-student-by" class="form-control" onchange="applyStudentFilters()" style="padding: 6px 12px; height: 38px; font-size: 13px;">
+              <option value="sno" selected>Sort: Class S.No</option>
+              <option value="roll">Sort: Roll Number</option>
+              <option value="name">Sort: Name (A-Z)</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="openAddModal()" style="white-space: nowrap;">
+            <i data-lucide="user-plus" class="icon-sm"></i>
+            <span>Enroll Student</span>
+          </button>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin: 12px 0 16px; font-size: 13px; color: var(--text-secondary); flex-wrap: wrap; gap: 8px;">
+        <span id="student-count-badge">Showing 252 of 252 students (B.Tech CSE &middot; Semester 3 &middot; Academic Session 2026)</span>
+        <span style="font-size: 11.5px; background: var(--surface-muted); padding: 4px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); font-weight: 500;">Authoritative Source: HOD Roll List</span>
       </div>
 
       <div class="table-responsive">
         <table class="data-table" id="students-table">
           <thead>
             <tr>
-              <th>Student</th>
+              <th style="width: 60px;">S.No</th>
+              <th>Student Name</th>
               <th>Roll Number</th>
               <th>Department</th>
               <th>Semester</th>
@@ -789,6 +1324,248 @@
             <!-- Populated by JS -->
           </tbody>
         </table>
+      </div>
+    </section>
+
+    <!-- ───────── FULL-SCREEN STUDENT PROFILE PAGE ───────── -->
+    <section class="page" id="page-student-profile">
+      <!-- Back to Roster Navigation Bar -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; flex-wrap: wrap; gap: 12px;">
+        <button class="btn btn-outline" onclick="showPage('students')" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600;">
+          <i data-lucide="arrow-left" class="icon-sm"></i>
+          <span>&larr; Back to Student Registry</span>
+        </button>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-outline btn-sm" onclick="window.print()" style="display: inline-flex; align-items: center; gap: 6px;">
+            <i data-lucide="printer" class="icon-sm"></i>
+            <span>Print Student Record</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Hero Student Profile Card -->
+      <div class="card" style="margin-bottom: 24px; padding: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);">
+        <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+          <div id="sp-avatar" style="width: 72px; height: 72px; border-radius: var(--radius-full); background: var(--primary-subtle); color: var(--primary); font-size: 26px; font-weight: 700; display: flex; align-items: center; justify-content: center; border: 2px solid var(--primary-border); flex-shrink: 0;">
+            ST
+          </div>
+          <div style="flex: 1; min-width: 260px;">
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <h2 id="sp-name" style="font-size: 22px; font-weight: 700; color: var(--text-primary); margin: 0;">STUDENT NAME</h2>
+              <span class="badge badge-ok" id="sp-status-badge">ACTIVE</span>
+              <span class="badge" id="sp-sec-badge" style="background: var(--surface-muted); border: 1px solid var(--border);">SECTION A</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 14px; margin-top: 6px; flex-wrap: wrap; font-size: 13px; color: var(--text-secondary);">
+              <span>Roll No: <code id="sp-roll" style="font-size: 13px; font-weight: 600;">303302225001</code></span>
+              <span>&middot;</span>
+              <span id="sp-dept-sem">Department of Computer Science &amp; Engineering &middot; 3rd Semester</span>
+              <span>&middot;</span>
+              <span>SSIPMT Raipur (CSVTU Affiliated)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Academic Metadata Grid -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
+        <div class="stat-card" style="padding: 18px;">
+          <span class="stat-label">Class Serial Number (S.No)</span>
+          <div class="stat-value" id="sp-sno" style="font-size: 22px; margin-top: 4px;">#1</div>
+          <div class="stat-sub">Official Section Roster Position</div>
+        </div>
+        <div class="stat-card" style="padding: 18px;">
+          <span class="stat-label">University Roll Number</span>
+          <div class="stat-value" id="sp-roll-val" style="font-size: 18px; margin-top: 4px; font-family: monospace;">303302225001</div>
+          <div class="stat-sub">Authoritative Student Identifier</div>
+        </div>
+        <div class="stat-card" style="padding: 18px;">
+          <span class="stat-label">Enrollment Number</span>
+          <div class="stat-value" id="sp-enroll-val" style="font-size: 17px; margin-top: 4px;">CE9491</div>
+          <div class="stat-sub" id="sp-enroll-status">Verified Department Record</div>
+        </div>
+        <div class="stat-card" style="padding: 18px;">
+          <span class="stat-label">Admission Category</span>
+          <div class="stat-value" id="sp-admission-type" style="font-size: 17px; margin-top: 4px;">Regular CSVTU</div>
+          <div class="stat-sub" id="sp-source-sec-tag">Section A</div>
+        </div>
+      </div>
+
+      <!-- Institutional Affiliation Card -->
+      <div class="card" style="margin-bottom: 24px; padding: 18px 24px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; font-size: 13px;">
+          <div>
+            <span style="color: var(--text-muted); font-size: 11.5px; text-transform: uppercase; font-weight: 600;">Institution</span>
+            <div style="font-weight: 600; color: var(--text-primary); margin-top: 3px;">SSIPMT, Raipur</div>
+          </div>
+          <div>
+            <span style="color: var(--text-muted); font-size: 11.5px; text-transform: uppercase; font-weight: 600;">Department</span>
+            <div style="font-weight: 600; color: var(--text-primary); margin-top: 3px;">Computer Science &amp; Engineering</div>
+          </div>
+          <div>
+            <span style="color: var(--text-muted); font-size: 11.5px; text-transform: uppercase; font-weight: 600;">Academic Program</span>
+            <div style="font-weight: 600; color: var(--text-primary); margin-top: 3px;">B.Tech (CSVTU Affiliated)</div>
+          </div>
+          <div>
+            <span style="color: var(--text-muted); font-size: 11.5px; text-transform: uppercase; font-weight: 600;">Academic Session</span>
+            <div style="font-weight: 600; color: var(--text-primary); margin-top: 3px;">July – Dec 2026 (W.E.F. 27/07/2026)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 1. Previous Recorded Attendance (Historical Snapshot) -->
+      <div class="card" id="sp-historical-card" style="margin-bottom: 24px; padding: 24px; border-left: 4px solid var(--warning);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <h3 style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0;">Previous Recorded Attendance (Historical Snapshot)</h3>
+              <span class="badge" style="background: var(--warning-subtle); color: var(--warning); border: 1px solid var(--warning-border); font-size: 11px;">HISTORICAL SNAPSHOT</span>
+            </div>
+            <div style="font-size: 12.5px; color: var(--text-secondary); margin-top: 3px;" id="sp-historical-source-desc">
+              Source: Section-A Attendance Sheet (JULY&ndash;AUG 2026) &middot; Printed Date: <strong>25-08-2025</strong> <span style="color: var(--text-muted);">(Date Discrepancy / Requires HOD Verification)</span>
+            </div>
+          </div>
+          <span class="badge badge-ok" id="sp-historical-badge" style="font-size: 12px; padding: 6px 12px;">AT OR ABOVE THRESHOLD</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-top: 10px;">
+          <div class="drawer-info-card" style="padding: 16px;">
+            <div class="drawer-info-label">Recorded Snapshot Percentage</div>
+            <div class="drawer-info-val" id="sp-historical-pct" style="font-size: 28px; font-weight: 700; color: var(--primary);">97%</div>
+            <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">Official Attendance Register Record</div>
+          </div>
+          <div class="drawer-info-card" style="padding: 16px;">
+            <div class="drawer-info-label">Threshold Policy Compliance (&ge;75%)</div>
+            <div class="drawer-info-val" id="sp-historical-compliance" style="font-size: 18px; font-weight: 600; color: var(--success);">In Compliance</div>
+            <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;" id="sp-historical-sub">Centralized CSVTU 75% Criteria</div>
+          </div>
+          <div class="drawer-info-card" style="padding: 16px;">
+            <div class="drawer-info-label">Data Provenance Status</div>
+            <div class="drawer-info-val" id="sp-historical-prov" style="font-size: 16px; font-weight: 600;">Verified Match</div>
+            <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">Matched against HOD Roll List by Roll Number</div>
+          </div>
+        </div>
+        <div id="sp-historical-note" style="font-size: 12px; color: var(--text-muted); margin-top: 12px; line-height: 1.45; font-style: italic;">
+          * Note: This represents a historical attendance percentage snapshot from the previous attendance register. In accordance with departmental policy, underlying lecture counts are not reconstructed or fabricated without official session records.
+        </div>
+      </div>
+
+      <!-- 2. Current Session Attendance (Live Instructional Term) -->
+      <div class="card" style="margin-bottom: 24px; padding: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
+          <div>
+            <h3 style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0;">Current Academic Term Live Attendance</h3>
+            <div style="font-size: 12.5px; color: var(--text-secondary); margin-top: 2px;">Live instructional sessions recorded during Academic Session July&ndash;Dec 2026</div>
+          </div>
+          <span class="badge" style="background: var(--surface-muted); border: 1px solid var(--border); color: var(--text-secondary);">W.E.F. 27/07/2026</span>
+        </div>
+
+        <div id="sp-attendance-empty-state" style="padding: 24px 20px; text-align: center; background: var(--surface-muted); border-radius: var(--radius-md); border: 1px dashed var(--border);">
+          <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--surface); color: var(--text-muted); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 8px;">
+            <i data-lucide="clipboard-list" style="width: 20px; height: 20px;"></i>
+          </div>
+          <h4 style="font-size: 14.5px; font-weight: 600; color: var(--text-primary); margin: 0 0 4px;">No live instructional sessions recorded yet.</h4>
+          <p style="font-size: 12.5px; color: var(--text-secondary); max-width: 540px; margin: 0 auto; line-height: 1.5;">
+            Individual lecture records will automatically calculate and display here once faculty members conduct and record live classroom attendance.
+          </p>
+        </div>
+
+        <!-- Live Attendance Stats (Truthful zero baseline) -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-top: 16px;">
+          <div class="drawer-info-card" style="padding: 14px;">
+            <div class="drawer-info-label">Live Lectures Held</div>
+            <div class="drawer-info-val" id="sp-total-held" style="font-size: 18px;">0</div>
+          </div>
+          <div class="drawer-info-card" style="padding: 14px;">
+            <div class="drawer-info-label">Live Lectures Attended</div>
+            <div class="drawer-info-val" id="sp-attended" style="font-size: 18px; color: var(--success);">0</div>
+          </div>
+          <div class="drawer-info-card" style="padding: 14px;">
+            <div class="drawer-info-label">Live Lectures Missed</div>
+            <div class="drawer-info-val" id="sp-absent" style="font-size: 18px; color: var(--danger);">0</div>
+          </div>
+          <div class="drawer-info-card" style="padding: 14px;">
+            <div class="drawer-info-label">Live Attendance Rate</div>
+            <div class="drawer-info-val" id="sp-pct" style="font-size: 18px; font-weight: 700;">--</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Subject-Wise Attendance Breakdown (5 Official Curricular Modules) -->
+      <div class="card" style="margin-bottom: 24px; padding: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
+          <h3 style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0;">Registered Course Modules (B.Tech CSE &middot; 3rd Semester)</h3>
+          <span class="badge" style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border);">5 Official Subjects</span>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Subject Name</th>
+                <th>Subject Code</th>
+                <th>Assigned Faculty</th>
+                <th>Lectures Conducted</th>
+                <th>Attended</th>
+                <th>Attendance %</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="sp-courses-body">
+              <tr>
+                <td><strong>Operating System</strong></td>
+                <td><span style="color: var(--text-muted); font-size: 12.5px;">Pending CSVTU Code</span></td>
+                <td><strong>Devbrat Sahu</strong></td>
+                <td>0</td>
+                <td>0</td>
+                <td><span style="font-weight: 600; color: var(--text-muted);">--</span></td>
+                <td><span class="badge" style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border);">Pending Sessions</span></td>
+              </tr>
+              <tr>
+                <td><strong>Discrete Mathematics</strong></td>
+                <td><span style="color: var(--text-muted); font-size: 12.5px;">Pending CSVTU Code</span></td>
+                <td><strong>Pranjali Sharma</strong></td>
+                <td>0</td>
+                <td>0</td>
+                <td><span style="font-weight: 600; color: var(--text-muted);">--</span></td>
+                <td><span class="badge" style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border);">Pending Sessions</span></td>
+              </tr>
+              <tr>
+                <td><strong>OOPS in C++</strong></td>
+                <td><span style="color: var(--text-muted); font-size: 12.5px;">Pending CSVTU Code</span></td>
+                <td><strong>Vaibhav Chandrakar</strong></td>
+                <td>0</td>
+                <td>0</td>
+                <td><span style="font-weight: 600; color: var(--text-muted);">--</span></td>
+                <td><span class="badge" style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border);">Pending Sessions</span></td>
+              </tr>
+              <tr>
+                <td><strong>Web Technology</strong></td>
+                <td><span style="color: var(--text-muted); font-size: 12.5px;">Pending CSVTU Code</span></td>
+                <td><strong>Suman K. Swarnkar</strong></td>
+                <td>0</td>
+                <td>0</td>
+                <td><span style="font-weight: 600; color: var(--text-muted);">--</span></td>
+                <td><span class="badge" style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border);">Pending Sessions</span></td>
+              </tr>
+              <tr>
+                <td><strong>Digital Electronics</strong></td>
+                <td><span style="color: var(--text-muted); font-size: 12.5px;">Pending CSVTU Code</span></td>
+                <td><strong>Navdeep Khare</strong></td>
+                <td>0</td>
+                <td>0</td>
+                <td><span style="font-weight: 600; color: var(--text-muted);">--</span></td>
+                <td><span class="badge" style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border);">Pending Sessions</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Lecture / Session History Area -->
+      <div class="card" style="padding: 24px;">
+        <h3 style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0 0 16px;">Lecture Session History</h3>
+        <div style="padding: 28px 20px; text-align: center; color: var(--text-muted); font-size: 13.5px; background: var(--surface-muted); border-radius: var(--radius-md); border: 1px dashed var(--border);">
+          No lecture sessions conducted yet for 3rd Semester 2026.
+        </div>
       </div>
     </section>
 
@@ -806,8 +1583,8 @@
             <span class="stat-label">Overall Attendance</span>
             <div class="stat-icon-wrap"><i data-lucide="pie-chart" class="icon-sm"></i></div>
           </div>
-          <div class="stat-value">84.2%</div>
-          <div class="stat-sub">Across 4 semesters</div>
+          <div class="stat-value">81.0%</div>
+          <div class="stat-sub">Across Semester 2 batches</div>
         </div>
 
         <div class="stat-card">
@@ -815,8 +1592,8 @@
             <span class="stat-label">Average Class Strength</span>
             <div class="stat-icon-wrap"><i data-lucide="users" class="icon-sm"></i></div>
           </div>
-          <div class="stat-value">58</div>
-          <div class="stat-sub">Students per session</div>
+          <div class="stat-value">70</div>
+          <div class="stat-sub">Students per section batch</div>
         </div>
 
         <div class="stat-card">
@@ -834,7 +1611,7 @@
             <div class="stat-icon-wrap"><i data-lucide="alert-triangle" class="icon-sm"></i></div>
           </div>
           <div class="stat-value" style="color: var(--danger);">14</div>
-          <div class="stat-sub">Requires faculty counseling</div>
+          <div class="stat-sub">Flagged under 75% threshold</div>
         </div>
       </div>
 
@@ -853,8 +1630,8 @@
         <div class="chart-card">
           <div class="chart-header">
             <div>
-              <div class="chart-title">Attendance by Subject</div>
-              <div class="chart-sub">Average percentage per course</div>
+              <div class="chart-title">Attendance by Core Subject</div>
+              <div class="chart-sub">Average percentage per curriculum course</div>
             </div>
           </div>
           <canvas id="analyticsSubjectChart" height="180"></canvas>
@@ -871,40 +1648,45 @@
 
       <!-- Reports Filter Card -->
       <div class="card" style="margin-bottom: 20px;">
-        <div class="attendance-filters-grid">
+        <div class="report-filters-grid">
           <div class="form-group">
-            <label class="form-label">Course</label>
-            <select id="report-course" class="form-control">
-              <option>CSE301 — Data Structures & Algorithms</option>
-              <option>CSE401 — Computer Networks</option>
-              <option>ECE302 — Digital Signal Processing</option>
+            <label class="form-label" for="report-course">Course</label>
+            <select id="report-course" class="form-control" onchange="generateReport()">
+              <option value="All">All Courses (5 Modules)</option>
+              <option value="Operating System">Operating System (Devbrat Sahu)</option>
+              <option value="Discrete Mathematics">Discrete Mathematics (Pranjali Sharma)</option>
+              <option value="OOPS in C++">OOPS in C++ (Vaibhav Chandrakar)</option>
+              <option value="Web Technology">Web Technology (Suman K. Swarnkar)</option>
+              <option value="Digital Electronics">Digital Electronics (Navdeep Khare)</option>
             </select>
           </div>
 
           <div class="form-group">
-            <label class="form-label">Semester</label>
-            <select class="form-control">
-              <option>Semester 3</option>
-              <option>Semester 4</option>
+            <label class="form-label" for="report-sem">Semester</label>
+            <select id="report-sem" class="form-control" onchange="generateReport()">
+              <option value="3" selected>Semester 3</option>
             </select>
           </div>
 
           <div class="form-group">
-            <label class="form-label">Section</label>
-            <select class="form-control">
-              <option>Section A</option>
-              <option>Section B</option>
+            <label class="form-label" for="report-sec">Section</label>
+            <select id="report-sec" class="form-control" onchange="generateReport()">
+              <option value="All">All Sections (A, B, C, D)</option>
+              <option value="A">Section A (60)</option>
+              <option value="B">Section B (59)</option>
+              <option value="C">Section C (66)</option>
+              <option value="D">Section D (67)</option>
             </select>
           </div>
 
           <div class="form-group">
-            <label class="form-label">From Date</label>
-            <input type="date" id="report-from" class="form-control" />
+            <label class="form-label" for="report-from">From Date</label>
+            <input type="date" id="report-from" class="form-control" value="2026-08-01" onchange="generateReport()" />
           </div>
 
           <div class="form-group">
-            <label class="form-label">To Date</label>
-            <input type="date" id="report-to" class="form-control" />
+            <label class="form-label" for="report-to">To Date</label>
+            <input type="date" id="report-to" class="form-control" value="2026-09-02" onchange="generateReport()" />
           </div>
 
           <div class="form-group">
@@ -918,7 +1700,7 @@
                 <i data-lucide="download" class="icon-sm"></i>
                 <span>CSV</span>
               </button>
-              <button class="btn btn-outline" onclick="showToast('PDF Export feature ready for backend integration')" title="Export PDF Document">
+              <button class="btn btn-outline" onclick="showToast('Demo report prepared for export (ready for institutional reporting service)')" title="Export PDF Document">
                 <i data-lucide="file-down" class="icon-sm"></i>
                 <span>PDF</span>
               </button>
@@ -931,23 +1713,23 @@
       <div class="stats-grid" style="margin-bottom: 20px;">
         <div class="stat-card">
           <div class="stat-label">Sessions Conducted</div>
-          <div class="stat-value">48</div>
+          <div class="stat-value" id="report-kpi-sessions">40</div>
           <div class="stat-sub">Across selected date range</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Average Attendance</div>
-          <div class="stat-value" style="color: var(--primary);">83.4%</div>
-          <div class="stat-sub">Target: &ge; 75.0%</div>
+          <div class="stat-value" id="report-kpi-avg" style="color: var(--primary);">--</div>
+          <div class="stat-sub">Attendance Threshold: &ge; 75.0%</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Highest Student</div>
-          <div class="stat-value" style="color: var(--success);">94%</div>
-          <div class="stat-sub">Arjun Mehta (21CSE007)</div>
+          <div class="stat-label">Highest Compliance Student</div>
+          <div class="stat-value" id="report-kpi-high-val" style="color: var(--success);">--</div>
+          <div class="stat-sub" id="report-kpi-high-sub">Pending recorded sessions</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Lowest Student</div>
-          <div class="stat-value" style="color: var(--danger);">64%</div>
-          <div class="stat-sub">Suresh Verma (21CSE003)</div>
+          <div class="stat-label">Lowest Compliance Student</div>
+          <div class="stat-value" id="report-kpi-low-val" style="color: var(--danger);">--</div>
+          <div class="stat-sub" id="report-kpi-low-sub">Pending recorded sessions</div>
         </div>
       </div>
 
@@ -994,22 +1776,22 @@
     <section class="page" id="page-student-dashboard">
       <div class="page-header">
         <h2 class="page-title-main" id="stu-welcome-title">Good morning, Aryansh</h2>
-        <div class="page-subtitle" id="stu-welcome-subtitle">Roll No: 21CSE032 &middot; Computer Science &amp; Engineering &middot; Semester 2 (Section A)</div>
+        <div class="page-subtitle" id="stu-welcome-subtitle">Roll No: 303302225048 &middot; Class S.No #46 &middot; Computer Science &amp; Engineering &middot; Semester 3 (Section A)</div>
       </div>
 
       <!-- Eligibility Compliance Banner -->
-      <div class="card" id="stu-compliance-banner" style="background: var(--success-subtle); border-color: var(--success-border); margin-bottom: 20px;">
+      <div class="card" id="stu-compliance-banner" style="background: var(--surface-muted); border-color: var(--border); margin-bottom: 20px;">
         <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
-          <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--success); color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-            <i data-lucide="check" class="icon-sm"></i>
+          <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <i data-lucide="info" class="icon-sm"></i>
           </div>
           <div style="flex: 1;">
-            <div style="font-weight: 700; font-size: 14.5px; color: var(--success-hover);">Examination Eligibility Status: Eligible (&ge; 75%)</div>
+            <div style="font-weight: 700; font-size: 14.5px; color: var(--text-primary);">Academic Session Status: Pre-Commencement / Registered</div>
             <div style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">
-              Your current aggregate attendance rate of <strong>84.6%</strong> complies with university examination criteria. You have an attendance safety margin of <strong>9.6%</strong>.
+              Enrolled in B.Tech CSE Semester 3 (Academic Session July&ndash;Dec 2026, W.E.F. 27/07/2026). Previous Attendance Snapshot: <strong>97%</strong> (Section A Attendance Sheet).
             </div>
           </div>
-          <span class="badge badge-ok" style="font-size: 12px; padding: 5px 10px;">IN COMPLIANCE</span>
+          <span class="badge" style="background: var(--surface); border: 1px solid var(--border); font-size: 12px; padding: 5px 10px;">PRE-COMMENCEMENT</span>
         </div>
       </div>
 
@@ -1025,7 +1807,7 @@
               <span class="badge" style="background: var(--primary-subtle); color: var(--primary); border: 1px solid var(--primary-border); font-size: 11px;">TERM ADVISORY</span>
             </div>
             <div style="font-size: 13px; color: var(--text-secondary); margin-top: 4px; line-height: 1.5;" id="stu-advisory-desc">
-              Based on your attendance consistency over 39 completed instructional sessions, you are projected to conclude Semester 2 at <strong>86.8%</strong> overall attendance. <strong>Action Advisory:</strong> Engineering Mathematics (MAT105) is currently at 74% (1 class below the required 75% threshold). Attending the next 2 scheduled sessions will elevate this course to the compliant band.
+              <strong>Pre-Commencement:</strong> Departmental lectures for 3rd Semester 2026 are preparing to commence. Attend all upcoming instructional sessions in your 5 core modules (Operating System, Discrete Mathematics, OOPS in C++, Web Technology, Digital Electronics) to maintain compliant standing throughout the term.
             </div>
           </div>
         </div>
@@ -1037,30 +1819,30 @@
           <div class="student-gauge-circle">
             <svg viewBox="0 0 36 36" style="width: 120px; height: 120px; transform: rotate(-90deg);">
               <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--border)" stroke-width="3" />
-              <path id="stu-circle-prog" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--primary)" stroke-dasharray="84.6, 100" stroke-width="3" stroke-linecap="round" />
+              <path id="stu-circle-prog" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--primary)" stroke-dasharray="0, 100" stroke-width="3" stroke-linecap="round" />
             </svg>
             <div style="position: absolute; text-align: center;">
-              <span class="student-gauge-val" id="stu-gauge-pct">84.6%</span>
-              <div class="student-gauge-lbl">Overall Rate</div>
+              <span class="student-gauge-val" id="stu-gauge-pct">--</span>
+              <div class="student-gauge-lbl">Live Term Rate</div>
             </div>
           </div>
         </div>
 
         <div>
-          <h3 style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px;">Semester Attendance Overview</h3>
-          <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">Semester 2 Instructional Session Summary (Academic Year 2025&ndash;2026)</p>
+          <h3 style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px;">Semester 3 Attendance Overview</h3>
+          <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">B.Tech CSE &middot; 3rd Semester Instructional Sessions (Academic Session July&ndash;Dec 2026)</p>
           
           <div class="student-hero-stats">
             <div class="student-hstat-box">
-              <div class="student-hstat-val" style="color: var(--success);" id="stu-attended-count">33</div>
-              <div class="student-hstat-lbl">Sessions Attended</div>
+              <div class="student-hstat-val" style="color: var(--success);" id="stu-attended-count">0</div>
+              <div class="student-hstat-lbl">Live Sessions Attended</div>
             </div>
             <div class="student-hstat-box">
-              <div class="student-hstat-val" style="color: var(--danger);" id="stu-missed-count">6</div>
-              <div class="student-hstat-lbl">Sessions Missed</div>
+              <div class="student-hstat-val" style="color: var(--danger);" id="stu-missed-count">0</div>
+              <div class="student-hstat-lbl">Live Sessions Missed</div>
             </div>
             <div class="student-hstat-box">
-              <div class="student-hstat-val" style="color: var(--primary);" id="stu-total-count">39</div>
+              <div class="student-hstat-val" style="color: var(--primary);" id="stu-total-count">0</div>
               <div class="student-hstat-lbl">Total Conducted</div>
             </div>
           </div>
@@ -1068,11 +1850,11 @@
           <!-- Threshold safety indicator -->
           <div class="threshold-indicator-bar">
             <div class="threshold-legend">
-              <span style="color: var(--text-secondary);">University Minimum Requirement: 75%</span>
-              <span style="color: var(--success);">&check; 84.6% Safe Margin</span>
+              <span style="color: var(--text-secondary);">Attendance Threshold: 75%</span>
+              <span style="color: var(--text-muted);">Live tracking pending first lecture</span>
             </div>
             <div class="threshold-track">
-              <div class="threshold-fill" id="stu-threshold-fill" style="width: 84.6%; background: var(--primary);"></div>
+              <div class="threshold-fill" id="stu-threshold-fill" style="width: 0%; background: var(--primary);"></div>
               <div class="threshold-marker-line" style="left: 75%;" title="75% Minimum Threshold"></div>
             </div>
           </div>
@@ -1122,9 +1904,29 @@
 
     <!-- ───────── PAGE: HOD / DEPARTMENT OVERVIEW ───────── -->
     <section class="page" id="page-hod-overview">
-      <div class="page-header">
-        <h2 class="page-title-main">Department Administration &amp; Academic Governance</h2>
-        <div class="page-subtitle">Department of Computer Science &amp; Engineering &middot; Academic Overview &amp; Compliance Audit</div>
+      <!-- HOD Identity Header Card (Anand Sir · SSIPMT Raipur) -->
+      <div class="card hod-profile-header-card" style="margin-bottom: 20px; padding: 22px 26px; border: 1px solid var(--border); border-left: 4px solid var(--primary); background: var(--surface); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <div class="user-avatar" id="hod-header-avatar" style="width: 56px; height: 56px; font-size: 20px; font-weight: 700; background: var(--primary-subtle); color: var(--primary); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; border: 1px solid var(--primary-border);">AS</div>
+          <div>
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <h2 id="hod-greeting-title" style="font-size: 24px; font-weight: 700; color: var(--text-primary); margin: 0;">Good morning, Anand Sir</h2>
+              <span class="badge" style="background: var(--primary-subtle); color: var(--primary); border: 1px solid var(--primary-border); font-size: 12px; font-weight: 700;">Head of Department (HOD)</span>
+              <span class="badge" style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border); font-size: 11.5px;">SSIPMT, Raipur</span>
+            </div>
+            <div style="font-size: 13.5px; color: var(--text-secondary); margin-top: 4px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span>Department of Computer Science &amp; Engineering</span>
+              <span>&middot;</span>
+              <span>Shri Shankaracharya Institute of Professional Management &amp; Technology, Raipur</span>
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span class="badge" style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border); padding: 6px 12px; font-size: 12px;">
+            <i data-lucide="shield-check" class="icon-xs"></i>
+            <span>Department Governance Active</span>
+          </span>
+        </div>
       </div>
 
       <!-- Department Academic Oversight & Attendance Governance Briefing -->
@@ -1139,7 +1941,7 @@
               <span class="badge" style="background: var(--primary-subtle); color: var(--primary); border: 1px solid var(--primary-border); font-size: 11px;">TERM AUDIT BRIEFING</span>
             </div>
             <div style="font-size: 13px; color: var(--text-secondary); margin-top: 4px; line-height: 1.5;">
-              Department-wide aggregate attendance stands at <strong>84.2%</strong> across 142 completed sessions. 14 students are currently flagged under the 75% threshold across CSE (Sections A &amp; B) and IT (Section A). Scheduled faculty reviews and advisory notices have stabilized attendance retention across all 5 core curriculum modules.
+              Department-wide curriculum comprises <strong>5 Official Modules</strong> across 252 enrolled students in CSE Sections A, B, C, and D. The academic session is in pre-commencement status (W.E.F. 27/07/2026). Previous attendance snapshot is active for Section A (60 students).
             </div>
           </div>
         </div>
@@ -1149,33 +1951,33 @@
       <div class="hod-kpi-grid">
         <div class="hod-kpi-card">
           <div class="hod-kpi-lbl">Total Enrolled</div>
-          <div class="hod-kpi-val" id="hod-stat-students">169</div>
-          <div class="hod-kpi-sub">CSE (A, B) &amp; IT (A)</div>
+          <div class="hod-kpi-val" id="hod-stat-students">252</div>
+          <div class="hod-kpi-sub">CSE Sections A, B, C, D</div>
         </div>
         <div class="hod-kpi-card">
-          <div class="hod-kpi-lbl">Faculty Members</div>
-          <div class="hod-kpi-val">18</div>
-          <div class="hod-kpi-sub">Active instructors</div>
+          <div class="hod-kpi-lbl">Official Faculty</div>
+          <div class="hod-kpi-val">5</div>
+          <div class="hod-kpi-sub">Assigned Instructors</div>
         </div>
         <div class="hod-kpi-card">
-          <div class="hod-kpi-lbl">Overall Attendance</div>
-          <div class="hod-kpi-val" style="color: var(--primary);">84.2%</div>
-          <div class="hod-kpi-sub">&ge; 75% department target</div>
+          <div class="hod-kpi-lbl">Live Overall Rate</div>
+          <div class="hod-kpi-val" style="color: var(--primary);">--</div>
+          <div class="hod-kpi-sub">Pre-commencement (0 sessions)</div>
         </div>
         <div class="hod-kpi-card">
-          <div class="hod-kpi-lbl">Students At Risk</div>
-          <div class="hod-kpi-val" style="color: var(--danger);">14</div>
-          <div class="hod-kpi-sub">&lt; 75% threshold</div>
+          <div class="hod-kpi-lbl">Live Students At Risk</div>
+          <div class="hod-kpi-val" style="color: var(--danger);">0</div>
+          <div class="hod-kpi-sub">&lt; 75% threshold (0 live lectures)</div>
         </div>
         <div class="hod-kpi-card">
-          <div class="hod-kpi-lbl">Sessions Held</div>
-          <div class="hod-kpi-val">142</div>
+          <div class="hod-kpi-lbl">Live Sessions Held</div>
+          <div class="hod-kpi-val">0</div>
           <div class="hod-kpi-sub">Completed this term</div>
         </div>
         <div class="hod-kpi-card">
-          <div class="hod-kpi-lbl">Record Coverage</div>
-          <div class="hod-kpi-val" style="color: var(--success);">98.4%</div>
-          <div class="hod-kpi-sub">Sessions logged on time</div>
+          <div class="hod-kpi-lbl">Sec-A Snapshot Avg</div>
+          <div class="hod-kpi-val" style="color: var(--warning);">64.8%</div>
+          <div class="hod-kpi-sub">Previous register record (60 students)</div>
         </div>
       </div>
 
@@ -1221,6 +2023,49 @@
         </div>
       </div>
 
+      <!-- ── PHASE 5: DEPARTMENT MASTER TIMETABLE (HOD OVERSIGHT) ──── -->
+      <div class="card" style="margin-bottom: 24px; padding: 22px 24px; border: 1px solid var(--border); background: var(--surface);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 14px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <h3 style="font-size: 17px; font-weight: 700; color: var(--text-primary); margin: 0;">Department Master Timetable &middot; 3rd Semester CSE</h3>
+              <span class="badge" style="background: var(--primary-subtle); color: var(--primary); border: 1px solid var(--primary-border); font-size: 11.5px; font-weight: 600;">W.E.F. 17/08/2026</span>
+              <span class="badge" style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border); font-size: 11px;">Sections A &amp; B Active</span>
+            </div>
+            <div style="font-size: 13px; color: var(--text-secondary); margin-top: 3px;">
+              Authoritative instructional schedule &middot; Computer Science &amp; Engineering &middot; SSIPMT, Raipur
+            </div>
+          </div>
+
+          <!-- Section Switcher for HOD Master Timetable -->
+          <div style="display: flex; gap: 6px;">
+            <button type="button" class="btn btn-sm btn-primary" id="hod-tt-btn-secA" onclick="renderHodMasterTimetable('A')">Section A Timetable</button>
+            <button type="button" class="btn btn-sm btn-outline" id="hod-tt-btn-secB" onclick="renderHodMasterTimetable('B')">Section B Timetable</button>
+          </div>
+        </div>
+
+        <div class="table-responsive" style="max-height: 480px; overflow-y: auto;">
+          <table class="data-table" id="hod-master-timetable-table">
+            <thead>
+              <tr>
+                <th style="width: 100px;">Day</th>
+                <th>Period I<br><small style="color:var(--text-muted); font-size: 11px;">09:00–09:50</small></th>
+                <th>Period II<br><small style="color:var(--text-muted); font-size: 11px;">09:50–10:40</small></th>
+                <th>Period III<br><small style="color:var(--text-muted); font-size: 11px;">10:40–11:30</small></th>
+                <th>Period IV<br><small style="color:var(--text-muted); font-size: 11px;">11:30–12:20</small></th>
+                <th>Period V<br><small style="color:var(--text-muted); font-size: 11px;">13:00–13:50</small></th>
+                <th>Period VI<br><small style="color:var(--text-muted); font-size: 11px;">13:50–14:40</small></th>
+                <th>Period VII<br><small style="color:var(--text-muted); font-size: 11px;">14:40–15:20</small></th>
+                <th>Period VIII<br><small style="color:var(--text-muted); font-size: 11px;">15:20–16:00</small></th>
+              </tr>
+            </thead>
+            <tbody id="hod-master-timetable-body">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- Flagged Students At Risk Department Governance -->
       <div class="card">
         <div class="chart-header">
@@ -1228,7 +2073,7 @@
             <div class="chart-title">Flagged Students Below 75% Attendance</div>
             <div class="chart-sub">Academic warning review &amp; examination eligibility intervention</div>
           </div>
-          <button class="btn btn-primary btn-sm" onclick="showToast('Formal attendance notices dispatched to all 14 students', 'success')">
+          <button class="btn btn-primary btn-sm" onclick="showToast('Demo notices prepared for all 14 flagged students', 'info')">
             <i data-lucide="send" class="icon-sm"></i>
             <span>Dispatch Notices to All Flagged</span>
           </button>
@@ -1263,8 +2108,8 @@
       <div class="drawer-title-group">
         <div class="drawer-avatar" id="d-avatar">AS</div>
         <div>
-          <div class="drawer-name" id="d-name">Aarav Sharma</div>
-          <div class="drawer-sub" id="d-roll">21CSE001 · Computer Science</div>
+          <div class="drawer-name" id="d-name">Aryansh Sharma</div>
+          <div class="drawer-sub" id="d-roll">21CSE032 · Computer Science &amp; Engineering</div>
         </div>
       </div>
       <button class="drawer-close-btn" onclick="closeStudentDrawer()" aria-label="Close drawer">
@@ -1283,15 +2128,15 @@
           </div>
           <div class="drawer-info-card">
             <div class="drawer-info-label">Semester & Section</div>
-            <div class="drawer-info-val" id="d-sem-sec">Sem 3 · Sec A</div>
+            <div class="drawer-info-val" id="d-sem-sec">Sem 2 · Sec A</div>
           </div>
           <div class="drawer-info-card">
             <div class="drawer-info-label">Roll Number</div>
-            <div class="drawer-info-val" id="d-roll-detail">21CSE001</div>
+            <div class="drawer-info-val" id="d-roll-detail">21CSE032</div>
           </div>
           <div class="drawer-info-card">
             <div class="drawer-info-label">Email</div>
-            <div class="drawer-info-val" id="d-email">aarav@student.edu</div>
+            <div class="drawer-info-val" id="d-email">aryansh.sharma@student.edu</div>
           </div>
         </div>
       </div>
@@ -1303,23 +2148,23 @@
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <span style="font-weight: 600; font-size: 13px;">Term Attendance</span>
             <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="font-weight: 700; font-size: 15px;" id="d-pct-text">85%</span>
-              <span class="badge badge-ok" id="d-status-badge">REGULAR</span>
+              <span style="font-weight: 700; font-size: 15px;" id="d-pct-text">82.5%</span>
+              <span class="badge badge-ok" id="d-status-badge">COMPLIANT</span>
             </div>
           </div>
           <div class="drawer-progress-bar">
-            <div class="drawer-progress-fill" id="d-pct-bar" style="width: 85%;"></div>
+            <div class="drawer-progress-fill" id="d-pct-bar" style="width: 82.5%; background: var(--primary);"></div>
           </div>
         </div>
 
         <div class="drawer-info-grid" style="margin-top: 4px;">
           <div class="drawer-info-card">
             <div class="drawer-info-label">Attended Classes</div>
-            <div class="drawer-info-val" id="d-attended" style="color: var(--success);">34</div>
+            <div class="drawer-info-val" id="d-attended" style="color: var(--success);">33</div>
           </div>
           <div class="drawer-info-card">
             <div class="drawer-info-label">Absent Classes</div>
-            <div class="drawer-info-val" id="d-absent" style="color: var(--danger);">6</div>
+            <div class="drawer-info-val" id="d-absent" style="color: var(--danger);">7</div>
           </div>
           <div class="drawer-info-card">
             <div class="drawer-info-label">Last Present Date</div>
@@ -1327,13 +2172,13 @@
           </div>
           <div class="drawer-info-card">
             <div class="drawer-info-label">Absence Streak</div>
-            <div class="drawer-info-val" id="d-streak">0 Classes</div>
+            <div class="drawer-info-val" id="d-streak">0 Classes (Regular)</div>
           </div>
         </div>
 
         <!-- Concise Academic Attendance Advisory -->
         <div class="drawer-advisory" id="d-advisory" style="margin-top: 12px; padding: 10px 12px; border-radius: var(--radius-md); background: var(--surface-muted); border: 1px solid var(--border); font-size: 12px; color: var(--text-secondary); line-height: 1.45;">
-          Student is currently maintaining a compliant attendance buffer above the 75% threshold.
+          Student maintains a compliant attendance buffer of <strong>+7.5%</strong> above the 75% threshold (33/40 sessions attended; <strong>4</strong> additional absences permitted before falling below the threshold).
         </div>
       </div>
 
