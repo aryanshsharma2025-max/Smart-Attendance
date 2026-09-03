@@ -633,7 +633,7 @@ function updateTakeAttendanceHeader() {
   const conducted = getCompletedLecturesCount(subj, sec);
   const isRecording = ACTIVE_LECTURE && ACTIVE_LECTURE.subject === subj && ACTIVE_LECTURE.section === sec && ACTIVE_LECTURE.status === 'recording';
   const currentLec = isRecording ? `Lecture ${ACTIVE_LECTURE.lectureNumber}` : '—';
-  const nextLec = `Lecture ${conducted + 1}`;
+  const nextLec = isRecording ? '—' : `Lecture ${conducted + 1}`;
 
   const hdrSubject = document.getElementById('att-hdr-subject');
   const hdrSection = document.getElementById('att-hdr-section');
@@ -726,7 +726,9 @@ function updateFacultyDashboardLiveMetrics() {
   }
 
   const nextLecEl = document.getElementById('dash-lec-next');
-  if (nextLecEl) nextLecEl.textContent = `Lecture ${metrics.nextLecture}`;
+  if (nextLecEl) {
+    nextLecEl.textContent = isRecording ? '—' : `Lecture ${metrics.nextLecture}`;
+  }
 
   const statusEl = document.getElementById('dash-lec-status');
   const statusSubEl = document.getElementById('dash-lec-status-sub');
@@ -783,13 +785,13 @@ function getRosterForClass(dept, sem, sec) {
   const targetSem = parseInt(sem) || 3;
   const matched = STUDENTS.filter(s => s.dept === dept && s.sem === targetSem && (!sec || s.sec === sec));
   if (matched.length > 0) {
-    return matched.map(s => ({ ...s, status: 'present' }));
+    return matched.map(s => ({ ...s, status: 'pending' }));
   }
   const deptStudents = STUDENTS.filter(s => s.dept === dept);
   if (deptStudents.length > 0) {
-    return deptStudents.map(s => ({ ...s, status: 'present' }));
+    return deptStudents.map(s => ({ ...s, status: 'pending' }));
   }
-  return STUDENTS.map(s => ({ ...s, status: 'present' }));
+  return STUDENTS.map(s => ({ ...s, status: 'pending' }));
 }
 
 // ── 4. ATTENDANCE RECORDING STATE ────────────────────────────
@@ -1075,23 +1077,43 @@ function loadStudentsAction() {
     IT: 'Information Technology'
   };
 
+  // Authorization check for faculty
+  if (CURRENT_USER && CURRENT_USER.role === 'faculty') {
+    if (CURRENT_USER.assignedSections && !CURRENT_USER.assignedSections.includes(sec)) {
+      showToast(`Section ${sec} is not assigned to ${CURRENT_USER.facultyName}. Official allocation is pending.`, 'danger');
+      if (secSelect) secSelect.value = 'A';
+      return;
+    }
+  }
+
   const faculty = (CURRENT_USER && CURRENT_USER.role === 'faculty') ? CURRENT_USER.facultyName : getFacultyForSubject(subject);
   const facultyId = (CURRENT_USER && CURRENT_USER.role === 'faculty') ? CURRENT_USER.facultyId : ('faculty_' + faculty.toLowerCase().replace(/[^a-z]/g, ''));
   const effectiveSubject = (CURRENT_USER && CURRENT_USER.role === 'faculty') ? CURRENT_USER.subjectName : subject;
   const lectureNo = getNextLectureNumber(effectiveSubject, sec);
   const nowTimeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
-  // Phase 5A: Create Active Lecture Session in recording status
+  // Phase 6: Standardized Live Session Model (Status: recording)
   ACTIVE_LECTURE = {
-    id: `lec-${Date.now()}`,
-    subject: effectiveSubject,
-    faculty,
-    facultyId,
+    id: `sess-${Date.now()}`,
+    subjectId: (CURRENT_USER && CURRENT_USER.subjectId) || 'operating-system',
+    subjectName: effectiveSubject,
+    subjectCodeShort: (CURRENT_USER && CURRENT_USER.subjectCodeShort) || 'OS',
+    facultyId: facultyId,
+    facultyName: faculty,
     section: sec,
+    semester: parseInt(sem) || 3,
+    date: date,
+    timetableEntryId: ACTIVE_LECTURE && ACTIVE_LECTURE.timetableEntryId ? ACTIVE_LECTURE.timetableEntryId : null,
+    period: ACTIVE_LECTURE && ACTIVE_LECTURE.period ? ACTIVE_LECTURE.period : 'I',
+    periodStart: ACTIVE_LECTURE && ACTIVE_LECTURE.periodStart ? ACTIVE_LECTURE.periodStart : 1,
+    periodEnd: ACTIVE_LECTURE && ACTIVE_LECTURE.periodEnd ? ACTIVE_LECTURE.periodEnd : 1,
+    startTime: ACTIVE_LECTURE && ACTIVE_LECTURE.startTime ? ACTIVE_LECTURE.startTime : '09:00 AM',
+    endTime: ACTIVE_LECTURE && ACTIVE_LECTURE.endTime ? ACTIVE_LECTURE.endTime : '09:50 AM',
     lectureNumber: lectureNo,
     status: 'recording',
+    completedAt: null,
     startedAt: nowTimeStr,
-    startTime: Date.now()
+    startTimeTs: Date.now()
   };
 
   ATTENDANCE_STATE.classInfo = {
@@ -1124,15 +1146,57 @@ function loadStudentsAction() {
 }
 
 function getAttendanceMetrics() {
-  const students = ATTENDANCE_STATE.students;
+  const students = ATTENDANCE_STATE.students || [];
   const total = students.length;
   const presentCount = students.filter(s => s.status === 'present').length;
-  const absentCount = total - presentCount;
+  const absentCount = students.filter(s => s.status === 'absent').length;
+  const pendingCount = students.filter(s => s.status === 'pending' || !s.status).length;
+  const markedCount = presentCount + absentCount;
   const selectedCount = ATTENDANCE_STATE.mode === 'present' ? presentCount : absentCount;
   const presentPct = total > 0 ? Number(((presentCount / total) * 100).toFixed(1)) : 0;
   const absentPct = total > 0 ? Number(((absentCount / total) * 100).toFixed(1)) : 0;
 
-  return { total, presentCount, absentCount, selectedCount, presentPct, absentPct };
+  return { total, presentCount, absentCount, pendingCount, markedCount, selectedCount, presentPct, absentPct };
+}
+
+function markAllPresent() {
+  if (!ATTENDANCE_STATE.students) return;
+  ATTENDANCE_STATE.students.forEach(s => s.status = 'present');
+  renderAttendanceView();
+  showToast('All students marked PRESENT');
+}
+
+function markAllAbsent() {
+  if (!ATTENDANCE_STATE.students) return;
+  ATTENDANCE_STATE.students.forEach(s => s.status = 'absent');
+  renderAttendanceView();
+  showToast('All students marked ABSENT');
+}
+
+function resetAllPending() {
+  if (!ATTENDANCE_STATE.students) return;
+  ATTENDANCE_STATE.students.forEach(s => s.status = 'pending');
+  renderAttendanceView();
+  showToast('All student marks reset to PENDING');
+}
+
+function setStudentAttendanceStatus(studentId, status) {
+  const s = (ATTENDANCE_STATE.students || []).find(st => st.id === studentId || st.roll === studentId);
+  if (s) {
+    s.status = status;
+    renderAttendanceView();
+  }
+}
+
+function cancelLectureAction() {
+  ACTIVE_LECTURE = null;
+  ATTENDANCE_STATE.status = 'initial';
+  ATTENDANCE_STATE.students = [];
+  ATTENDANCE_STATE.savedSummary = null;
+  renderAttendanceView();
+  updateTakeAttendanceHeader();
+  updateFacultyDashboardLiveMetrics();
+  showToast('Lecture session cancelled. Temporary attendance discarded.', 'info');
 }
 
 function renderAttendanceView() {
@@ -1224,29 +1288,31 @@ function renderLoadedState() {
         <span class="att-roster-tag" style="background: var(--primary); color: #fff; border-color: var(--primary); font-weight: 700;"><i data-lucide="hash" class="icon-sm"></i> <strong>${escapeHtml(info.lectureNoDisplay || 'Lecture No. 1')}</strong></span>
         <span class="att-roster-tag"><i data-lucide="calendar" class="icon-sm"></i> <strong>${escapeHtml(info.date)}</strong></span>
       </div>
-      <button class="btn btn-outline btn-sm" onclick="resetAttendanceAction()">
+      <button class="btn btn-outline btn-sm" onclick="cancelLectureAction()">
         <i data-lucide="x" class="icon-sm"></i>
-        <span>Change Class</span>
+        <span>Cancel Lecture</span>
       </button>
     </div>
 
-    <!-- Action Status Ribbon -->
+    <!-- Action Status Ribbon (Phase 6: Marked vs Pending Counter) -->
     <div class="att-action-ribbon">
       <div class="att-ribbon-item">
         <span class="att-ribbon-lbl">Enrolled Class</span>
         <span class="att-ribbon-val" id="cnt-total">${metrics.total} Students</span>
       </div>
       <div class="att-ribbon-item">
+        <span class="att-ribbon-lbl">Resolution Status</span>
+        <span class="att-ribbon-val" id="cnt-resolution" style="color: ${metrics.pendingCount === 0 ? 'var(--success)' : 'var(--warning)'}; font-weight: 700;">
+          ${metrics.markedCount} Marked &middot; ${metrics.pendingCount} Pending
+        </span>
+      </div>
+      <div class="att-ribbon-item">
         <span class="att-ribbon-lbl">Marked Present</span>
-        <span class="att-ribbon-val" id="cnt-present" style="color: var(--success);">${metrics.presentCount} (${metrics.presentPct}%)</span>
+        <span class="att-ribbon-val" id="cnt-present" style="color: var(--success);">${metrics.presentCount}</span>
       </div>
       <div class="att-ribbon-item">
         <span class="att-ribbon-lbl">Marked Absent</span>
-        <span class="att-ribbon-val" id="cnt-absent" style="color: var(--danger);">${metrics.absentCount} (${metrics.absentPct}%)</span>
-      </div>
-      <div class="att-ribbon-item">
-        <span class="att-ribbon-lbl">Attendance Rate</span>
-        <span class="att-ribbon-val" id="cnt-rate" style="color: ${metrics.presentPct >= ATTENDANCE_THRESHOLD ? 'var(--primary)' : 'var(--danger)'};">${metrics.presentPct}%</span>
+        <span class="att-ribbon-val" id="cnt-absent" style="color: var(--danger);">${metrics.absentCount}</span>
       </div>
       <div class="att-ribbon-item att-ribbon-mode">
         <span class="att-ribbon-lbl">Marking Mode</span>
@@ -1254,8 +1320,8 @@ function renderLoadedState() {
       </div>
     </div>
 
-    <!-- Attendance Controls Toolbar -->
-    <div class="att-controls-bar">
+    <!-- Attendance Controls Toolbar (Phase 6: Bulk Actions) -->
+    <div class="att-controls-bar" style="flex-wrap: wrap; gap: 10px;">
       <div class="att-modes-wrapper">
         <span class="att-mode-label">Mode:</span>
         <div class="mode-segmented-control" role="group" aria-label="Attendance marking mode">
@@ -1270,21 +1336,22 @@ function renderLoadedState() {
         </div>
       </div>
 
-      <div class="att-bulk-group">
-        <button type="button" class="btn btn-outline btn-sm" onclick="bulkSelectAll()" title="Select all students">
-          <i data-lucide="check-square" class="icon-sm"></i>
-          <span>Select All</span>
+      <div class="att-bulk-group" style="display: flex; gap: 6px; flex-wrap: wrap;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="markAllPresent()" title="Mark all students Present">
+          <i data-lucide="check-check" class="icon-sm" style="color: var(--success);"></i>
+          <span>Mark All Present</span>
         </button>
-        <button type="button" class="btn btn-outline btn-sm" onclick="bulkClearAll()" title="Clear all selections">
-          <i data-lucide="square" class="icon-sm"></i>
-          <span>Clear All</span>
+        <button type="button" class="btn btn-outline btn-sm" onclick="markAllAbsent()" title="Mark all students Absent">
+          <i data-lucide="x-circle" class="icon-sm" style="color: var(--danger);"></i>
+          <span>Mark All Absent</span>
         </button>
-        <span class="selected-count-pill" id="cnt-selected-pill">
-          Selected: ${metrics.selectedCount}
-        </span>
+        <button type="button" class="btn btn-outline btn-sm" onclick="resetAllPending()" title="Reset all to Pending">
+          <i data-lucide="rotate-ccw" class="icon-sm"></i>
+          <span>Reset All Pending</span>
+        </button>
       </div>
 
-      <div class="search-wrapper" style="max-width: 260px;">
+      <div class="search-wrapper" style="max-width: 240px; margin-left: auto;">
         <i data-lucide="search" class="search-icon-inside"></i>
         <input type="text" class="search-box" style="padding-top: 6px; padding-bottom: 6px;" placeholder="Search student or roll no…" value="${escapeHtml(ATTENDANCE_STATE.searchQuery)}" oninput="filterAttendanceTable(this.value)" />
       </div>
@@ -1295,8 +1362,8 @@ function renderLoadedState() {
       <div>
         <strong>Marking mode: ${isMarkPresent ? 'Present' : 'Absent'}</strong> —
         ${isMarkPresent
-          ? 'Checked students will be recorded as present.'
-          : 'Checked students will be recorded as absent.'
+          ? 'Checked students will be recorded as present. All students must be resolved before saving.'
+          : 'Checked students will be recorded as absent. All students must be resolved before saving.'
         }
       </div>
       <span class="banner-pill">${isMarkPresent ? 'Active: Checked = Present' : 'Active: Checked = Absent'}</span>
@@ -1308,11 +1375,10 @@ function renderLoadedState() {
         <thead>
           <tr>
             <th style="width: 50px;">#</th>
-            <th style="width: 130px;">Roll Number</th>
+            <th style="width: 140px;">Roll Number</th>
             <th>Student Name</th>
-            <th style="width: 140px;">Attendance %</th>
-            <th style="width: 140px;">Last Present</th>
-            <th style="width: 130px;">Status</th>
+            <th style="width: 130px; text-align: center;">Status</th>
+            <th style="width: 120px; text-align: center;">Quick Action</th>
             <th class="col-mark">
               <label class="custom-checkbox-wrap" title="${isMarkPresent ? 'Toggle Select All Present' : 'Toggle Select All Absent'}">
                 <input type="checkbox" id="att-master-checkbox" class="att-checkbox-input" onchange="toggleHeaderCheckbox(this.checked)" />
@@ -1327,14 +1393,17 @@ function renderLoadedState() {
       </table>
     </div>
 
-    <!-- Save Attendance Bar -->
+    <!-- Save Attendance Bar with Validation State -->
     <div class="att-save-bar">
       <div class="att-save-info">
         <i data-lucide="info" class="icon-sm" style="color: var(--primary); vertical-align: middle;"></i>
-        <span>Session Summary: <strong id="save-summary-txt">${metrics.presentCount} Present, ${metrics.absentCount} Absent</strong> (${metrics.presentPct}% overall)</span>
+        <span>Session Summary: <strong id="save-summary-txt">${metrics.presentCount} Present &middot; ${metrics.absentCount} Absent</strong> &middot; <span style="color: ${metrics.pendingCount === 0 ? 'var(--success)' : 'var(--warning)'}; font-weight: 700;">${metrics.pendingCount} Pending</span></span>
       </div>
-      <div class="att-save-actions">
-        <button class="btn btn-outline" onclick="resetAttendanceAction()">Cancel</button>
+      <div class="att-save-actions" style="display: flex; gap: 8px;">
+        <button class="btn btn-outline btn-danger" onclick="cancelLectureAction()">
+          <i data-lucide="x" class="icon-sm"></i>
+          <span>Cancel Lecture</span>
+        </button>
         <button class="btn btn-primary" onclick="saveAttendanceAction()">
           <i data-lucide="save" class="icon-sm"></i>
           <span>Save Attendance</span>
@@ -1348,7 +1417,7 @@ function renderTableRows(students, isMarkPresent) {
   if (!students || students.length === 0) {
     return `
       <tr>
-        <td colspan="7" style="text-align: center; padding: 32px; color: var(--text-muted);">
+        <td colspan="6" style="text-align: center; padding: 32px; color: var(--text-muted);">
           No enrolled students match your search filter.
         </td>
       </tr>
@@ -1357,28 +1426,36 @@ function renderTableRows(students, isMarkPresent) {
 
   return students.map((s, index) => {
     const isChecked = isMarkPresent ? s.status === 'present' : s.status === 'absent';
-    const pct = (s.pct !== undefined && s.pct !== null) ? s.pct : null;
-    const pctDisplay = pct !== null ? `${pct}%` : '--';
-    const lastDate = s.lastPresent || 'Pending Session';
+    let statusBadge = '';
+    let rowClass = 'att-row ';
+
+    if (s.status === 'pending' || !s.status) {
+      statusBadge = `<span class="badge badge-pending">PENDING</span>`;
+      rowClass += 'row-is-pending';
+    } else if (s.status === 'present') {
+      statusBadge = `<span class="badge badge-present">PRESENT</span>`;
+      rowClass += 'row-is-present';
+    } else {
+      statusBadge = `<span class="badge badge-absent">ABSENT</span>`;
+      rowClass += 'row-is-absent';
+    }
 
     return `
-      <tr class="att-row ${s.status === 'present' ? 'row-is-present' : 'row-is-absent'}" id="att-row-${s.id}" onclick="handleRowClick(${s.id}, event)">
+      <tr class="${rowClass}" id="att-row-${s.id}" onclick="handleRowClick(${s.id}, event)">
         <td>${index + 1}</td>
         <td><code>${escapeHtml(s.roll)}</code></td>
         <td>
-          <button type="button" class="student-link-btn" onclick="openStudentProfile(${s.id}); event.stopPropagation();">
+          <button type="button" class="student-link-btn" onclick="openStudentProfile('${escapeHtml(s.roll)}'); event.stopPropagation();">
             <span>${escapeHtml(s.name)}</span>
             <i data-lucide="external-link" style="width: 12px; height: 12px; opacity: 0.6;"></i>
           </button>
         </td>
-        <td>
-          <span style="font-weight: 600; color: ${pct !== null ? (pct >= ATTENDANCE_THRESHOLD ? 'var(--text-primary)' : 'var(--danger)') : 'var(--text-muted)'};">${pctDisplay}</span>
-        </td>
-        <td style="color: var(--text-secondary); font-size: 13px;">${escapeHtml(lastDate)}</td>
-        <td>
-          <span class="badge ${s.status === 'present' ? 'badge-present' : 'badge-absent'}" id="badge-${s.id}">
-            ${s.status.toUpperCase()}
-          </span>
+        <td style="text-align: center;" id="badge-td-${s.id}">${statusBadge}</td>
+        <td style="text-align: center;" onclick="event.stopPropagation()">
+          <div style="display: inline-flex; gap: 4px;">
+            <button type="button" class="att-quick-mark-btn ${s.status === 'present' ? 'att-quick-p active' : 'btn-outline'}" onclick="setStudentAttendanceStatus('${escapeHtml(s.roll)}', 'present')" title="Mark Present">P</button>
+            <button type="button" class="att-quick-mark-btn ${s.status === 'absent' ? 'att-quick-a active' : 'btn-outline'}" onclick="setStudentAttendanceStatus('${escapeHtml(s.roll)}', 'absent')" title="Mark Absent">A</button>
+          </div>
         </td>
         <td class="col-mark" onclick="event.stopPropagation()">
           <label class="custom-checkbox-wrap">
@@ -1386,7 +1463,7 @@ function renderTableRows(students, isMarkPresent) {
               class="att-checkbox-input att-student-checkbox"
               data-id="${s.id}"
               id="chk-${s.id}"
-              ${isChecked ? 'checked' : ''}
+              ${isChecked && s.status !== 'pending' ? 'checked' : ''}
               onchange="handleCheckboxChange(${s.id}, this.checked)"
               aria-label="Mark attendance for ${escapeHtml(s.name)}"
             />
@@ -1474,9 +1551,7 @@ function handleCheckboxChange(studentId, isChecked) {
     student.status = isChecked ? 'absent' : 'present';
   }
 
-  updateStudentRowDOM(student);
-  updateLiveSummaryDOM();
-  updateMasterCheckboxState();
+  renderAttendanceView();
 }
 
 function handleRowClick(studentId, event) {
@@ -1487,11 +1562,15 @@ function handleRowClick(studentId, event) {
   const student = ATTENDANCE_STATE.students.find(s => s.id === studentId);
   if (!student) return;
 
-  student.status = student.status === 'present' ? 'absent' : 'present';
+  if (student.status === 'pending') {
+    student.status = 'present';
+  } else if (student.status === 'present') {
+    student.status = 'absent';
+  } else {
+    student.status = 'present';
+  }
 
-  updateStudentRowDOM(student);
-  updateLiveSummaryDOM();
-  updateMasterCheckboxState();
+  renderAttendanceView();
 }
 
 function updateStudentRowDOM(student) {
@@ -1620,9 +1699,17 @@ function saveAttendanceAction() {
     return;
   }
 
+  if (!ACTIVE_LECTURE || ACTIVE_LECTURE.status !== 'recording') {
+    showToast('No active lecture in recording status', 'warning');
+    return;
+  }
+
   const metrics = getAttendanceMetrics();
-  const now = new Date();
-  const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  if (metrics.pendingCount > 0) {
+    showToast(`Cannot save attendance: ${metrics.pendingCount} student(s) still have pending status. Mark all students Present or Absent before saving.`, 'warning');
+    return;
+  }
+
   const facultyName = (CURRENT_USER && CURRENT_USER.role === 'faculty')
     ? CURRENT_USER.facultyName
     : (ATTENDANCE_STATE.classInfo.faculty || getFacultyForSubject(ATTENDANCE_STATE.classInfo.subject));
@@ -1634,37 +1721,60 @@ function saveAttendanceAction() {
     : ATTENDANCE_STATE.classInfo.subject;
   const sectionName = ATTENDANCE_STATE.classInfo.sec;
 
-  const lectureNo = (ACTIVE_LECTURE && ACTIVE_LECTURE.lectureNumber) ||
-    ATTENDANCE_STATE.classInfo.lectureNumber ||
-    getNextLectureNumber(effectiveSubject, sectionName);
+  // Authorization Check
+  if (CURRENT_USER && CURRENT_USER.role === 'faculty') {
+    if (CURRENT_USER.assignedSections && !CURRENT_USER.assignedSections.includes(sectionName)) {
+      showToast(`Section ${sectionName} is not assigned to ${CURRENT_USER.facultyName}. Allocation is pending.`, 'danger');
+      return;
+    }
+  }
+
+  const lectureNo = ACTIVE_LECTURE.lectureNumber || getNextLectureNumber(effectiveSubject, sectionName);
   const lectureNoDisplay = `Lecture No. ${lectureNo}`;
 
-  ATTENDANCE_STATE.savedSummary = {
-    ...ATTENDANCE_STATE.classInfo,
-    faculty: facultyName,
-    lectureNumber: lectureNo,
-    lectureNoDisplay,
-    total: metrics.total,
-    present: metrics.presentCount,
-    absent: metrics.absentCount,
-    pct: metrics.presentPct,
-    time: timeStr
-  };
+  // Duplicate Check
+  const duplicate = SESSIONS_DATA.find(s =>
+    s.status === 'completed' &&
+    (s.course === effectiveSubject || s.subject === effectiveSubject) &&
+    s.sec === sectionName &&
+    (s.lectureNo === lectureNo || s.lectureNumber === lectureNo)
+  );
+  if (duplicate) {
+    showToast(`Lecture ${lectureNo} for ${effectiveSubject} (Section ${sectionName}) has already been saved. Duplicate rejected.`, 'danger');
+    return;
+  }
+
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  const completedDate = ATTENDANCE_STATE.classInfo.date || 'Today';
 
   const newSessionRecord = {
-    id: SESSIONS_DATA.length + 1,
+    id: `sess-${Date.now()}`,
     lectureNo,
+    lectureNumber: lectureNo,
     lectureNoDisplay,
     course: effectiveSubject,
     subject: effectiveSubject,
+    subjectId: (CURRENT_USER && CURRENT_USER.subjectId) || 'operating-system',
+    subjectName: effectiveSubject,
+    subjectCodeShort: (CURRENT_USER && CURRENT_USER.subjectCodeShort) || 'OS',
     dept: ATTENDANCE_STATE.classInfo.dept || 'CSE',
     sem: parseInt(ATTENDANCE_STATE.classInfo.sem) || 3,
+    semester: parseInt(ATTENDANCE_STATE.classInfo.sem) || 3,
     sec: sectionName,
-    room: 'Lab 5',
-    time: (ACTIVE_LECTURE && ACTIVE_LECTURE.startedAt) || timeStr,
-    date: ATTENDANCE_STATE.classInfo.date || 'Today',
+    section: sectionName,
+    room: ACTIVE_LECTURE.room || 'Classroom 301',
+    time: ACTIVE_LECTURE.startedAt || timeStr,
+    date: completedDate,
+    timetableEntryId: ACTIVE_LECTURE.timetableEntryId || null,
+    period: ACTIVE_LECTURE.period || 'I',
+    periodStart: ACTIVE_LECTURE.periodStart || 1,
+    periodEnd: ACTIVE_LECTURE.periodEnd || 1,
+    startTime: ACTIVE_LECTURE.startTime || '09:00 AM',
+    endTime: ACTIVE_LECTURE.endTime || '09:50 AM',
     completedAt: timeStr,
     faculty: facultyName,
+    facultyName: facultyName,
     facultyId: facultyId,
     total: metrics.total,
     present: metrics.presentCount,
@@ -1673,18 +1783,31 @@ function saveAttendanceAction() {
     status: 'completed'
   };
 
+  const studentRecords = ATTENDANCE_STATE.students.map(s => ({
+    sessionId: newSessionRecord.id,
+    studentId: s.roll,
+    roll: s.roll,
+    name: s.name,
+    status: s.status === 'present' ? 'PRESENT' : 'ABSENT',
+    markedAt: timeStr
+  }));
+
+  // Enforce duplicate uniqueness for student records
+  const uniqueRecords = [];
+  const seenStudent = new Set();
+  studentRecords.forEach(r => {
+    if (!seenStudent.has(r.studentId)) {
+      seenStudent.add(r.studentId);
+      uniqueRecords.push(r);
+    }
+  });
+
   SESSIONS_DATA.unshift(newSessionRecord);
 
   if (typeof LIVE_ATTENDANCE_RECORDS !== 'undefined') {
     LIVE_ATTENDANCE_RECORDS.unshift({
       ...newSessionRecord,
-      studentRecords: ATTENDANCE_STATE.students.map(s => ({
-        id: s.id,
-        studentId: s.studentId,
-        roll: s.roll,
-        name: s.name,
-        status: s.status
-      }))
+      studentRecords: uniqueRecords
     });
   }
 
@@ -1693,13 +1816,13 @@ function saveAttendanceAction() {
 
   renderSessions();
 
-  ATTENDANCE_STATE.students.slice(0, 5).forEach(s => {
+  uniqueRecords.slice(0, 5).forEach(s => {
     RECENT_ATTENDANCE_LOGS.unshift({
       name: s.name,
       roll: s.roll,
       course: effectiveSubject.split('—')[0].trim(),
       time: timeStr,
-      status: s.status,
+      status: s.status.toLowerCase(),
       markedBy: facultyName
     });
   });
@@ -1710,10 +1833,19 @@ function saveAttendanceAction() {
     sessStat.textContent = SESSIONS_DATA.length;
   }
 
+  ATTENDANCE_STATE.savedSummary = {
+    ...newSessionRecord,
+    total: metrics.total,
+    present: metrics.presentCount,
+    absent: metrics.absentCount,
+    pct: metrics.presentPct,
+    time: timeStr
+  };
+
   ATTENDANCE_STATE.status = 'saved';
   renderAttendanceView();
 
-  // Phase 5A: Refresh live counters on Faculty Dashboard & Take Attendance
+  // Phase 6: Refresh live counters on Faculty Dashboard & Take Attendance
   updateFacultyDashboardLiveMetrics();
   updateTakeAttendanceHeader();
 
@@ -1879,30 +2011,75 @@ function openStudentProfile(studentIdOrRoll) {
   }
 
   // Live Attendance metrics on profile
+  const sectionCompleted = SESSIONS_DATA.filter(s => s.status === 'completed' && s.sec === student.sec);
+  const totalCompleted = sectionCompleted.length;
+
+  let liveAttendedCount = 0;
+  let liveMissedCount = 0;
+
+  sectionCompleted.forEach(sess => {
+    const liveRec = (typeof LIVE_ATTENDANCE_RECORDS !== 'undefined')
+      ? LIVE_ATTENDANCE_RECORDS.find(r => r.id === sess.id || (r.lectureNo === sess.lectureNo && r.subject === sess.subject && r.sec === sess.sec))
+      : null;
+    if (liveRec && liveRec.studentRecords) {
+      const sr = liveRec.studentRecords.find(r => r.roll === student.roll || r.studentId === student.roll || r.studentId === student.id);
+      if (sr && (sr.status || '').toUpperCase() === 'PRESENT') {
+        liveAttendedCount++;
+      } else {
+        liveMissedCount++;
+      }
+    }
+  });
+
+  const livePct = totalCompleted > 0 ? Number(((liveAttendedCount / totalCompleted) * 100).toFixed(1)) : null;
+
   const spTotal = document.getElementById('sp-total-held');
   const spAtt = document.getElementById('sp-attended');
   const spAbs = document.getElementById('sp-absent');
   const spPct = document.getElementById('sp-pct');
 
-  if (spTotal) spTotal.textContent = student.total || 0;
-  if (spAtt) spAtt.textContent = student.attended || 0;
-  if (spAbs) spAbs.textContent = student.absent || 0;
-  if (spPct) spPct.textContent = student.pct !== null ? `${student.pct}%` : '--';
+  if (spTotal) spTotal.textContent = totalCompleted;
+  if (spAtt) spAtt.textContent = liveAttendedCount;
+  if (spAbs) spAbs.textContent = liveMissedCount;
+  if (spPct) spPct.textContent = livePct !== null ? `${livePct}%` : '--';
 
-  // Populate Course Modules with 5 official subjects
+  // Populate Course Modules with 5 official subjects using live records
   const coursesBody = document.getElementById('sp-courses-body');
   if (coursesBody) {
     coursesBody.innerHTML = OFFICIAL_SUBJECTS.map(subj => {
       const fac = getFacultyForSubject(subj);
+      const subjSessions = sectionCompleted.filter(s => (s.subject === subj || s.course === subj || s.subjectName === subj));
+      const sCompleted = subjSessions.length;
+      let sAttended = 0;
+
+      subjSessions.forEach(sess => {
+        const liveRec = (typeof LIVE_ATTENDANCE_RECORDS !== 'undefined')
+          ? LIVE_ATTENDANCE_RECORDS.find(r => r.id === sess.id || (r.lectureNo === sess.lectureNo && r.subject === sess.subject && r.sec === sess.sec))
+          : null;
+        if (liveRec && liveRec.studentRecords) {
+          const sr = liveRec.studentRecords.find(r => r.roll === student.roll || r.studentId === student.roll);
+          if (sr && (sr.status || '').toUpperCase() === 'PRESENT') sAttended++;
+        }
+      });
+
+      const sAbsent = sCompleted - sAttended;
+      const sPct = sCompleted > 0 ? Number(((sAttended / sCompleted) * 100).toFixed(1)) : null;
+      const sPctDisplay = sPct !== null ? `${sPct}%` : '--';
+      const isEligible = sPct !== null && sPct >= ATTENDANCE_THRESHOLD;
+
       return `
         <tr>
           <td><strong>${escapeHtml(subj)}</strong></td>
           <td><span style="color: var(--text-muted); font-size: 12.5px;">Pending CSVTU Code</span></td>
           <td><strong>${escapeHtml(fac)}</strong></td>
-          <td>0</td>
-          <td>0</td>
-          <td><span style="font-weight: 600; color: var(--text-muted);">--</span></td>
-          <td><span class="badge" style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border);">Pending Sessions</span></td>
+          <td>${sCompleted}</td>
+          <td>${sAttended}</td>
+          <td><span style="font-weight: 600; color: ${sPct !== null ? (isEligible ? 'var(--text-primary)' : 'var(--danger)') : 'var(--text-muted)'};">${sPctDisplay}</span></td>
+          <td>
+            <span class="badge ${sPct === null ? '' : (isEligible ? 'badge-ok' : 'badge-risk')}" style="${sPct === null ? 'background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border);' : ''}">
+              ${sPct === null ? 'Pending Sessions' : (isEligible ? 'Eligible (≥ 75%)' : 'Below Threshold (< 75%)')}
+            </span>
+          </td>
         </tr>
       `;
     }).join('');
@@ -3335,6 +3512,144 @@ function validateAcademicUniverse() {
   }
 }
 
+
+
+function renderStudentDashboard(roll) {
+  const student = (STUDENTS || []).find(s => s.roll === roll || s.studentId === roll) || STUDENTS[0];
+  if (!student) return;
+
+  const welcomeTitle = document.getElementById('stu-welcome-title');
+  const welcomeSub = document.getElementById('stu-welcome-subtitle');
+  if (welcomeTitle) welcomeTitle.textContent = `Good morning, ${student.name.split(' ')[0]}`;
+  if (welcomeSub) welcomeSub.textContent = `Roll No: ${student.roll} · S.No #${student.sno || '—'} · Computer Science & Engineering · Semester ${student.sem} (Section ${student.sec})`;
+
+  // Calculate live completed sessions for student's section
+  const sectionCompleted = SESSIONS_DATA.filter(s => s.status === 'completed' && s.sec === student.sec);
+  const totalCompleted = sectionCompleted.length;
+
+  let attendedCount = 0;
+  let missedCount = 0;
+  const historyRows = [];
+
+  sectionCompleted.forEach(sess => {
+    const liveRec = (typeof LIVE_ATTENDANCE_RECORDS !== 'undefined')
+      ? LIVE_ATTENDANCE_RECORDS.find(r => r.id === sess.id || (r.lectureNo === sess.lectureNo && r.subject === sess.subject && r.sec === sess.sec))
+      : null;
+
+    let status = 'ABSENT';
+    let markedAt = sess.completedAt || sess.time || '—';
+
+    if (liveRec && liveRec.studentRecords) {
+      const sr = liveRec.studentRecords.find(r => r.roll === student.roll || r.studentId === student.id || r.studentId === student.roll);
+      if (sr) {
+        status = (sr.status || '').toUpperCase() === 'PRESENT' ? 'PRESENT' : 'ABSENT';
+        markedAt = sr.markedAt || markedAt;
+      }
+    }
+
+    if (status === 'PRESENT') {
+      attendedCount++;
+    } else {
+      missedCount++;
+    }
+
+    historyRows.push({
+      date: sess.date || 'Today',
+      time: markedAt,
+      subject: sess.subjectName || sess.course || sess.subject,
+      lectureNo: sess.lectureNumber || sess.lectureNo || 1,
+      period: sess.period || 'I',
+      faculty: sess.facultyName || sess.faculty || 'Devbrat Sahu',
+      room: sess.room || 'Classroom 301',
+      status: status,
+      markedAt: markedAt
+    });
+  });
+
+  const livePct = totalCompleted > 0 ? Number(((attendedCount / totalCompleted) * 100).toFixed(1)) : null;
+
+  // Update gauge and hero stats
+  const gaugePct = document.getElementById('stu-gauge-pct');
+  const circleProg = document.getElementById('stu-circle-prog');
+  const attCountEl = document.getElementById('stu-attended-count');
+  const missCountEl = document.getElementById('stu-missed-count');
+  const totalCountEl = document.getElementById('stu-total-count');
+  const threshFill = document.getElementById('stu-threshold-fill');
+
+  if (gaugePct) gaugePct.textContent = livePct !== null ? `${livePct}%` : '--';
+  if (circleProg) circleProg.setAttribute('stroke-dasharray', `${livePct || 0}, 100`);
+  if (attCountEl) attCountEl.textContent = attendedCount;
+  if (missCountEl) missCountEl.textContent = missedCount;
+  if (totalCountEl) totalCountEl.textContent = totalCompleted;
+  if (threshFill) threshFill.style.width = `${Math.min(100, livePct || 0)}%`;
+
+  // Update 5 Core Subject Breakdown
+  const subjContainer = document.getElementById('stu-subjects-container');
+  if (subjContainer) {
+    subjContainer.innerHTML = OFFICIAL_SUBJECTS.map(subj => {
+      const subjSessions = sectionCompleted.filter(s => (s.subject === subj || s.course === subj || s.subjectName === subj));
+      const sCompleted = subjSessions.length;
+      let sAttended = 0;
+
+      subjSessions.forEach(sess => {
+        const liveRec = (typeof LIVE_ATTENDANCE_RECORDS !== 'undefined')
+          ? LIVE_ATTENDANCE_RECORDS.find(r => r.id === sess.id || (r.lectureNo === sess.lectureNo && r.subject === sess.subject && r.sec === sess.sec))
+          : null;
+        if (liveRec && liveRec.studentRecords) {
+          const sr = liveRec.studentRecords.find(r => r.roll === student.roll || r.studentId === student.roll);
+          if (sr && (sr.status || '').toUpperCase() === 'PRESENT') sAttended++;
+        }
+      });
+
+      const sAbsent = sCompleted - sAttended;
+      const sPct = sCompleted > 0 ? Number(((sAttended / sCompleted) * 100).toFixed(1)) : null;
+      const sPctDisplay = sPct !== null ? `${sPct}%` : '--';
+      const isEligible = sPct !== null && sPct >= ATTENDANCE_THRESHOLD;
+
+      return `
+        <div class="card" style="padding: 16px; border: 1px solid var(--border); background: var(--surface);">
+          <div style="font-size: 11px; font-weight: 700; color: var(--primary); text-transform: uppercase;">${escapeHtml(subj)}</div>
+          <div style="font-size: 22px; font-weight: 700; color: var(--text-primary); margin: 6px 0 2px;">${sPctDisplay}</div>
+          <div style="font-size: 12px; color: var(--text-secondary);">
+            ${sCompleted > 0 ? `${sAttended} Attended / ${sCompleted} Held` : 'No live sessions recorded yet'}
+          </div>
+          <div style="margin-top: 10px;">
+            <span class="badge ${sPct === null ? '' : (isEligible ? 'badge-ok' : 'badge-risk')}" style="${sPct === null ? 'background: var(--surface-muted); color: var(--text-muted); border: 1px solid var(--border);' : ''} font-size: 11px;">
+              ${sPct === null ? 'Pending Sessions' : (isEligible ? 'Eligible (≥ 75%)' : 'Below Threshold (< 75%)')}
+            </span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Update Personal Attendance History Table
+  const historyTbody = document.getElementById('stu-history-body');
+  if (historyTbody) {
+    if (historyRows.length === 0) {
+      historyTbody.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 24px; color: var(--text-muted);">
+            No live instructional sessions recorded yet. Attendance logs will populate as teachers conduct class.
+          </td>
+        </tr>
+      `;
+    } else {
+      historyTbody.innerHTML = historyRows.map(r => `
+        <tr>
+          <td>${escapeHtml(r.date)}</td>
+          <td><code>${escapeHtml(r.markedAt)}</code></td>
+          <td><strong>${escapeHtml(r.subject)}</strong> (Lecture ${r.lectureNo} &middot; Period ${r.period})</td>
+          <td>${escapeHtml(r.faculty)}</td>
+          <td>${escapeHtml(r.room)}</td>
+          <td><span class="badge ${r.status === 'PRESENT' ? 'badge-present' : 'badge-absent'}">${r.status}</span></td>
+        </tr>
+      `).join('');
+    }
+  }
+
+  refreshIcons();
+}
 
 function renderHodMasterTimetable(section = 'A') {
   const tbody = document.getElementById('hod-master-timetable-body');
