@@ -1881,13 +1881,24 @@ function resetLiveAttendanceState() {
     ATTENDANCE_STATE.status = 'initial';
     ATTENDANCE_STATE.students = [];
     ATTENDANCE_STATE.savedSummary = null;
+    ATTENDANCE_STATE.searchQuery = '';
   }
 
   renderSessions();
   renderRecentAttendanceLogs();
   updateFacultyDashboardLiveMetrics();
   updateTakeAttendanceHeader();
+  renderAttendanceView();
+
+  if (CURRENT_USER && CURRENT_USER.role === 'student') {
+    renderStudentDashboard(CURRENT_USER.roll);
+  }
+  if (CURRENT_USER && CURRENT_USER.role === 'hod') {
+    renderHodOverview();
+    renderHodMasterTimetable('A');
+  }
 }
+window.resetLiveAttendanceState = resetLiveAttendanceState;
 
 function editCurrentAttendance() {
   ATTENDANCE_STATE.status = 'loaded';
@@ -2359,21 +2370,33 @@ function exportCSV() {
 function renderSessions() {
   const grid = document.getElementById('sessions-grid');
   if (!grid) return;
+  if (!SESSIONS_DATA || SESSIONS_DATA.length === 0) {
+    grid.innerHTML = `
+      <div style="grid-column: 1 / -1; padding: 40px 20px; text-align: center; color: var(--text-muted); background: var(--surface); border: 1px dashed var(--border); border-radius: var(--radius-md);">
+        <i data-lucide="calendar" class="icon-md" style="margin-bottom: 8px; opacity: 0.5;"></i>
+        <div style="font-weight: 600; font-size: 14px; color: var(--text-primary); margin-bottom: 4px;">No Live Sessions Recorded</div>
+        <div>No instructional lectures have been completed yet for this term. Recorded sessions will appear here.</div>
+      </div>
+    `;
+    refreshIcons();
+    return;
+  }
   grid.innerHTML = SESSIONS_DATA.map(s => `
     <div class="session-card">
       <div class="session-card-header">
         <div>
-          <div class="session-card-title">${escapeHtml(s.course)}</div>
+          <div class="session-card-title">${escapeHtml(s.course || s.subjectName || s.subject)}</div>
           <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
-            ${escapeHtml(s.dept || 'CSE')} · Semester ${s.sem || 2} (${s.sec || 'A'})
+            ${escapeHtml(s.dept || 'CSE')} · Semester ${s.sem || s.semester || 3} (Section ${s.sec || s.section || 'A'})
           </div>
         </div>
-        <span class="badge badge-${s.status}">${s.status.toUpperCase()}</span>
+        <span class="badge badge-${s.status}">${(s.status || 'COMPLETED').toUpperCase()}</span>
       </div>
       <div class="session-card-meta">
-        <div class="session-meta-row"><i data-lucide="map-pin" class="icon-sm"></i> ${escapeHtml(s.room)} · ${escapeHtml(s.time)}</div>
-        <div class="session-meta-row"><i data-lucide="user" class="icon-sm"></i> Faculty: ${escapeHtml(s.faculty || 'Dr. Anand Tamrakar')}</div>
-        <div class="session-meta-row"><i data-lucide="calendar" class="icon-sm"></i> Date: ${escapeHtml(s.date)} · Attendance: <strong style="color: var(--primary);">${s.status === 'scheduled' ? 'Scheduled' : s.pct + '%'}</strong></div>
+        <div class="session-meta-row"><i data-lucide="hash" class="icon-sm"></i> ${escapeHtml(s.lectureNoDisplay || `Lecture No. ${s.lectureNumber || s.lectureNo || 1}`)} &middot; Period ${escapeHtml(s.period || 'I')}</div>
+        <div class="session-meta-row"><i data-lucide="clock" class="icon-sm"></i> ${escapeHtml(s.time || s.completedAt || '09:00 AM')} &middot; ${escapeHtml(s.room || 'Classroom 301')}</div>
+        <div class="session-meta-row"><i data-lucide="user" class="icon-sm"></i> Faculty: ${escapeHtml(s.facultyName || s.faculty || 'Devbrat Sahu')}</div>
+        <div class="session-meta-row"><i data-lucide="check-circle-2" class="icon-sm"></i> Present: <strong>${s.present || 0}/${s.total || 0}</strong> &middot; Attendance Rate: <strong style="color: var(--primary);">${s.pct !== undefined && s.pct !== null ? s.pct + '%' : '--'}</strong></div>
       </div>
     </div>
   `).join('');
@@ -3333,14 +3356,28 @@ function renderHodOverview() {
   if (healthBody) {
     healthBody.innerHTML = OFFICIAL_SUBJECTS.map((subj, idx) => {
       const fac = getFacultyForSubject(subj);
+      const subjSessions = SESSIONS_DATA.filter(s => s.status === 'completed' && (s.subject === subj || s.course === subj || s.subjectName === subj));
+      const sCompleted = subjSessions.length;
+      let sPresents = 0;
+      let sTotalMarks = 0;
+      subjSessions.forEach(s => {
+        sPresents += (s.present || 0);
+        sTotalMarks += (s.total || 0);
+      });
+      const sAvg = sTotalMarks > 0 ? Number(((sPresents / sTotalMarks) * 100).toFixed(1)) : null;
+
       return `
         <tr>
           <td><strong>${escapeHtml(subj)}</strong> <span style="font-size:11px; color:var(--text-muted);">(Core Module)</span></td>
           <td><strong>${escapeHtml(fac)}</strong></td>
-          <td>0 / 0 sessions</td>
-          <td><span style="font-weight:700; color: var(--text-muted);">--</span></td>
-          <td><span class="badge" style="background:var(--surface-muted); color:var(--text-secondary); border:1px solid var(--border);">0 students</span></td>
-          <td><span class="badge" style="background:var(--surface-muted); color:var(--text-secondary); border:1px solid var(--border);">PENDING</span></td>
+          <td>${sCompleted} sessions</td>
+          <td><span style="font-weight:700; color: ${sAvg !== null ? 'var(--text-primary)' : 'var(--text-muted)'};">${sAvg !== null ? sAvg + '%' : '--'}</span></td>
+          <td><span class="badge" style="background:var(--surface-muted); color:var(--text-secondary); border:1px solid var(--border);">${sPresents} / ${sTotalMarks} marks</span></td>
+          <td>
+            <span class="badge ${sAvg === null ? '' : (sAvg >= ATTENDANCE_THRESHOLD ? 'badge-ok' : 'badge-risk')}" style="${sAvg === null ? 'background:var(--surface-muted); color:var(--text-secondary); border:1px solid var(--border);' : ''}">
+              ${sAvg === null ? 'PENDING' : (sAvg >= ATTENDANCE_THRESHOLD ? 'COMPLIANT' : 'WATCH')}
+            </span>
+          </td>
         </tr>
       `;
     }).join('');
