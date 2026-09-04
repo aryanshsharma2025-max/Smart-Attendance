@@ -1,69 +1,18 @@
-// ============================================================
-//  SMART ATTENDANCE SYSTEM — Java Backend (Spring Boot 3.x)
-//  Academic Target: B.Tech CSE · 3rd Semester · July–Dec 2026
-//  Authoritative Contract: 252 Students, 5 Primary Faculty, 5 Subjects, 80 Timetable Blocks
-//  File structure shown via comments; all components also pre-extracted
-//  into standard Maven project directory structure in src/main/java/com/attendance/
-// ============================================================
+import os
 
-// ────────────────────────────────────────────────────────────
-// pom.xml  (Maven dependencies)
-// ────────────────────────────────────────────────────────────
-/*
-<dependencies>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-web</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-data-jpa</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>com.mysql</groupId>
-        <artifactId>mysql-connector-j</artifactId>
-        <scope>runtime</scope>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-security</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>io.jsonwebtoken</groupId>
-        <artifactId>jjwt-api</artifactId>
-        <version>0.11.5</version>
-    </dependency>
-    <dependency>
-        <groupId>org.projectlombok</groupId>
-        <artifactId>lombok</artifactId>
-        <optional>true</optional>
-    </dependency>
-</dependencies>
-*/
+def write_file(path, content):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content)
 
-// ────────────────────────────────────────────────────────────
-// src/main/resources/application.properties
-// ────────────────────────────────────────────────────────────
-/*
-server.port=8080
-spring.datasource.url=jdbc:mysql://localhost:3306/smart_attendance?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Kolkata
-spring.datasource.username=root
-spring.datasource.password=${DB_PASSWORD:root}
-spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+def build_all():
+    print("Writing Spring Boot source files...")
 
-spring.jpa.hibernate.ddl-auto=validate
-spring.jpa.show-sql=true
-spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect
+    # We will build a generator that writes all individual files into src/main/java and also aggregates into AttendanceBackend.java
+    modules = {}
 
-jwt.secret=${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
-jwt.expiration=86400000
-*/
-
-
-// ============================================================
-// FILE: src/main/java/com/attendance/AttendanceApplication.java
-// ============================================================
-package com.attendance;
+    # 1. Main Application
+    modules["AttendanceApplication.java"] = """package com.attendance;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -76,12 +25,10 @@ public class AttendanceApplication {
         SpringApplication.run(AttendanceApplication.class, args);
     }
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/model/Department.java
-// ============================================================
-package com.attendance.model;
+    # 2. Models
+    modules["model/Department.java"] = """package com.attendance.model;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -108,12 +55,9 @@ public class Department {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/model/Section.java
-// ============================================================
-package com.attendance.model;
+    modules["model/Section.java"] = """package com.attendance.model;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -141,12 +85,9 @@ public class Section {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/model/Faculty.java
-// ============================================================
-package com.attendance.model;
+    modules["model/Faculty.java"] = """package com.attendance.model;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -192,12 +133,9 @@ public class Faculty {
 
     public enum FacultyRole { faculty, hod, admin, staff }
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/model/Course.java
-// ============================================================
-package com.attendance.model;
+    modules["model/Course.java"] = """package com.attendance.model;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -237,12 +175,9 @@ public class Course {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/model/CourseAllocation.java
-// ============================================================
-package com.attendance.model;
+    modules["model/CourseAllocation.java"] = """package com.attendance.model;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -281,12 +216,9 @@ public class CourseAllocation {
 
     public enum AllocationStatus { CONFIRMED, PENDING }
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/model/Student.java
-// ============================================================
-package com.attendance.model;
+    modules["model/Student.java"] = """package com.attendance.model;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -342,12 +274,9 @@ public class Student {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/model/TimetableEntry.java
-// ============================================================
-package com.attendance.model;
+    modules["model/TimetableEntry.java"] = """package com.attendance.model;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -413,12 +342,9 @@ public class TimetableEntry {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/model/AttendanceSession.java
-// ============================================================
-package com.attendance.model;
+    modules["model/AttendanceSession.java"] = """package com.attendance.model;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -487,12 +413,9 @@ public class AttendanceSession {
 
     public enum SessionStatus { RECORDING, COMPLETED, CANCELLED }
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/model/AttendanceRecord.java
-// ============================================================
-package com.attendance.model;
+    modules["model/AttendanceRecord.java"] = """package com.attendance.model;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -527,12 +450,10 @@ public class AttendanceRecord {
 
     public enum AttendanceStatus { PRESENT, ABSENT }
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/dto/StudentDto.java
-// ============================================================
-package com.attendance.dto;
+    # 3. DTOs
+    modules["dto/StudentDto.java"] = """package com.attendance.dto;
 
 import lombok.*;
 
@@ -563,12 +484,9 @@ public class StudentDto {
         private String statusText;
     }
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/dto/FacultyDto.java
-// ============================================================
-package com.attendance.dto;
+    modules["dto/FacultyDto.java"] = """package com.attendance.dto;
 
 import lombok.*;
 import java.util.List;
@@ -588,12 +506,9 @@ public class FacultyDto {
     private List<String> assignedSubjects;
     private List<String> assignedSections;
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/dto/CourseDto.java
-// ============================================================
-package com.attendance.dto;
+    modules["dto/CourseDto.java"] = """package com.attendance.dto;
 
 import lombok.*;
 
@@ -611,12 +526,9 @@ public class CourseDto {
     private Boolean isPrimary;
     private String assignedFacultyName;
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/dto/TimetableDto.java
-// ============================================================
-package com.attendance.dto;
+    modules["dto/TimetableDto.java"] = """package com.attendance.dto;
 
 import lombok.*;
 
@@ -644,12 +556,9 @@ public class TimetableDto {
     private String room;
     private String effectiveDate;
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/dto/StartSessionRequest.java
-// ============================================================
-package com.attendance.dto;
+    modules["dto/StartSessionRequest.java"] = """package com.attendance.dto;
 
 import lombok.*;
 import java.time.LocalDate;
@@ -670,12 +579,9 @@ public class StartSessionRequest {
     private String startTime;
     private String endTime;
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/dto/SessionDto.java
-// ============================================================
-package com.attendance.dto;
+    modules["dto/SessionDto.java"] = """package com.attendance.dto;
 
 import lombok.*;
 import java.time.LocalDate;
@@ -704,12 +610,9 @@ public class SessionDto {
     private Integer presentCount;
     private Integer absentCount;
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/dto/StudentAttendanceMark.java
-// ============================================================
-package com.attendance.dto;
+    modules["dto/StudentAttendanceMark.java"] = """package com.attendance.dto;
 
 import lombok.*;
 
@@ -721,12 +624,9 @@ public class StudentAttendanceMark {
     private String rollNumber;
     private String status; // "PRESENT" or "ABSENT"
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/dto/MarkAttendanceRequest.java
-// ============================================================
-package com.attendance.dto;
+    modules["dto/MarkAttendanceRequest.java"] = """package com.attendance.dto;
 
 import lombok.*;
 import java.util.List;
@@ -739,12 +639,9 @@ public class MarkAttendanceRequest {
     private Long facultyId;
     private List<StudentAttendanceMark> records;
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/dto/AttendanceRecordDto.java
-// ============================================================
-package com.attendance.dto;
+    modules["dto/AttendanceRecordDto.java"] = """package com.attendance.dto;
 
 import lombok.*;
 import java.time.LocalDateTime;
@@ -762,12 +659,9 @@ public class AttendanceRecordDto {
     private String status;
     private LocalDateTime markedAt;
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/dto/AttendanceSubmissionResponse.java
-// ============================================================
-package com.attendance.dto;
+    modules["dto/AttendanceSubmissionResponse.java"] = """package com.attendance.dto;
 
 import lombok.*;
 
@@ -784,12 +678,9 @@ public class AttendanceSubmissionResponse {
     private Integer absentCount;
     private Integer totalRecorded;
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/dto/StudentAttendanceSummaryDto.java
-// ============================================================
-package com.attendance.dto;
+    modules["dto/StudentAttendanceSummaryDto.java"] = """package com.attendance.dto;
 
 import lombok.*;
 import java.util.List;
@@ -821,12 +712,9 @@ public class StudentAttendanceSummaryDto {
         private Double percentage;
     }
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/dto/SectionAttendanceStatsDto.java
-// ============================================================
-package com.attendance.dto;
+    modules["dto/SectionAttendanceStatsDto.java"] = """package com.attendance.dto;
 
 import lombok.*;
 
@@ -844,52 +732,38 @@ public class SectionAttendanceStatsDto {
     private Integer totalPresentMarks;
     private Double averagePercentage;
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/exception/ResourceNotFoundException.java
-// ============================================================
-package com.attendance.exception;
+    # 4. Exceptions
+    modules["exception/ResourceNotFoundException.java"] = """package com.attendance.exception;
 
 public class ResourceNotFoundException extends RuntimeException {
     public ResourceNotFoundException(String message) { super(message); }
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/exception/UnauthorizedActionException.java
-// ============================================================
-package com.attendance.exception;
+    modules["exception/UnauthorizedActionException.java"] = """package com.attendance.exception;
 
 public class UnauthorizedActionException extends RuntimeException {
     public UnauthorizedActionException(String message) { super(message); }
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/exception/ValidationException.java
-// ============================================================
-package com.attendance.exception;
+    modules["exception/ValidationException.java"] = """package com.attendance.exception;
 
 public class ValidationException extends RuntimeException {
     public ValidationException(String message) { super(message); }
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/exception/ConflictException.java
-// ============================================================
-package com.attendance.exception;
+    modules["exception/ConflictException.java"] = """package com.attendance.exception;
 
 public class ConflictException extends RuntimeException {
     public ConflictException(String message) { super(message); }
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/exception/GlobalExceptionHandler.java
-// ============================================================
-package com.attendance.exception;
+    modules["exception/GlobalExceptionHandler.java"] = """package com.attendance.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -972,12 +846,10 @@ public class GlobalExceptionHandler {
         ));
     }
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/repository/DepartmentRepository.java
-// ============================================================
-package com.attendance.repository;
+    # 5. Repositories
+    modules["repository/DepartmentRepository.java"] = """package com.attendance.repository;
 
 import com.attendance.model.Department;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -986,12 +858,9 @@ import java.util.Optional;
 public interface DepartmentRepository extends JpaRepository<Department, Long> {
     Optional<Department> findByDeptCode(String deptCode);
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/repository/SectionRepository.java
-// ============================================================
-package com.attendance.repository;
+    modules["repository/SectionRepository.java"] = """package com.attendance.repository;
 
 import com.attendance.model.Section;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -1002,12 +871,9 @@ public interface SectionRepository extends JpaRepository<Section, Long> {
     Optional<Section> findBySectionName(String sectionName);
     List<Section> findByDepartmentDeptId(Long deptId);
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/repository/FacultyRepository.java
-// ============================================================
-package com.attendance.repository;
+    modules["repository/FacultyRepository.java"] = """package com.attendance.repository;
 
 import com.attendance.model.Faculty;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -1019,12 +885,9 @@ public interface FacultyRepository extends JpaRepository<Faculty, Long> {
     Optional<Faculty> findByEmail(String email);
     List<Faculty> findByRole(Faculty.FacultyRole role);
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/repository/CourseRepository.java
-// ============================================================
-package com.attendance.repository;
+    modules["repository/CourseRepository.java"] = """package com.attendance.repository;
 
 import com.attendance.model.Course;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -1035,12 +898,9 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
     Optional<Course> findByCourseCodeShort(String shortCode);
     List<Course> findByIsPrimaryTrue();
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/repository/CourseAllocationRepository.java
-// ============================================================
-package com.attendance.repository;
+    modules["repository/CourseAllocationRepository.java"] = """package com.attendance.repository;
 
 import com.attendance.model.CourseAllocation;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -1063,12 +923,9 @@ public interface CourseAllocationRepository extends JpaRepository<CourseAllocati
         @Param("sectionName") String sectionName
     );
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/repository/StudentRepository.java
-// ============================================================
-package com.attendance.repository;
+    modules["repository/StudentRepository.java"] = """package com.attendance.repository;
 
 import com.attendance.model.Student;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -1082,12 +939,9 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     List<Student> findBySectionSectionId(Long sectionId);
     long countBySectionSectionName(String sectionName);
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/repository/TimetableEntryRepository.java
-// ============================================================
-package com.attendance.repository;
+    modules["repository/TimetableEntryRepository.java"] = """package com.attendance.repository;
 
 import com.attendance.model.TimetableEntry;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -1100,12 +954,9 @@ public interface TimetableEntryRepository extends JpaRepository<TimetableEntry, 
     List<TimetableEntry> findByFacultyFacultyId(Long facultyId);
     List<TimetableEntry> findByFacultyFacultyCode(String facultyCode);
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/repository/AttendanceSessionRepository.java
-// ============================================================
-package com.attendance.repository;
+    modules["repository/AttendanceSessionRepository.java"] = """package com.attendance.repository;
 
 import com.attendance.model.AttendanceSession;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -1128,12 +979,9 @@ public interface AttendanceSessionRepository extends JpaRepository<AttendanceSes
 
     long countByStatus(AttendanceSession.SessionStatus status);
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/repository/AttendanceRecordRepository.java
-// ============================================================
-package com.attendance.repository;
+    modules["repository/AttendanceRecordRepository.java"] = """package com.attendance.repository;
 
 import com.attendance.model.AttendanceRecord;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -1156,12 +1004,10 @@ public interface AttendanceRecordRepository extends JpaRepository<AttendanceReco
     @Query("SELECT COUNT(ar) FROM AttendanceRecord ar WHERE ar.session.section.sectionId = :sectionId AND ar.session.course.courseId = :courseId AND ar.session.status = 'COMPLETED' AND ar.status = 'PRESENT'")
     long countPresentMarksForSectionAndCourse(@Param("sectionId") Long sectionId, @Param("courseId") Long courseId);
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/service/AttendanceSessionService.java
-// ============================================================
-package com.attendance.service;
+    # 6. Services
+    modules["service/AttendanceSessionService.java"] = """package com.attendance.service;
 
 import com.attendance.dto.*;
 import com.attendance.exception.*;
@@ -1466,12 +1312,9 @@ public class AttendanceSessionService {
             .collect(Collectors.toList());
     }
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/service/StudentService.java
-// ============================================================
-package com.attendance.service;
+    modules["service/StudentService.java"] = """package com.attendance.service;
 
 import com.attendance.dto.StudentDto;
 import com.attendance.exception.ResourceNotFoundException;
@@ -1527,12 +1370,9 @@ public class StudentService {
             .build();
     }
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/service/FacultyService.java
-// ============================================================
-package com.attendance.service;
+    modules["service/FacultyService.java"] = """package com.attendance.service;
 
 import com.attendance.dto.FacultyDto;
 import com.attendance.exception.ResourceNotFoundException;
@@ -1589,12 +1429,9 @@ public class FacultyService {
             .build();
     }
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/service/CourseService.java
-// ============================================================
-package com.attendance.service;
+    modules["service/CourseService.java"] = """package com.attendance.service;
 
 import com.attendance.dto.CourseDto;
 import com.attendance.model.Course;
@@ -1641,12 +1478,9 @@ public class CourseService {
             .build();
     }
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/service/TimetableService.java
-// ============================================================
-package com.attendance.service;
+    modules["service/TimetableService.java"] = """package com.attendance.service;
 
 import com.attendance.dto.TimetableDto;
 import com.attendance.model.TimetableEntry;
@@ -1700,12 +1534,9 @@ public class TimetableService {
             .build();
     }
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/service/AttendanceCalculationService.java
-// ============================================================
-package com.attendance.service;
+    modules["service/AttendanceCalculationService.java"] = """package com.attendance.service;
 
 import com.attendance.dto.SectionAttendanceStatsDto;
 import com.attendance.dto.StudentAttendanceSummaryDto;
@@ -1811,12 +1642,10 @@ public class AttendanceCalculationService {
             .build();
     }
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/controller/StudentController.java
-// ============================================================
-package com.attendance.controller;
+    # 7. Controllers
+    modules["controller/StudentController.java"] = """package com.attendance.controller;
 
 import com.attendance.dto.StudentDto;
 import com.attendance.service.StudentService;
@@ -1850,12 +1679,9 @@ public class StudentController {
         }
     }
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/controller/FacultyController.java
-// ============================================================
-package com.attendance.controller;
+    modules["controller/FacultyController.java"] = """package com.attendance.controller;
 
 import com.attendance.dto.FacultyDto;
 import com.attendance.service.FacultyService;
@@ -1888,12 +1714,9 @@ public class FacultyController {
         }
     }
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/controller/SubjectController.java
-// ============================================================
-package com.attendance.controller;
+    modules["controller/SubjectController.java"] = """package com.attendance.controller;
 
 import com.attendance.dto.CourseDto;
 import com.attendance.service.CourseService;
@@ -1919,12 +1742,9 @@ public class SubjectController {
         return ResponseEntity.ok(courseService.getAllSubjects());
     }
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/controller/TimetableController.java
-// ============================================================
-package com.attendance.controller;
+    modules["controller/TimetableController.java"] = """package com.attendance.controller;
 
 import com.attendance.dto.TimetableDto;
 import com.attendance.service.TimetableService;
@@ -1952,12 +1772,9 @@ public class TimetableController {
         return ResponseEntity.ok(timetableService.getTimetableByFaculty(facultyId));
     }
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/controller/SessionController.java
-// ============================================================
-package com.attendance.controller;
+    modules["controller/SessionController.java"] = """package com.attendance.controller;
 
 import com.attendance.dto.*;
 import com.attendance.service.AttendanceSessionService;
@@ -2004,12 +1821,9 @@ public class SessionController {
         return ResponseEntity.ok(sessionService.getSessionsForFaculty(facultyId));
     }
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/controller/AttendanceHistoryController.java
-// ============================================================
-package com.attendance.controller;
+    modules["controller/AttendanceHistoryController.java"] = """package com.attendance.controller;
 
 import com.attendance.dto.*;
 import com.attendance.service.AttendanceCalculationService;
@@ -2057,12 +1871,10 @@ public class AttendanceHistoryController {
         return ResponseEntity.ok(sessionService.getSessionsForFaculty(facultyId));
     }
 }
+"""
 
-
-// ============================================================
-// FILE: src/main/java/com/attendance/security/SecurityConfig.java
-// ============================================================
-package com.attendance.security;
+    # 8. Security Scaffolding
+    modules["security/SecurityConfig.java"] = """package com.attendance.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -2112,3 +1924,208 @@ public class SecurityConfig {
         return source;
     }
 }
+"""
+
+    # 9. Test file
+    modules["test/AttendanceBackendTests.java"] = """package com.attendance;
+
+import com.attendance.dto.*;
+import com.attendance.model.*;
+import com.attendance.repository.*;
+import com.attendance.service.AttendanceSessionService;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+@SpringBootTest
+@ActiveProfiles("test")
+@Transactional
+public class AttendanceBackendTests {
+
+    @Autowired private StudentRepository studentRepo;
+    @Autowired private FacultyRepository facultyRepo;
+    @Autowired private CourseRepository courseRepo;
+    @Autowired private TimetableEntryRepository timetableRepo;
+    @Autowired private CourseAllocationRepository allocationRepo;
+    @Autowired private AttendanceSessionRepository sessionRepo;
+    @Autowired private AttendanceSessionService sessionService;
+
+    @Test
+    @DisplayName("Test 01 & 02: 252 Authoritative Students and A/B/C/D Section Counts")
+    void testStudentRosterCounts() {
+        assertEquals(252, studentRepo.count(), "Total student count must be 252");
+        assertEquals(60, studentRepo.countBySectionSectionName("A"), "Section A must have 60 students");
+        assertEquals(59, studentRepo.countBySectionSectionName("B"), "Section B must have 59 students");
+        assertEquals(66, studentRepo.countBySectionSectionName("C"), "Section C must have 66 students");
+        assertEquals(67, studentRepo.countBySectionSectionName("D"), "Section D must have 67 students");
+    }
+
+    @Test
+    @DisplayName("Test 03: Five Primary Subjects Exist")
+    void testPrimarySubjects() {
+        List<Course> courses = courseRepo.findByIsPrimaryTrue();
+        assertEquals(5, courses.size());
+        assertTrue(courses.stream().anyMatch(c -> c.getCourseCodeShort().equals("OS")));
+        assertTrue(courses.stream().anyMatch(c -> c.getCourseCodeShort().equals("DM")));
+        assertTrue(courses.stream().anyMatch(c -> c.getCourseCodeShort().equals("OOPS")));
+        assertTrue(courses.stream().anyMatch(c -> c.getCourseCodeShort().equals("WT")));
+        assertTrue(courses.stream().anyMatch(c -> c.getCourseCodeShort().equals("DELD")));
+    }
+
+    @Test
+    @DisplayName("Test 04 & 05: Primary Faculty and Anand Sir HOD Restriction")
+    void testFacultyAndHodRole() {
+        Faculty devbrat = facultyRepo.findByFacultyCode("faculty_os").orElseThrow();
+        assertEquals("Devbrat Sahu", devbrat.getName());
+        assertEquals(Faculty.FacultyRole.faculty, devbrat.getRole());
+
+        Faculty anand = facultyRepo.findByFacultyCode("hod_cse").orElseThrow();
+        assertEquals("Dr. Anand Tamrakar", anand.getName());
+        assertEquals(Faculty.FacultyRole.hod, anand.getRole());
+        assertTrue(allocationRepo.findByFacultyFacultyId(anand.getFacultyId()).isEmpty(), "HOD must have 0 teaching allocations");
+    }
+
+    @Test
+    @DisplayName("Test 06: Timetable Contains 80 Blocks")
+    void testTimetableCounts() {
+        assertEquals(80, timetableRepo.count(), "Timetable must contain 80 authoritative blocks");
+        assertEquals(39, timetableRepo.findBySectionSectionName("A").size(), "Section A must have 39 blocks");
+        assertEquals(41, timetableRepo.findBySectionSectionName("B").size(), "Section B must have 41 blocks");
+    }
+
+    @Test
+    @DisplayName("Test 07, 08, 09, 10: Faculty Authorization Enforcement")
+    void testAuthorizationMatrix() {
+        // Devbrat can create OS-A
+        StartSessionRequest req1 = new StartSessionRequest();
+        req1.setFacultyCode("faculty_os");
+        req1.setSubjectCodeShort("OS");
+        req1.setSection("A");
+        SessionDto sess1 = sessionService.startSession(req1);
+        assertNotNull(sess1);
+        assertEquals(1, sess1.getLectureNumber());
+
+        // Devbrat can create OS-B
+        StartSessionRequest req2 = new StartSessionRequest();
+        req2.setFacultyCode("faculty_os");
+        req2.setSubjectCodeShort("OS");
+        req2.setSection("B");
+        SessionDto sess2 = sessionService.startSession(req2);
+        assertNotNull(sess2);
+        assertEquals(1, sess2.getLectureNumber());
+
+        // Devbrat cannot create DM-A
+        StartSessionRequest req3 = new StartSessionRequest();
+        req3.setFacultyCode("faculty_os");
+        req3.setSubjectCodeShort("DM");
+        req3.setSection("A");
+        assertThrows(RuntimeException.class, () -> sessionService.startSession(req3));
+
+        // Devbrat cannot create OS-C (allocation pending)
+        StartSessionRequest req4 = new StartSessionRequest();
+        req4.setFacultyCode("faculty_os");
+        req4.setSubjectCodeShort("OS");
+        req4.setSection("C");
+        assertThrows(RuntimeException.class, () -> sessionService.startSession(req4));
+
+        // Anand Sir cannot start teaching session
+        StartSessionRequest req5 = new StartSessionRequest();
+        req5.setFacultyCode("hod_cse");
+        req5.setSubjectCodeShort("OS");
+        req5.setSection("A");
+        assertThrows(RuntimeException.class, () -> sessionService.startSession(req5));
+    }
+}
+"""
+
+    # Write individual source files
+    for rel_path, code in modules.items():
+        if rel_path.startswith("test/"):
+            dest = f"src/test/java/com/attendance/{rel_path[5:]}"
+        else:
+            dest = f"src/main/java/com/attendance/{rel_path}"
+        write_file(dest, code)
+
+    # Now assemble the comprehensive monolithic reference AttendanceBackend.java
+    monolithic_header = """// ============================================================
+//  SMART ATTENDANCE SYSTEM — Java Backend (Spring Boot 3.x)
+//  Academic Target: B.Tech CSE · 3rd Semester · July–Dec 2026
+//  Authoritative Contract: 252 Students, 5 Primary Faculty, 5 Subjects, 80 Timetable Blocks
+//  File structure shown via comments; all components also pre-extracted
+//  into standard Maven project directory structure in src/main/java/com/attendance/
+// ============================================================
+
+// ────────────────────────────────────────────────────────────
+// pom.xml  (Maven dependencies)
+// ────────────────────────────────────────────────────────────
+/*
+<dependencies>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>com.mysql</groupId>
+        <artifactId>mysql-connector-j</artifactId>
+        <scope>runtime</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>io.jsonwebtoken</groupId>
+        <artifactId>jjwt-api</artifactId>
+        <version>0.11.5</version>
+    </dependency>
+    <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <optional>true</optional>
+    </dependency>
+</dependencies>
+*/
+
+// ────────────────────────────────────────────────────────────
+// src/main/resources/application.properties
+// ────────────────────────────────────────────────────────────
+/*
+server.port=8080
+spring.datasource.url=jdbc:mysql://localhost:3306/smart_attendance?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Kolkata
+spring.datasource.username=root
+spring.datasource.password=${DB_PASSWORD:root}
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+
+spring.jpa.hibernate.ddl-auto=validate
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect
+
+jwt.secret=${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+jwt.expiration=86400000
+*/
+"""
+
+    monolithic_parts = [monolithic_header]
+    for rel_path, code in modules.items():
+        if rel_path.startswith("test/"):
+            continue
+        monolithic_parts.append(f"\n// ============================================================\n// FILE: src/main/java/com/attendance/{rel_path}\n// ============================================================\n{code}")
+
+    with open("AttendanceBackend.java", "w", encoding="utf-8") as f:
+        f.write("\n".join(monolithic_parts))
+
+    print("Successfully generated full modular Spring Boot codebase and updated AttendanceBackend.java!")
+
+if __name__ == '__main__':
+    build_all()

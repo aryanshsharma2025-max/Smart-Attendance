@@ -513,7 +513,7 @@ function calculateLiveSectionMetrics(subjectName, section) {
 
     if (liveRecord && liveRecord.studentRecords) {
       liveRecord.studentRecords.forEach(sr => {
-        if (sr.status === 'present') {
+        if ((sr.status || '').toLowerCase() === 'present') {
           presentCountMap.set(sr.roll, (presentCountMap.get(sr.roll) || 0) + 1);
         }
       });
@@ -545,7 +545,10 @@ function calculateLiveSectionMetrics(subjectName, section) {
   const presentToday = latestSession ? latestSession.present : null;
   const absentToday = latestSession ? latestSession.absent : null;
 
-  const currentLecture = ACTIVE_LECTURE && ACTIVE_LECTURE.subject === subjectName && ACTIVE_LECTURE.section === section
+  const currentLecture = ACTIVE_LECTURE && 
+    (ACTIVE_LECTURE.subject === subjectName || ACTIVE_LECTURE.subjectName === subjectName) && 
+    (ACTIVE_LECTURE.section === section || ACTIVE_LECTURE.sec === section) &&
+    ACTIVE_LECTURE.status === 'recording'
     ? ACTIVE_LECTURE.lectureNumber : null;
 
   return {
@@ -631,7 +634,10 @@ function updateTakeAttendanceHeader() {
   const facultyName = (CURRENT_USER && CURRENT_USER.role === 'faculty') ? CURRENT_USER.facultyName : getFacultyForSubject(subj);
 
   const conducted = getCompletedLecturesCount(subj, sec);
-  const isRecording = ACTIVE_LECTURE && ACTIVE_LECTURE.subject === subj && ACTIVE_LECTURE.section === sec && ACTIVE_LECTURE.status === 'recording';
+  const isRecording = ACTIVE_LECTURE && 
+    (ACTIVE_LECTURE.subject === subj || ACTIVE_LECTURE.subjectName === subj) && 
+    (ACTIVE_LECTURE.section === sec || ACTIVE_LECTURE.sec === sec) && 
+    ACTIVE_LECTURE.status === 'recording';
   const currentLec = isRecording ? `Lecture ${ACTIVE_LECTURE.lectureNumber}` : '—';
   const nextLec = isRecording ? '—' : `Lecture ${conducted + 1}`;
 
@@ -680,6 +686,9 @@ function updateTakeAttendanceHeader() {
 
 function onAttendanceFilterChange() {
   updateTakeAttendanceHeader();
+  if (ATTENDANCE_STATE.status === 'loaded') {
+    renderAttendanceView();
+  }
 }
 
 function updateFacultyDashboardLiveMetrics() {
@@ -700,7 +709,10 @@ function updateFacultyDashboardLiveMetrics() {
   const lecConducted = document.getElementById('dash-lec-conducted');
   if (lecConducted) lecConducted.textContent = metrics.conductedCount;
 
-  const isRecording = ACTIVE_LECTURE && ACTIVE_LECTURE.subject === subj && ACTIVE_LECTURE.section === sec && ACTIVE_LECTURE.status === 'recording';
+  const isRecording = ACTIVE_LECTURE && 
+    (ACTIVE_LECTURE.subject === subj || ACTIVE_LECTURE.subjectName === subj) && 
+    (ACTIVE_LECTURE.section === sec || ACTIVE_LECTURE.sec === sec) && 
+    ACTIVE_LECTURE.status === 'recording';
   const currentLecEl = document.getElementById('dash-lec-current');
   const currentLecSub = document.getElementById('dash-lec-current-sub');
   const currentLecBadge = document.getElementById('dash-lec-current-badge');
@@ -1095,12 +1107,15 @@ function loadStudentsAction() {
   // Phase 6: Standardized Live Session Model (Status: recording)
   ACTIVE_LECTURE = {
     id: `sess-${Date.now()}`,
-    subjectId: (CURRENT_USER && CURRENT_USER.subjectId) || 'operating-system',
+    subject: effectiveSubject,
     subjectName: effectiveSubject,
+    subjectId: (CURRENT_USER && CURRENT_USER.subjectId) || 'operating-system',
     subjectCodeShort: (CURRENT_USER && CURRENT_USER.subjectCodeShort) || 'OS',
+    faculty: faculty,
     facultyId: facultyId,
     facultyName: faculty,
     section: sec,
+    sec: sec,
     semester: parseInt(sem) || 3,
     date: date,
     timetableEntryId: ACTIVE_LECTURE && ACTIVE_LECTURE.timetableEntryId ? ACTIVE_LECTURE.timetableEntryId : null,
@@ -1198,6 +1213,64 @@ function cancelLectureAction() {
   updateFacultyDashboardLiveMetrics();
   showToast('Lecture session cancelled. Temporary attendance discarded.', 'info');
 }
+
+
+/**
+ * Phase 6.1: Calculate live attendance statistics for an individual student for a specific subject and section.
+ * Strictly scoped to completed live sessions in SESSIONS_DATA / LIVE_ATTENDANCE_RECORDS.
+ * Do NOT count recording sessions, cancelled sessions, historical Section-A snapshot, or timetable slots.
+ */
+function getStudentLiveAttendanceForSubjectAndSection(roll, subject, section) {
+  const completedSessions = SESSIONS_DATA.filter(s =>
+    s.status === 'completed' &&
+    (s.sec === section || s.section === section) &&
+    (s.course === subject || s.subject === subject || s.subjectName === subject)
+  );
+
+  const conductedLectures = completedSessions.length;
+  if (conductedLectures === 0) {
+    return {
+      conducted: 0,
+      attended: 0,
+      displayCount: '— / 0',
+      pct: null,
+      pctDisplay: '--',
+      lastPresentDate: 'Pending Session'
+    };
+  }
+
+  let attendedLectures = 0;
+  let lastPresentDate = null;
+
+  // Scan sessions (SESSIONS_DATA is unshifted, so index 0 is newest)
+  completedSessions.forEach(sess => {
+    const liveRec = (typeof LIVE_ATTENDANCE_RECORDS !== 'undefined')
+      ? LIVE_ATTENDANCE_RECORDS.find(r => r.id === sess.id || (r.lectureNo === sess.lectureNo && r.subject === sess.subject && r.sec === sess.sec))
+      : null;
+
+    if (liveRec && liveRec.studentRecords) {
+      const sr = liveRec.studentRecords.find(r => r.roll === roll || r.studentId === roll);
+      if (sr && (sr.status || '').toUpperCase() === 'PRESENT') {
+        attendedLectures++;
+        if (!lastPresentDate) {
+          lastPresentDate = sess.date || 'Today';
+        }
+      }
+    }
+  });
+
+  const pct = Number(((attendedLectures / conductedLectures) * 100).toFixed(1));
+
+  return {
+    conducted: conductedLectures,
+    attended: attendedLectures,
+    displayCount: `${attendedLectures} / ${conductedLectures}`,
+    pct: pct,
+    pctDisplay: `${pct}%`,
+    lastPresentDate: lastPresentDate || 'No Attendance Yet'
+  };
+}
+window.getStudentLiveAttendanceForSubjectAndSection = getStudentLiveAttendanceForSubjectAndSection;
 
 function renderAttendanceView() {
   const container = document.getElementById('attendance-content');
@@ -1369,16 +1442,18 @@ function renderLoadedState() {
       <span class="banner-pill">${isMarkPresent ? 'Active: Checked = Present' : 'Active: Checked = Absent'}</span>
     </div>
 
-    <!-- Student Attendance Table -->
+    <!-- Student Attendance Table (Phase 6.1: 8 Columns including LECTURES ATTENDED) -->
     <div class="att-table-wrapper ${isMarkPresent ? 'mode-present-active' : 'mode-absent-active'}">
       <table class="att-table" id="att-students-table">
         <thead>
           <tr>
-            <th style="width: 50px;">#</th>
-            <th style="width: 140px;">Roll Number</th>
+            <th style="width: 45px;">#</th>
+            <th style="width: 130px;">Roll Number</th>
             <th>Student Name</th>
-            <th style="width: 130px; text-align: center;">Status</th>
-            <th style="width: 120px; text-align: center;">Quick Action</th>
+            <th style="width: 110px;">Attendance %</th>
+            <th style="width: 140px;">Lectures Attended</th>
+            <th style="width: 120px;">Last Present</th>
+            <th style="width: 140px; text-align: center;">Status</th>
             <th class="col-mark">
               <label class="custom-checkbox-wrap" title="${isMarkPresent ? 'Toggle Select All Present' : 'Toggle Select All Absent'}">
                 <input type="checkbox" id="att-master-checkbox" class="att-checkbox-input" onchange="toggleHeaderCheckbox(this.checked)" />
@@ -1417,12 +1492,18 @@ function renderTableRows(students, isMarkPresent) {
   if (!students || students.length === 0) {
     return `
       <tr>
-        <td colspan="6" style="text-align: center; padding: 32px; color: var(--text-muted);">
+        <td colspan="8" style="text-align: center; padding: 32px; color: var(--text-muted);">
           No enrolled students match your search filter.
         </td>
       </tr>
     `;
   }
+
+  const info = ATTENDANCE_STATE.classInfo || {};
+  const currentSubject = (CURRENT_USER && CURRENT_USER.role === 'faculty')
+    ? CURRENT_USER.subjectName
+    : (info.subject || 'Operating System');
+  const currentSec = info.sec || 'A';
 
   return students.map((s, index) => {
     const isChecked = isMarkPresent ? s.status === 'present' : s.status === 'absent';
@@ -1440,6 +1521,8 @@ function renderTableRows(students, isMarkPresent) {
       rowClass += 'row-is-absent';
     }
 
+    const liveStats = getStudentLiveAttendanceForSubjectAndSection(s.roll, currentSubject, currentSec);
+
     return `
       <tr class="${rowClass}" id="att-row-${s.id}" onclick="handleRowClick(${s.id}, event)">
         <td>${index + 1}</td>
@@ -1450,11 +1533,26 @@ function renderTableRows(students, isMarkPresent) {
             <i data-lucide="external-link" style="width: 12px; height: 12px; opacity: 0.6;"></i>
           </button>
         </td>
-        <td style="text-align: center;" id="badge-td-${s.id}">${statusBadge}</td>
-        <td style="text-align: center;" onclick="event.stopPropagation()">
-          <div style="display: inline-flex; gap: 4px;">
-            <button type="button" class="att-quick-mark-btn ${s.status === 'present' ? 'att-quick-p active' : 'btn-outline'}" onclick="setStudentAttendanceStatus('${escapeHtml(s.roll)}', 'present')" title="Mark Present">P</button>
-            <button type="button" class="att-quick-mark-btn ${s.status === 'absent' ? 'att-quick-a active' : 'btn-outline'}" onclick="setStudentAttendanceStatus('${escapeHtml(s.roll)}', 'absent')" title="Mark Absent">A</button>
+        <td>
+          <span style="font-weight: 600; color: ${liveStats.pct !== null ? (liveStats.pct >= ATTENDANCE_THRESHOLD ? 'var(--text-primary)' : 'var(--danger)') : 'var(--text-muted)'};">
+            ${liveStats.pctDisplay}
+          </span>
+        </td>
+        <td>
+          <span style="font-weight: 600; color: var(--text-primary); font-family: monospace; font-size: 13px;">
+            ${liveStats.displayCount}
+          </span>
+        </td>
+        <td style="color: var(--text-secondary); font-size: 13px;">
+          ${escapeHtml(liveStats.lastPresentDate)}
+        </td>
+        <td style="text-align: center;" id="badge-td-${s.id}">
+          <div style="display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+            ${statusBadge}
+            <div style="display: inline-flex; gap: 3px;" onclick="event.stopPropagation()">
+              <button type="button" class="att-quick-mark-btn ${s.status === 'present' ? 'att-quick-p active' : 'btn-outline'}" onclick="setStudentAttendanceStatus('${escapeHtml(s.roll)}', 'present')" title="Mark Present">P</button>
+              <button type="button" class="att-quick-mark-btn ${s.status === 'absent' ? 'att-quick-a active' : 'btn-outline'}" onclick="setStudentAttendanceStatus('${escapeHtml(s.roll)}', 'absent')" title="Mark Absent">A</button>
+            </div>
           </div>
         </td>
         <td class="col-mark" onclick="event.stopPropagation()">
@@ -3051,6 +3149,52 @@ function doSignOut() {
   refreshIcons();
 }
 
+function switchSession(roleKey) {
+  const account = DEMO_ACCOUNTS[roleKey] || DEMO_ACCOUNTS.faculty;
+  let sessionData;
+  if (roleKey === 'student') {
+    sessionData = {
+      role: 'student',
+      userId: account.id,
+      displayName: account.name,
+      roll: account.id,
+      dept: 'CSE',
+      sem: 3,
+      sec: 'A'
+    };
+  } else if (roleKey === 'hod') {
+    sessionData = {
+      role: 'hod',
+      name: 'Anand Sir',
+      userId: account.id,
+      displayName: 'Anand Sir',
+      department: 'Computer Science & Engineering',
+      institution: 'SSIPMT, Raipur'
+    };
+  } else {
+    // faculty
+    const facId = (account.facultyId || account.id || 'faculty-os').replace('_', '-');
+    const fac = AUTHORITATIVE_FACULTY.find(f => f.id === facId || f.name === account.name) || AUTHORITATIVE_FACULTY[0];
+    sessionData = {
+      role: 'faculty',
+      userId: fac.id,
+      facultyId: fac.id,
+      facultyName: fac.name,
+      name: fac.name,
+      displayName: fac.name,
+      subjectName: fac.subjectName,
+      subjectId: fac.subjectId,
+      subjectCodeShort: fac.subjectCodeShort || 'OS',
+      shortCode: fac.shortCode || 'DS',
+      assignedSections: ['A', 'B'],
+      sectionAllocationStatus: 'Sections A, B Confirmed (Sections C, D Pending)'
+    };
+  }
+  applySessionUI(sessionData);
+  return sessionData;
+}
+window.switchSession = switchSession;
+
 function applySessionUI(session) {
   document.body.classList.remove('landing-mode');
   document.body.classList.add('app-mode');
@@ -3072,6 +3216,15 @@ function applySessionUI(session) {
   if (takeAttBtn) takeAttBtn.style.display = session.role === 'faculty' ? 'inline-flex' : 'none';
 
   if (session.role === 'student') {
+    CURRENT_USER = {
+      role: 'student',
+      name: session.displayName || 'Aryansh Sharma',
+      displayName: session.displayName || 'Aryansh Sharma',
+      roll: session.roll || '303302225048',
+      dept: 'CSE',
+      sem: 3,
+      sec: 'A'
+    };
     if (portalLabel) portalLabel.textContent = 'Student Portal';
     if (userAvatar) userAvatar.textContent = (session.displayName || 'Aryansh Sharma').split(' ').map(w => w[0]).join('').slice(0, 2);
     if (userName) userName.textContent = session.displayName || 'Aryansh Sharma';
@@ -3082,6 +3235,13 @@ function applySessionUI(session) {
     showPage('student-dashboard', document.querySelector('#nav-group-student [data-page="student-dashboard"]'));
     renderStudentDashboard(session.roll);
   } else if (session.role === 'hod') {
+    CURRENT_USER = {
+      role: 'hod',
+      name: 'Anand Sir',
+      displayName: 'Anand Sir',
+      department: 'Computer Science & Engineering',
+      institution: 'SSIPMT, Raipur'
+    };
     if (portalLabel) portalLabel.textContent = 'HOD Administration';
     if (userAvatar) userAvatar.textContent = 'AS';
     if (userName) userName.textContent = 'Anand Sir';
