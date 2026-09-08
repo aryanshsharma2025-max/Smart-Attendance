@@ -1,10 +1,13 @@
 package com.attendance.controller;
 
 import com.attendance.dto.*;
+import com.attendance.exception.UnauthorizedActionException;
+import com.attendance.security.UserPrincipal;
 import com.attendance.service.AttendanceCalculationService;
 import com.attendance.service.AttendanceSessionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,14 +22,33 @@ public class AttendanceHistoryController {
 
     // Student summary (legacy & new REST convention)
     @GetMapping({"/api/students/{id}/attendance", "/api/attendance/summary/student/{id}", "/api/attendance/history/student/{id}"})
-    public ResponseEntity<StudentAttendanceSummaryDto> getStudentAttendance(@PathVariable Long id) {
+    public ResponseEntity<StudentAttendanceSummaryDto> getStudentAttendance(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        
+        // Identity Spoofing Protection: student can only access own attendance
+        if (principal != null && "STUDENT".equalsIgnoreCase(principal.getRole())) {
+            if (principal.getStudentId() != null && !principal.getStudentId().equals(id)) {
+                throw new UnauthorizedActionException("403 Forbidden: Students are restricted from accessing attendance records of other students");
+            }
+        }
+
         return ResponseEntity.ok(calculationService.getStudentSummary(id));
     }
 
     @GetMapping("/api/students/{id}/attendance/subject/{subjectId}")
     public ResponseEntity<StudentAttendanceSummaryDto.CourseBreakdown> getStudentSubjectAttendance(
             @PathVariable Long id,
-            @PathVariable Long subjectId) {
+            @PathVariable Long subjectId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        
+        // Identity Spoofing Protection: student can only access own attendance
+        if (principal != null && "STUDENT".equalsIgnoreCase(principal.getRole())) {
+            if (principal.getStudentId() != null && !principal.getStudentId().equals(id)) {
+                throw new UnauthorizedActionException("403 Forbidden: Students are restricted from accessing attendance records of other students");
+            }
+        }
+
         StudentAttendanceSummaryDto summary = calculationService.getStudentSummary(id);
         return summary.getCourses().stream()
             .filter(c -> c.getCourseId().equals(subjectId))

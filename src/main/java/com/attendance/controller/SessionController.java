@@ -1,11 +1,14 @@
 package com.attendance.controller;
 
 import com.attendance.dto.*;
+import com.attendance.exception.UnauthorizedActionException;
+import com.attendance.security.UserPrincipal;
 import com.attendance.service.AttendanceSessionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,15 +23,31 @@ public class SessionController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('FACULTY', 'HOD')")
-    public ResponseEntity<SessionDto> startSession(@RequestBody StartSessionRequest request) {
+    public ResponseEntity<SessionDto> startSession(
+            @RequestBody StartSessionRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        
+        // Identity Spoofing Protection: enforce or safely derive facultyId from authentication
+        if (principal != null && "FACULTY".equalsIgnoreCase(principal.getRole())) {
+            if (request.getFacultyId() != null && !request.getFacultyId().equals(principal.getFacultyId())) {
+                throw new UnauthorizedActionException("403 Forbidden: Identity spoofing detected - authenticated faculty ID (" 
+                    + principal.getFacultyId() + ") does not match requested facultyId (" + request.getFacultyId() + ")");
+            }
+            if (request.getFacultyId() == null) {
+                request.setFacultyId(principal.getFacultyId());
+            }
+        }
+
         SessionDto session = sessionService.startSession(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(session);
     }
 
     @PostMapping("/start")
     @PreAuthorize("hasAnyRole('FACULTY', 'HOD')")
-    public ResponseEntity<SessionDto> startSessionAlias(@RequestBody StartSessionRequest request) {
-        return startSession(request);
+    public ResponseEntity<SessionDto> startSessionAlias(
+            @RequestBody StartSessionRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return startSession(request, principal);
     }
 
     @GetMapping("/{id}")
@@ -40,7 +59,20 @@ public class SessionController {
     @PreAuthorize("hasAnyRole('FACULTY', 'HOD')")
     public ResponseEntity<AttendanceSubmissionResponse> saveAttendance(
             @PathVariable Long id,
-            @RequestBody MarkAttendanceRequest request) {
+            @RequestBody MarkAttendanceRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        
+        // Identity Spoofing Protection: enforce or safely derive facultyId from authentication
+        if (principal != null && "FACULTY".equalsIgnoreCase(principal.getRole())) {
+            if (request.getFacultyId() != null && !request.getFacultyId().equals(principal.getFacultyId())) {
+                throw new UnauthorizedActionException("403 Forbidden: Identity spoofing detected - authenticated faculty ID (" 
+                    + principal.getFacultyId() + ") does not match submission facultyId (" + request.getFacultyId() + ")");
+            }
+            if (request.getFacultyId() == null) {
+                request.setFacultyId(principal.getFacultyId());
+            }
+        }
+
         return ResponseEntity.ok(sessionService.saveAttendance(id, request));
     }
 
@@ -48,8 +80,9 @@ public class SessionController {
     @PreAuthorize("hasAnyRole('FACULTY', 'HOD')")
     public ResponseEntity<AttendanceSubmissionResponse> submitAttendanceAlias(
             @PathVariable Long id,
-            @RequestBody MarkAttendanceRequest request) {
-        return saveAttendance(id, request);
+            @RequestBody MarkAttendanceRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return saveAttendance(id, request, principal);
     }
 
     @GetMapping("/{id}/attendance")
