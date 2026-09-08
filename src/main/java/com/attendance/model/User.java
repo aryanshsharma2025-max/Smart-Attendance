@@ -36,7 +36,7 @@ public class User {
     @JoinColumn(name = "student_id")
     private Student student;
 
-    @Column(name = "display_name", nullable = false, length = 100)
+    @Transient
     private String displayName;
 
     @Builder.Default
@@ -44,21 +44,26 @@ public class User {
     private Boolean isActive = true;
 
     @Builder.Default
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    @Builder.Default
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt = LocalDateTime.now();
-
-    @PreUpdate
-    public void preUpdate() {
-        this.updatedAt = LocalDateTime.now();
+    public String getDisplayName() {
+        if (displayName != null && !displayName.isBlank()) {
+            return displayName;
+        }
+        if (faculty != null && faculty.getName() != null) {
+            return faculty.getName();
+        }
+        if (student != null && student.getName() != null) {
+            return student.getName();
+        }
+        return username;
     }
 
     public enum UserRole {
         HOD,
         FACULTY,
-        STUDENT
+        STUDENT,
+        ADMIN
     }
 }

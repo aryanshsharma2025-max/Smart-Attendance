@@ -663,7 +663,7 @@ public class User {
     @JoinColumn(name = "student_id")
     private Student student;
 
-    @Column(name = "display_name", nullable = false, length = 100)
+    @Transient
     private String displayName;
 
     @Builder.Default
@@ -671,22 +671,27 @@ public class User {
     private Boolean isActive = true;
 
     @Builder.Default
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    @Builder.Default
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt = LocalDateTime.now();
-
-    @PreUpdate
-    public void preUpdate() {
-        this.updatedAt = LocalDateTime.now();
+    public String getDisplayName() {
+        if (displayName != null && !displayName.isBlank()) {
+            return displayName;
+        }
+        if (faculty != null && faculty.getName() != null) {
+            return faculty.getName();
+        }
+        if (student != null && student.getName() != null) {
+            return student.getName();
+        }
+        return username;
     }
 
     public enum UserRole {
         HOD,
         FACULTY,
-        STUDENT
+        STUDENT,
+        ADMIN
     }
 }
 
@@ -850,6 +855,7 @@ import java.util.List;
 
 public interface StudentRepository extends JpaRepository<Student, Long> {
     Optional<Student> findByRollNumber(String rollNumber);
+    boolean existsByRollNumber(String rollNumber);
     Optional<Student> findByRfidUid(String rfidUid);
     List<Student> findBySectionSectionName(String sectionName);
     List<Student> findBySectionSectionId(Long sectionId);
@@ -2247,7 +2253,7 @@ public class AttendanceSessionService {
             .id(s.getSessionId())
             .subjectId(s.getCourse().getCourseId())
             .subjectName(s.getCourse().getCourseName())
-            .subjectCode(s.getCourseCodeShort())
+            .subjectCode(s.getCourse().getCourseCodeShort())
             .facultyId(s.getFaculty().getFacultyId())
             .facultyCode(s.getFaculty().getFacultyCode())
             .facultyName(s.getFaculty().getName())
@@ -2533,13 +2539,13 @@ public class CourseService {
     private CourseDto toDto(Course c) {
         return CourseDto.builder()
             .id(c.getCourseId())
-            .courseCode(c.getCourseCode())
-            .courseCodeShort(c.getCourseCodeShort())
             .name(c.getCourseName())
-            .type(c.getCourseType().name())
-            .credits(c.getCredits())
+            .shortCode(c.getCourseCodeShort())
+            .officialCode(c.getOfficialCourseCode())
+            .department(c.getDepartment() != null ? c.getDepartment().getDeptCode() : "CSE")
             .semester(c.getSemester())
             .isPrimary(c.getIsPrimary())
+            .assignedFacultyName(null)
             .build();
     }
 }
@@ -2598,12 +2604,12 @@ public class FacultyService {
                 .allocationId(a.getAllocationId())
                 .courseId(a.getCourse().getCourseId())
                 .courseCodeShort(a.getCourse().getCourseCodeShort())
-                .courseCode(a.getCourse().getCourseCode())
+                .courseCode(a.getCourse().getOfficialCourseCode())
                 .courseName(a.getCourse().getCourseName())
                 .sectionId(a.getSection().getSectionId())
                 .sectionName(a.getSection().getSectionName())
-                .semester(a.getSemester())
-                .academicYear(a.getAcademicYear())
+                .semester(a.getCourse().getSemester())
+                .academicYear(null)
                 .status(a.getStatus().name())
                 .build())
             .collect(Collectors.toList());
@@ -2865,18 +2871,22 @@ public class TimetableService {
         return TimetableDto.builder()
             .id(e.getEntryId())
             .timetableCode(e.getTimetableCode())
-            .section(e.getSection().getSectionName())
-            .dayOfWeek(e.getDayOfWeek().name())
-            .slotTime(e.getSlotTime())
-            .startTime(e.getStartTime().toString())
-            .endTime(e.getEndTime().toString())
-            .subjectId(e.getCourse() != null ? e.getCourse().getCourseId() : null)
-            .subjectCode(e.getCourse() != null ? e.getCourse().getCourseCodeShort() : null)
+            .section(e.getSection() != null ? e.getSection().getSectionName() : null)
+            .day(e.getDayOfWeek())
+            .dayIndex(e.getDayIndex())
+            .period(e.getPeriod())
+            .periodStart(e.getPeriodStart())
+            .periodEnd(e.getPeriodEnd())
+            .startTime(e.getStartTime() != null ? e.getStartTime().toString() : null)
+            .endTime(e.getEndTime() != null ? e.getEndTime().toString() : null)
+            .timeDisplay(e.getStartTime() != null && e.getEndTime() != null ? (e.getStartTime() + " - " + e.getEndTime()) : null)
+            .subjectCodeShort(e.getCourse() != null ? e.getCourse().getCourseCodeShort() : null)
             .subjectName(e.getCourse() != null ? e.getCourse().getCourseName() : null)
-            .facultyId(e.getFaculty() != null ? e.getFaculty().getFacultyId() : null)
+            .facultyId(e.getFaculty() != null && e.getFaculty().getFacultyId() != null ? e.getFaculty().getFacultyId().toString() : null)
             .facultyName(e.getFaculty() != null ? e.getFaculty().getName() : null)
+            .type(e.getSlotType())
             .room(e.getRoom())
-            .isBreak(e.getIsBreak())
+            .effectiveDate(e.getEffectiveDate())
             .build();
     }
 }

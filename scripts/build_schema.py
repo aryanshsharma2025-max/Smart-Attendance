@@ -17,8 +17,8 @@ def generate_schema_sql():
     lines.append("--  Institution: SSIPMT Raipur | CSVTU Affiliated")
     lines.append("--  Compatible with MySQL 8.0+")
     lines.append("-- ============================================================\n")
-    lines.append("CREATE DATABASE IF NOT EXISTS smart_attendance;")
-    lines.append("USE smart_attendance;\n")
+    lines.append("CREATE DATABASE IF NOT EXISTS attendance_db;")
+    lines.append("USE attendance_db;\n")
 
     lines.append("-- ------------------------------------------------------------")
     lines.append("-- Drop Tables in Reverse Dependency Order")

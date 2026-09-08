@@ -5,8 +5,8 @@
 --  Compatible with MySQL 8.0+
 -- ============================================================
 
-CREATE DATABASE IF NOT EXISTS smart_attendance;
-USE smart_attendance;
+CREATE DATABASE IF NOT EXISTS attendance_db;
+USE attendance_db;
 
 -- ------------------------------------------------------------
 -- Drop Tables in Reverse Dependency Order

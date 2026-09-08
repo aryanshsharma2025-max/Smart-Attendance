@@ -246,7 +246,7 @@ public class AttendanceSessionService {
             .id(s.getSessionId())
             .subjectId(s.getCourse().getCourseId())
             .subjectName(s.getCourse().getCourseName())
-            .subjectCode(s.getCourseCodeShort())
+            .subjectCode(s.getCourse().getCourseCodeShort())
             .facultyId(s.getFaculty().getFacultyId())
             .facultyCode(s.getFaculty().getFacultyCode())
             .facultyName(s.getFaculty().getName())

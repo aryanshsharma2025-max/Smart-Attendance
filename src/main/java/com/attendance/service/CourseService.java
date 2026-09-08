@@ -69,13 +69,13 @@ public class CourseService {
     private CourseDto toDto(Course c) {
         return CourseDto.builder()
             .id(c.getCourseId())
-            .courseCode(c.getCourseCode())
-            .courseCodeShort(c.getCourseCodeShort())
             .name(c.getCourseName())
-            .type(c.getCourseType().name())
-            .credits(c.getCredits())
+            .shortCode(c.getCourseCodeShort())
+            .officialCode(c.getOfficialCourseCode())
+            .department(c.getDepartment() != null ? c.getDepartment().getDeptCode() : "CSE")
             .semester(c.getSemester())
             .isPrimary(c.getIsPrimary())
+            .assignedFacultyName(null)
             .build();
     }
 }
