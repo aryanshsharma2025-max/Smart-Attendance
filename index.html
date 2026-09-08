@@ -378,66 +378,66 @@
        ═══════════════════════════════════════════════════════ -->
   <div id="app-shell" class="app-shell">
 
-    <!-- ── SIDEBAR ─────────────────────────────────────────── -->
+    <!-- ── SIDEBAR OVERLAY BACKDROP ──────────────────────── -->
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar(false)"></div>
+
+    <!-- ── SIDEBAR (PHASE 8.1 COLLAPSIBLE DRAWER) ───────────── -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <div class="logo-mark">
           <i data-lucide="graduation-cap" class="icon-sm"></i>
         </div>
         <div class="logo-details">
-          <span class="logo-text">SmartAttend</span>
-          <span class="logo-subtext" id="sidebar-portal-label">Department Portal</span>
+          <span class="logo-text">Synapse</span>
+          <span class="logo-subtext" id="sidebar-portal-label">Smart Attendance</span>
         </div>
+        <button type="button" class="btn btn-ghost btn-icon btn-sm" onclick="toggleSidebar(false)" aria-label="Close menu" style="margin-left: auto; color: var(--text-muted);">
+          <i data-lucide="x" class="icon-sm"></i>
+        </button>
       </div>
 
       <nav class="sidebar-nav" id="sidebar-nav">
-        <!-- Faculty Navigation Group -->
+        <!-- Faculty Navigation Group (Requirement B2, B3) -->
         <div class="nav-role-group" id="nav-group-faculty">
-          <div class="nav-section-label">Faculty Workspace</div>
-          <a href="#" class="nav-item active" data-page="dashboard" onclick="showPage('dashboard',this)">
-            <i data-lucide="layout-dashboard" class="nav-icon"></i>
-            <span>Overview</span>
+          <div class="nav-section-label">Navigation</div>
+          <a href="#" class="nav-item active" data-page="dashboard" onclick="showPage('dashboard',this); toggleSidebar(false);">
+            <i data-lucide="home" class="nav-icon"></i>
+            <span>Home</span>
           </a>
-          <a href="#" class="nav-item" data-page="faculty-subject" onclick="showPage('faculty-subject',this)">
-            <i data-lucide="book-open" class="nav-icon"></i>
-            <span>My Subject</span>
-          </a>
-
-          <div class="nav-section-label">Academic</div>
-          <a href="#" class="nav-item" data-page="take-attendance" onclick="showPage('take-attendance',this)">
-            <i data-lucide="clipboard-check" class="nav-icon"></i>
-            <span>Attendance</span>
-          </a>
-          <a href="#" class="nav-item" data-page="students" onclick="showPage('students',this)">
+          <a href="#" class="nav-item" data-page="students" onclick="showPage('students',this); toggleSidebar(false);">
             <i data-lucide="users" class="nav-icon"></i>
             <span>Students</span>
           </a>
-          <a href="#" class="nav-item" data-page="sessions" onclick="showPage('sessions',this)">
-            <i data-lucide="calendar" class="nav-icon"></i>
-            <span>Lectures</span>
+          <a href="#" class="nav-item" data-page="attendance" onclick="showPage('attendance',this); toggleSidebar(false);">
+            <i data-lucide="bar-chart-2" class="nav-icon"></i>
+            <span>Watch Attendance</span>
           </a>
-          <a href="#" class="nav-item" data-page="reports" onclick="showPage('reports',this)">
-            <i data-lucide="file-text" class="nav-icon"></i>
-            <span>Reports</span>
+          <a href="#" class="nav-item" onclick="openTimetableModalOrView(); toggleSidebar(false);">
+            <i data-lucide="calendar" class="nav-icon"></i>
+            <span>Weekly Timetable</span>
+          </a>
+          <a href="#" class="nav-item" data-page="faculty-subject" onclick="showPage('faculty-subject',this); toggleSidebar(false);">
+            <i data-lucide="user" class="nav-icon"></i>
+            <span>Profile</span>
           </a>
         </div>
 
         <!-- Student Navigation Group -->
         <div class="nav-role-group" id="nav-group-student" style="display: none;">
           <div class="nav-section-label">My Academic</div>
-          <a href="#" class="nav-item active" data-page="student-dashboard" onclick="showPage('student-dashboard',this)">
+          <a href="#" class="nav-item active" data-page="student-dashboard" onclick="showPage('student-dashboard',this); toggleSidebar(false);">
             <i data-lucide="layout-dashboard" class="nav-icon"></i>
             <span>My Attendance</span>
           </a>
-          <a href="#" class="nav-item" data-page="student-dashboard" onclick="showPage('student-dashboard',this); scrollToId('stu-subjects-container');">
+          <a href="#" class="nav-item" data-page="student-dashboard" onclick="showPage('student-dashboard',this); scrollToId('stu-subjects-container'); toggleSidebar(false);">
             <i data-lucide="book-open" class="nav-icon"></i>
             <span>Subject Breakdown</span>
           </a>
-          <a href="#" class="nav-item" data-page="student-dashboard" onclick="showPage('student-dashboard',this); scrollToId('stu-history-body');">
+          <a href="#" class="nav-item" data-page="student-dashboard" onclick="showPage('student-dashboard',this); scrollToId('stu-history-body'); toggleSidebar(false);">
             <i data-lucide="history" class="nav-icon"></i>
             <span>Attendance History</span>
           </a>
-          <a href="#" class="nav-item" data-page="student-dashboard" onclick="showPage('student-dashboard',this); openStudentDrawer(32);">
+          <a href="#" class="nav-item" data-page="student-dashboard" onclick="showPage('student-dashboard',this); openStudentDrawer(32); toggleSidebar(false);">
             <i data-lucide="user" class="nav-icon"></i>
             <span>My Profile</span>
           </a>
@@ -446,19 +446,19 @@
         <!-- HOD Navigation Group -->
         <div class="nav-role-group" id="nav-group-hod" style="display: none;">
           <div class="nav-section-label">Governance</div>
-          <a href="#" class="nav-item active" data-page="hod-overview" onclick="showPage('hod-overview',this)">
+          <a href="#" class="nav-item active" data-page="hod-overview" onclick="showPage('hod-overview',this); toggleSidebar(false);">
             <i data-lucide="shield-check" class="nav-icon"></i>
             <span>Department Overview</span>
           </a>
-          <a href="#" class="nav-item" data-page="hod-overview" onclick="showPage('hod-overview',this); scrollToId('hod-health-body');">
+          <a href="#" class="nav-item" data-page="hod-overview" onclick="showPage('hod-overview',this); scrollToId('hod-health-body'); toggleSidebar(false);">
             <i data-lucide="book-open" class="nav-icon"></i>
             <span>Curriculum Health</span>
           </a>
-          <a href="#" class="nav-item" data-page="hod-overview" onclick="showPage('hod-overview',this); scrollToId('hod-risk-body');">
+          <a href="#" class="nav-item" data-page="hod-overview" onclick="showPage('hod-overview',this); scrollToId('hod-risk-body'); toggleSidebar(false);">
             <i data-lucide="alert-triangle" class="nav-icon"></i>
             <span>Students At Risk</span>
           </a>
-          <a href="#" class="nav-item" data-page="reports" onclick="showPage('reports',this)">
+          <a href="#" class="nav-item" data-page="reports" onclick="showPage('reports',this); toggleSidebar(false);">
             <i data-lucide="file-check" class="nav-icon"></i>
             <span>Reports &amp; Audit</span>
           </a>
@@ -473,11 +473,11 @@
             <div class="user-role" id="sidebar-user-role">Faculty · Operating System</div>
           </div>
         </div>
-        <button class="btn btn-ghost btn-sm" id="sidebar-switch-faculty-btn" onclick="openFacultyArea()" title="Switch Faculty Profile" style="margin-top: 8px; width: 100%; justify-content: flex-start; color: var(--primary); gap: 8px; font-weight: 600;">
+        <button class="btn btn-ghost btn-sm" id="sidebar-switch-faculty-btn" onclick="openFacultyArea(); toggleSidebar(false);" title="Switch Faculty Profile" style="margin-top: 8px; width: 100%; justify-content: flex-start; color: var(--primary); gap: 8px; font-weight: 600;">
           <i data-lucide="arrow-left-right" class="icon-sm"></i>
           <span>Switch Faculty</span>
         </button>
-        <button class="btn btn-ghost btn-sm" onclick="doSignOut()" title="Sign Out of SmartAttend" style="margin-top: 2px; width: 100%; justify-content: flex-start; color: var(--text-muted); gap: 8px;">
+        <button class="btn btn-ghost btn-sm" onclick="doSignOut(); toggleSidebar(false);" title="Sign Out of SmartAttend" style="margin-top: 2px; width: 100%; justify-content: flex-start; color: var(--text-muted); gap: 8px;">
           <i data-lucide="log-out" class="icon-sm"></i>
           <span>Sign Out</span>
         </button>
@@ -489,8 +489,8 @@
 
     <!-- Top bar -->
     <header class="topbar">
-      <div class="topbar-left">
-        <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Toggle navigation menu">
+      <div class="topbar-left" style="display: flex; align-items: center; gap: 12px;">
+        <button class="hamburger-btn" id="topbar-hamburger-btn" onclick="toggleSidebar()" aria-label="Toggle navigation menu" title="Open Navigation Menu">
           <i data-lucide="menu"></i>
         </button>
         <div class="topbar-breadcrumb">
@@ -507,13 +507,12 @@
         <button class="btn btn-icon theme-toggle" onclick="toggleTheme()" id="theme-toggle-btn" title="Toggle Theme" aria-label="Toggle theme">
           <i data-lucide="moon" id="theme-icon"></i>
         </button>
-        <!-- TOP-RIGHT "+ TAKE ATTENDANCE" OPENS DEDICATED TAKE ATTENDANCE WORKSPACE -->
-        <button class="btn btn-primary topbar-cta" id="topbar-take-att-btn" onclick="showPage('take-attendance', null)">
+        <!-- Retain elements for script compatibility (guarded display) -->
+        <button class="btn btn-primary topbar-cta" id="topbar-take-att-btn" onclick="showPage('take-attendance', null)" style="display: none;">
           <i data-lucide="check-square" class="icon-sm"></i>
           <span>Take Attendance</span>
         </button>
-        <!-- SWITCH FACULTY ACTION -->
-        <button class="btn btn-outline btn-sm" id="topbar-switch-faculty-btn" onclick="openFacultyArea()" title="Switch Faculty Profile" style="display: inline-flex; align-items: center; gap: 6px;">
+        <button class="btn btn-outline btn-sm" id="topbar-switch-faculty-btn" onclick="openFacultyArea()" title="Switch Faculty Profile" style="display: none;">
           <i data-lucide="arrow-left-right" class="icon-sm"></i>
           <span>Switch Faculty</span>
         </button>
@@ -1207,55 +1206,100 @@
         </div>
       </div>
 
-      <!-- ── PHASE 8: STUDENT ATTENDANCE VISUALIZATIONS (REQUIREMENT 10) ──── -->
+      <!-- ── PHASE 8.1: ENHANCED STUDENT ATTENDANCE VISUALIZATIONS & REAL BAR GRAPH ── -->
       <div class="card" style="margin-bottom: 24px; padding: 24px; border: 1px solid var(--border); background: var(--surface);">
-        <div class="chart-header" style="margin-bottom: 16px;">
+        <div class="chart-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 8px;">
           <div>
-            <h3 style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0;">Attendance Analytics &amp; Visualizations</h3>
-            <div class="chart-sub">Progress meter, present vs absent distribution, and monthly breakdown</div>
+            <h3 style="font-size: 17px; font-weight: 700; color: var(--text-primary); margin: 0;">Attendance Analytics &amp; Visualizations</h3>
+            <div class="chart-sub">Authoritative session performance &middot; Monthly bar graph &middot; Present vs absent ratio</div>
+          </div>
+          <span class="badge badge-ok" id="sp-vis-compliance-text">Threshold: 75%</span>
+        </div>
+
+        <!-- Primary 5-Column Plain Attendance Summary Grid (Requirement C2) -->
+        <div class="sp-main-summary-grid">
+          <div class="sp-summary-card highlight">
+            <span class="sp-summary-label">Attendance</span>
+            <div class="sp-summary-val" id="sp-vis-pct-text" style="color: var(--primary);">--</div>
+            <div class="sp-summary-sub">Overall percentage</div>
+          </div>
+          <div class="sp-summary-card">
+            <span class="sp-summary-label">Classes Attended</span>
+            <div class="sp-summary-val" id="sp-vis-classes-ratio">0 / 0</div>
+            <div class="sp-summary-sub">Attended / Conducted</div>
+          </div>
+          <div class="sp-summary-card">
+            <span class="sp-summary-label">Present</span>
+            <div class="sp-summary-val" id="sp-vis-present-count" style="color: var(--success);">0</div>
+            <div class="sp-summary-sub">Classes attended</div>
+          </div>
+          <div class="sp-summary-card">
+            <span class="sp-summary-label">Absent</span>
+            <div class="sp-summary-val" id="sp-vis-absent-count" style="color: var(--danger);">0</div>
+            <div class="sp-summary-sub">Classes missed</div>
+          </div>
+          <div class="sp-summary-card">
+            <span class="sp-summary-label">Conducted</span>
+            <div class="sp-summary-val" id="sp-main-conducted">0</div>
+            <div class="sp-summary-sub">Eligible sessions held</div>
           </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
-          <!-- A. Attendance Percentage Progress Bar -->
-          <div style="padding: 18px; background: var(--surface-muted); border-radius: var(--radius-md); border: 1px solid var(--border);">
-            <div style="display: flex; justify-content: space-between; align-items: baseline;">
-              <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.04em;">Attendance Percentage</span>
-              <span id="sp-vis-pct-text" style="font-size: 22px; font-weight: 700; color: var(--primary);">--</span>
-            </div>
-            <div class="linear-progress-wrap">
-              <div class="linear-progress-fill" id="sp-vis-progress-bar" style="width: 0%;"></div>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); margin-top: 6px;">
-              <span>Classes Attended: <strong id="sp-vis-classes-ratio">0 / 0</strong></span>
-              <span id="sp-vis-compliance-text" class="badge">Threshold: 75%</span>
-            </div>
+        <!-- Linear Progress Bar -->
+        <div style="margin-bottom: 24px; padding: 16px 18px; background: var(--surface-muted); border-radius: var(--radius-md); border: 1px solid var(--border);">
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; font-weight: 600;">
+            <span style="color: var(--text-secondary);">CSVTU Mandatory Attendance Compliance (75% Minimum Requirement)</span>
+            <span id="sp-vis-progress-lbl" style="color: var(--text-primary);">Target: 75%</span>
           </div>
-
-          <!-- B. Present vs Absent Visual Meter / Breakdown -->
-          <div style="padding: 18px; background: var(--surface-muted); border-radius: var(--radius-md); border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between;">
-            <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.04em; margin-bottom: 10px;">Present vs Absent</div>
-            <div style="display: flex; align-items: center; justify-content: space-around; gap: 16px;">
-              <div style="text-align: center;">
-                <div id="sp-vis-present-count" style="font-size: 24px; font-weight: 700; color: var(--success);">0</div>
-                <div style="font-size: 12px; color: var(--text-secondary);">Present Classes</div>
-              </div>
-              <div style="height: 36px; width: 1px; background: var(--border);"></div>
-              <div style="text-align: center;">
-                <div id="sp-vis-absent-count" style="font-size: 24px; font-weight: 700; color: var(--danger);">0</div>
-                <div style="font-size: 12px; color: var(--text-secondary);">Absent Classes</div>
-              </div>
-            </div>
-            <div style="margin-top: 10px; height: 10px; background: var(--border); border-radius: var(--radius-full); overflow: hidden; display: flex;">
-              <div id="sp-vis-ratio-present-bar" style="height: 100%; background: var(--success); width: 0%;"></div>
-              <div id="sp-vis-ratio-absent-bar" style="height: 100%; background: var(--danger); width: 0%;"></div>
-            </div>
+          <div class="linear-progress-wrap" style="margin: 10px 0 6px;">
+            <div class="linear-progress-fill" id="sp-vis-progress-bar" style="width: 0%;"></div>
           </div>
         </div>
 
-        <!-- C. Monthly Attendance Breakdown (July, August, September, October, November, December) -->
-        <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border);">
-          <div style="font-size: 13px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px;">Monthly Attendance Record (Academic Session July&ndash;Dec 2026)</div>
+        <!-- Real Monthly Attendance Bar Graph (Requirement C3 & Part I) -->
+        <div style="margin-bottom: 24px; padding: 20px; background: var(--surface-muted); border-radius: var(--radius-md); border: 1px solid var(--border);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+            <div>
+              <div style="font-size: 14px; font-weight: 700; color: var(--text-primary);">Monthly Attendance % (July &ndash; Dec 2026)</div>
+              <div style="font-size: 12px; color: var(--text-muted);">Real session attendance percentage month-by-month</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; font-size: 11px; color: var(--text-secondary);">
+              <span style="display: inline-flex; align-items: center; gap: 4px;"><span style="width: 10px; height: 10px; background: var(--success); border-radius: 2px; display: inline-block;"></span> &ge; 75% (Eligible)</span>
+              <span style="display: inline-flex; align-items: center; gap: 4px;"><span style="width: 10px; height: 10px; background: var(--danger); border-radius: 2px; display: inline-block;"></span> &lt; 75% (At-Risk)</span>
+            </div>
+          </div>
+
+          <!-- Empty State when 0 live sessions exist (Requirement Part I) -->
+          <div id="sp-chart-empty-state" style="display: none; padding: 32px 20px; text-align: center; color: var(--text-muted);">
+            <i data-lucide="bar-chart-2" class="icon-md" style="margin-bottom: 6px; display: inline-block; opacity: 0.6;"></i>
+            <div style="font-size: 14px; font-weight: 600; color: var(--text-primary);">No Live Attendance Recorded Yet</div>
+            <div style="font-size: 12px; margin-top: 4px;">Monthly attendance bars will populate automatically once faculty conduct and submit live lectures.</div>
+          </div>
+
+          <!-- Chart.js Canvas Wrapper -->
+          <div id="sp-chart-canvas-wrap" style="position: relative; height: 220px; width: 100%;">
+            <canvas id="sp-monthly-bar-chart"></canvas>
+          </div>
+        </div>
+
+        <!-- Present vs Absent Visual Meter (Requirement C5) -->
+        <div style="margin-bottom: 24px; padding: 18px; background: var(--surface-muted); border-radius: var(--radius-md); border: 1px solid var(--border);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.04em;">Present vs Absent Distribution</span>
+            <span style="font-size: 12px; color: var(--text-secondary);"><span id="sp-vis-present-pct">0%</span> Present &middot; <span id="sp-vis-absent-pct">0%</span> Absent</span>
+          </div>
+          <div style="height: 12px; background: var(--border); border-radius: var(--radius-full); overflow: hidden; display: flex;">
+            <div id="sp-vis-ratio-present-bar" style="height: 100%; background: var(--success); width: 0%; transition: width 400ms ease;"></div>
+            <div id="sp-vis-ratio-absent-bar" style="height: 100%; background: var(--danger); width: 0%; transition: width 400ms ease;"></div>
+          </div>
+        </div>
+
+        <!-- C. Monthly Attendance Details Grid (July, August, September, October, November, December) (Requirement C4 & C6) -->
+        <div style="padding-top: 16px; border-top: 1px solid var(--border);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+            <div style="font-size: 13px; font-weight: 700; color: var(--text-primary);">Academic Session Month Breakdown (July &ndash; Dec 2026)</div>
+            <span class="badge" id="sp-attendance-trend-badge" style="background: var(--surface-muted); border: 1px solid var(--border); font-size: 11px;">Attendance Trend: Pre-Commencement</span>
+          </div>
           <div class="monthly-attendance-grid" id="sp-monthly-attendance-grid">
             <!-- Populated by JS for July, August, September, October, November, December -->
           </div>
@@ -1335,8 +1379,10 @@
       <!-- Lecture / Session History Area -->
       <div class="card" style="padding: 24px;">
         <h3 style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0 0 16px;">Lecture Session History</h3>
-        <div style="padding: 28px 20px; text-align: center; color: var(--text-muted); font-size: 13.5px; background: var(--surface-muted); border-radius: var(--radius-md); border: 1px dashed var(--border);">
-          No lecture sessions conducted yet for 3rd Semester 2026.
+        <div id="sp-session-history-container">
+          <div style="padding: 28px 20px; text-align: center; color: var(--text-muted); font-size: 13.5px; background: var(--surface-muted); border-radius: var(--radius-md); border: 1px dashed var(--border);">
+            No lecture sessions conducted yet for 3rd Semester 2026.
+          </div>
         </div>
       </div>
     </section>
@@ -2020,34 +2066,66 @@
     </div>
   </div>
 
-  <!-- ── TIMETABLE MODAL ────────────────────────────────────── -->
+  <!-- ── TIMETABLE MODAL (PHASE 8.1 WEEKLY TIMETABLE) ─────── -->
   <div class="modal-overlay" id="timetable-modal-overlay" onclick="closeTimetableModal()" style="display: none;">
-    <div class="modal" onclick="event.stopPropagation()" style="max-width: 840px; width: 95%;">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width: 960px; width: 95%;">
       <div class="modal-header">
         <div>
-          <span style="font-weight: 700; font-size: 16px;">Weekly Teaching Timetable</span>
-          <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;" id="tt-modal-fac-subtitle">Devbrat Sahu &middot; Operating System</div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-weight: 700; font-size: 18px;">Weekly Timetable</span>
+            <span class="badge badge-ok" id="tt-modal-slots-count-badge">Teaching Timetable</span>
+          </div>
+          <div style="font-size: 12.5px; color: var(--text-secondary); margin-top: 2px;" id="tt-modal-fac-subtitle">Devbrat Sahu &middot; Operating System &middot; Department of CSE</div>
         </div>
         <button class="modal-close" onclick="closeTimetableModal()" aria-label="Close modal">
           <i data-lucide="x" class="icon-sm"></i>
         </button>
       </div>
-      <div class="modal-body" style="max-height: 75vh; overflow-y: auto;">
-        <!-- Day Selector Tabs -->
-        <div class="schedule-day-tabs" style="display: flex; gap: 6px; margin-bottom: 16px; background: var(--surface-muted); padding: 4px; border-radius: var(--radius-sm);" id="tt-modal-day-tabs">
-          <button type="button" class="btn btn-ghost btn-xs sched-tab" data-day="Monday" onclick="selectModalScheduleDay('Monday')">Mon</button>
-          <button type="button" class="btn btn-ghost btn-xs sched-tab" data-day="Tuesday" onclick="selectModalScheduleDay('Tuesday')">Tue</button>
-          <button type="button" class="btn btn-ghost btn-xs sched-tab" data-day="Wednesday" onclick="selectModalScheduleDay('Wednesday')">Wed</button>
-          <button type="button" class="btn btn-ghost btn-xs sched-tab" data-day="Thursday" onclick="selectModalScheduleDay('Thursday')">Thu</button>
-          <button type="button" class="btn btn-ghost btn-xs sched-tab" data-day="Friday" onclick="selectModalScheduleDay('Friday')">Fri</button>
-          <button type="button" class="btn btn-ghost btn-xs sched-tab" data-day="Saturday" onclick="selectModalScheduleDay('Saturday')">Sat</button>
+      <div class="modal-body" style="max-height: 80vh; overflow-y: auto;">
+        <!-- Controls: View mode (Weekly Grid / Day View) & Filter (My Classes Only / All Classes) -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+          <div class="timetable-view-toggle">
+            <button type="button" class="btn btn-outline btn-xs tt-view-btn active" id="tt-btn-view-grid" onclick="switchTimetableViewMode('grid')">
+              <i data-lucide="grid" class="icon-xs"></i>
+              <span>Weekly Grid</span>
+            </button>
+            <button type="button" class="btn btn-outline btn-xs tt-view-btn" id="tt-btn-view-day" onclick="switchTimetableViewMode('day')">
+              <i data-lucide="calendar" class="icon-xs"></i>
+              <span>Day View</span>
+            </button>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <label for="tt-filter-classes" style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">Filter:</label>
+            <select id="tt-filter-classes" class="form-control" onchange="onTimetableFilterChange(this.value)" style="padding: 4px 8px; height: 32px; font-size: 12px; width: 230px;">
+              <option value="mine" selected>My Classes Only</option>
+              <option value="all">All Classes (My Classes Highlighted)</option>
+            </select>
+          </div>
         </div>
-        <div id="tt-modal-schedule-list" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px;">
-          <!-- Populated by JS -->
+
+        <!-- Weekly Grid Container (Desktop View) -->
+        <div id="tt-modal-grid-view" class="timetable-grid-wrap" style="display: block;">
+          <!-- Populated by renderWeeklyTimetableGrid() -->
+        </div>
+
+        <!-- Day View Container (Day-by-Day & Mobile View) -->
+        <div id="tt-modal-day-view" style="display: none;">
+          <!-- Day Selector Tabs -->
+          <div class="schedule-day-tabs" style="display: flex; gap: 6px; margin-bottom: 16px; background: var(--surface-muted); padding: 4px; border-radius: var(--radius-sm);" id="tt-modal-day-tabs">
+            <button type="button" class="btn btn-ghost btn-xs sched-tab" data-day="Monday" onclick="selectModalScheduleDay('Monday')">Mon</button>
+            <button type="button" class="btn btn-ghost btn-xs sched-tab" data-day="Tuesday" onclick="selectModalScheduleDay('Tuesday')">Tue</button>
+            <button type="button" class="btn btn-ghost btn-xs sched-tab" data-day="Wednesday" onclick="selectModalScheduleDay('Wednesday')">Wed</button>
+            <button type="button" class="btn btn-ghost btn-xs sched-tab" data-day="Thursday" onclick="selectModalScheduleDay('Thursday')">Thu</button>
+            <button type="button" class="btn btn-ghost btn-xs sched-tab" data-day="Friday" onclick="selectModalScheduleDay('Friday')">Fri</button>
+            <button type="button" class="btn btn-ghost btn-xs sched-tab" data-day="Saturday" onclick="selectModalScheduleDay('Saturday')">Sat</button>
+          </div>
+          <div id="tt-modal-schedule-list" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px;">
+            <!-- Populated by JS -->
+          </div>
         </div>
       </div>
       <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-size: 11.5px; color: var(--text-muted);">CSVTU Scheme 2024 &middot; Effective 17/08/2026</span>
+        <span style="font-size: 11.5px; color: var(--text-muted);">CSVTU Scheme 2024 &middot; Effective 17/08/2026 &middot; SSIPMT Raipur</span>
         <button class="btn btn-outline btn-sm" onclick="closeTimetableModal()">Close</button>
       </div>
     </div>

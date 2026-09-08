@@ -1384,14 +1384,16 @@ function filterWatchStudents(searchVal) {
  * Requirement 10: Student Attendance Visualizations
  */
 function renderStudentAttendanceVisualizations(student, livePct, liveAttendedCount, liveMissedCount, totalCompleted) {
-  // A. Linear Progress Bar
+  // A. Linear Progress Bar & 5-stat summary
   const pctText = document.getElementById('sp-vis-pct-text');
   const progressBar = document.getElementById('sp-vis-progress-bar');
   const ratioText = document.getElementById('sp-vis-classes-ratio');
   const complianceBadge = document.getElementById('sp-vis-compliance-text');
+  const conductedEl = document.getElementById('sp-main-conducted');
 
   const isCompliant = livePct !== null && livePct >= ATTENDANCE_THRESHOLD;
 
+  if (conductedEl) conductedEl.textContent = totalCompleted;
   if (pctText) pctText.textContent = livePct !== null ? `${livePct}%` : '--';
   if (progressBar) {
     progressBar.style.width = livePct !== null ? `${livePct}%` : '0%';
@@ -1413,50 +1415,63 @@ function renderStudentAttendanceVisualizations(student, livePct, liveAttendedCou
     }
   }
 
-  // B. Present vs Absent Visual Breakdown
+  // B. Present vs Absent Visual Breakdown & Percentages
   const presEl = document.getElementById('sp-vis-present-count');
   const absEl = document.getElementById('sp-vis-absent-count');
   const presBar = document.getElementById('sp-vis-ratio-present-bar');
   const absBar = document.getElementById('sp-vis-ratio-absent-bar');
+  const presPctEl = document.getElementById('sp-vis-present-pct');
+  const absPctEl = document.getElementById('sp-vis-absent-pct');
 
   if (presEl) presEl.textContent = liveAttendedCount;
   if (absEl) absEl.textContent = liveMissedCount;
 
-  if (presBar && absBar) {
-    if (totalCompleted > 0) {
-      const presPct = (liveAttendedCount / totalCompleted) * 100;
-      const absPct = (liveMissedCount / totalCompleted) * 100;
-      presBar.style.width = `${presPct}%`;
-      absBar.style.width = `${absPct}%`;
-    } else {
-      presBar.style.width = '0%';
-      absBar.style.width = '0%';
-    }
+  if (totalCompleted > 0) {
+    const presPct = Math.round((liveAttendedCount / totalCompleted) * 100);
+    const absPct = 100 - presPct;
+    if (presBar) presBar.style.width = `${presPct}%`;
+    if (absBar) absBar.style.width = `${absPct}%`;
+    if (presPctEl) presPctEl.textContent = `${presPct}%`;
+    if (absPctEl) absPctEl.textContent = `${absPct}%`;
+  } else {
+    if (presBar) presBar.style.width = '0%';
+    if (absBar) absBar.style.width = '0%';
+    if (presPctEl) presPctEl.textContent = '0%';
+    if (absPctEl) absPctEl.textContent = '0%';
   }
 
   // C. Monthly Attendance Breakdown (July, August, September, October, November, December)
-  const monthlyGrid = document.getElementById('sp-monthly-attendance-grid');
-  if (monthlyGrid) {
-    const months = [
-      { name: 'July', monthNum: 7 },
-      { name: 'August', monthNum: 8 },
-      { name: 'September', monthNum: 9 },
-      { name: 'October', monthNum: 10 },
-      { name: 'November', monthNum: 11 },
-      { name: 'December', monthNum: 12 }
-    ];
+  const months = [
+    { name: 'July', short: 'Jul', monthNum: 7 },
+    { name: 'August', short: 'Aug', monthNum: 8 },
+    { name: 'September', short: 'Sep', monthNum: 9 },
+    { name: 'October', short: 'Oct', monthNum: 10 },
+    { name: 'November', short: 'Nov', monthNum: 11 },
+    { name: 'December', short: 'Dec', monthNum: 12 }
+  ];
 
-    const sectionSessions = (SESSIONS_DATA || []).filter(s => s.status === 'completed' && s.sec === student.sec);
+  const sectionSessions = (SESSIONS_DATA || []).filter(s => s.status === 'completed' && s.sec === student.sec);
+  const hasHistory = Array.isArray(student._history) && student._history.length > 0;
 
-    monthlyGrid.innerHTML = months.map(m => {
+  const monthlyStats = months.map(m => {
+    let conducted = 0;
+    let attended = 0;
+
+    if (hasHistory) {
+      const monthRecords = student._history.filter(h => {
+        if (!h.date) return false;
+        const d = new Date(h.date);
+        return !isNaN(d.getTime()) ? (d.getMonth() + 1 === m.monthNum) : false;
+      });
+      conducted = monthRecords.length;
+      attended = monthRecords.filter(h => (h.status || '').toUpperCase() === 'PRESENT').length;
+    } else {
       const monthSessions = sectionSessions.filter(s => {
         if (!s.date) return false;
         const d = new Date(s.date);
         return !isNaN(d.getTime()) ? (d.getMonth() + 1 === m.monthNum) : false;
       });
-
-      const conducted = monthSessions.length;
-      let attended = 0;
+      conducted = monthSessions.length;
       monthSessions.forEach(sess => {
         const liveRec = (typeof LIVE_ATTENDANCE_RECORDS !== 'undefined')
           ? LIVE_ATTENDANCE_RECORDS.find(r => r.id === sess.id || (r.lectureNo === sess.lectureNo && r.subject === sess.subject && r.sec === sess.sec))
@@ -1466,46 +1481,312 @@ function renderStudentAttendanceVisualizations(student, livePct, liveAttendedCou
           if (sr && (sr.status || '').toUpperCase() === 'PRESENT') attended++;
         }
       });
+    }
 
-      const pct = conducted > 0 ? Number(((attended / conducted) * 100).toFixed(1)) : null;
-      const pctDisplay = pct !== null ? `${pct}%` : '—';
-      const countsDisplay = conducted > 0 ? `${attended} / ${conducted} Attended` : 'No Sessions';
+    const pct = conducted > 0 ? Number(((attended / conducted) * 100).toFixed(1)) : null;
+    return { name: m.name, short: m.short, conducted, attended, pct };
+  });
+
+  // Attendance Trend (Requirement C6)
+  const trendBadge = document.getElementById('sp-attendance-trend-badge');
+  if (trendBadge) {
+    const activeMonths = monthlyStats.filter(m => m.conducted > 0);
+    if (activeMonths.length >= 2) {
+      const latest = activeMonths[activeMonths.length - 1];
+      const prev = activeMonths[activeMonths.length - 2];
+      const diff = Number((latest.pct - prev.pct).toFixed(1));
+      if (diff > 0) {
+        trendBadge.textContent = `Trend: Improving (+${diff}% vs ${prev.name})`;
+        trendBadge.className = 'badge badge-ok';
+      } else if (diff < 0) {
+        trendBadge.textContent = `Trend: Declining (${diff}% vs ${prev.name})`;
+        trendBadge.className = 'badge badge-risk';
+      } else {
+        trendBadge.textContent = `Trend: Steady (${latest.pct}%)`;
+        trendBadge.className = 'badge';
+      }
+    } else if (activeMonths.length === 1) {
+      trendBadge.textContent = `Trend: ${activeMonths[0].name} baseline (${activeMonths[0].pct}%)`;
+      trendBadge.className = 'badge';
+    } else {
+      trendBadge.textContent = 'Attendance Trend: Pre-Commencement';
+      trendBadge.className = 'badge';
+    }
+  }
+
+  const monthlyGrid = document.getElementById('sp-monthly-attendance-grid');
+  if (monthlyGrid) {
+    monthlyGrid.innerHTML = monthlyStats.map(m => {
+      const pctDisplay = m.pct !== null ? `${m.pct}%` : '—';
+      const countsDisplay = m.conducted > 0 ? `${m.attended} / ${m.conducted} Attended` : 'No attendance recorded';
 
       return `
         <div class="monthly-card">
           <div class="monthly-name">${m.name}</div>
-          <div class="monthly-pct" style="color: ${pct !== null ? (pct >= ATTENDANCE_THRESHOLD ? 'var(--success)' : 'var(--danger)') : 'var(--text-muted)'};">${pctDisplay}</div>
+          <div class="monthly-pct" style="color: ${m.pct !== null ? (m.pct >= ATTENDANCE_THRESHOLD ? 'var(--success)' : 'var(--danger)') : 'var(--text-muted)'};">${pctDisplay}</div>
           <div class="monthly-counts">${countsDisplay}</div>
         </div>
       `;
     }).join('');
   }
+
+  // D. Real Chart.js Bar Graph (sp-monthly-bar-chart)
+  const emptyStateEl = document.getElementById('sp-chart-empty-state');
+  const canvasWrapEl = document.getElementById('sp-chart-canvas-wrap');
+  const chartCanvas = document.getElementById('sp-monthly-bar-chart');
+
+  if (window.myStudentMonthlyBarChart) {
+    window.myStudentMonthlyBarChart.destroy();
+    window.myStudentMonthlyBarChart = null;
+  }
+
+  if (totalCompleted === 0) {
+    if (emptyStateEl) emptyStateEl.style.display = 'block';
+    if (canvasWrapEl) canvasWrapEl.style.display = 'none';
+  } else {
+    if (emptyStateEl) emptyStateEl.style.display = 'none';
+    if (canvasWrapEl) canvasWrapEl.style.display = 'block';
+
+    if (chartCanvas && typeof Chart !== 'undefined') {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const textColor = isDark ? '#94a3b8' : '#64748b';
+      const gridColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
+
+      const chartLabels = monthlyStats.map(m => m.short);
+      const chartValues = monthlyStats.map(m => m.pct !== null ? m.pct : 0);
+      const chartColors = monthlyStats.map(m => {
+        if (m.pct === null) return isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(203, 213, 225, 0.4)';
+        return m.pct >= ATTENDANCE_THRESHOLD ? '#10b981' : '#ef4444';
+      });
+      const chartBorders = monthlyStats.map(m => {
+        if (m.pct === null) return isDark ? '#475569' : '#cbd5e1';
+        return m.pct >= ATTENDANCE_THRESHOLD ? '#059669' : '#dc2626';
+      });
+
+      const ctx = chartCanvas.getContext('2d');
+      window.myStudentMonthlyBarChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: chartLabels,
+          datasets: [{
+            label: 'Monthly Attendance %',
+            data: chartValues,
+            backgroundColor: chartColors,
+            borderColor: chartBorders,
+            borderWidth: 1.5,
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const idx = context.dataIndex;
+                  const stat = monthlyStats[idx];
+                  if (stat.conducted === 0) return 'No sessions conducted';
+                  return `${stat.pct}% (${stat.attended}/${stat.conducted} attended)`;
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              min: 0,
+              max: 100,
+              grid: { color: gridColor },
+              ticks: {
+                callback: v => v + '%',
+                font: { family: 'Inter', size: 11 },
+                color: textColor
+              }
+            },
+            x: {
+              grid: { display: false },
+              ticks: {
+                font: { family: 'Inter', size: 12, weight: '500' },
+                color: textColor
+              }
+            }
+          }
+        }
+      });
+    }
+  }
 }
 
 /**
- * Timetable Modal Management
+ * PHASE 8.1: WEEKLY TIMETABLE ENGINE (AUTHORITATIVE & DYNAMIC)
  */
+let CURRENT_TIMETABLE_VIEW_MODE = 'grid'; // 'grid' | 'day'
+let CURRENT_TIMETABLE_FILTER = 'mine';    // 'mine' | 'all'
 let CURRENT_MODAL_SCHEDULE_DAY = 'Monday';
 
-function openTimetableModalOrView(day) {
-  const modal = document.getElementById('timetable-modal-overlay');
-  if (!modal) return;
-  const targetDay = day || CURRENT_SCHEDULE_DAY || getSystemDayOfWeek();
-  CURRENT_MODAL_SCHEDULE_DAY = targetDay;
-  modal.style.display = 'flex';
+function isFacultySlotAssigned(entry, faculty) {
+  if (!entry) return false;
+  const fac = faculty || CURRENT_USER;
+  if (!fac) return false;
+  const facName = (fac.facultyName || fac.name || '').trim();
+  const facShort = (fac.shortCode || fac.facultyShort || '').trim();
+  const facId = String(fac.facultyId || fac.id || '').trim();
 
-  const subEl = document.getElementById('tt-modal-fac-subtitle');
-  if (subEl && CURRENT_USER) {
-    subEl.textContent = `${CURRENT_USER.facultyName} · ${CURRENT_USER.subjectName} · Department of CSE`;
+  // 1. Match by short code (e.g. DS, PS, VC, SS, NK)
+  if (entry.facultyShort && facShort && entry.facultyShort.toUpperCase() === facShort.toUpperCase()) return true;
+
+  // 2. Match by faculty ID
+  if (entry.facultyId && facId && (entry.facultyId === facId || entry.facultyId === `faculty-${facId}` || String(entry.facultyId).replace('faculty-', '') === facId)) return true;
+
+  // 3. Match by faculty name (case-insensitive, ignoring honorific titles)
+  if (entry.facultyName && facName) {
+    const cleanEntry = entry.facultyName.toLowerCase().replace(/^(dr\.|mr\.|mrs\.|prof\.)\s*/i, '').trim();
+    const cleanFac = facName.toLowerCase().replace(/^(dr\.|mr\.|mrs\.|prof\.)\s*/i, '').trim();
+    if (cleanEntry === cleanFac || (cleanFac.length > 3 && cleanEntry.includes(cleanFac)) || (cleanEntry.length > 3 && cleanFac.includes(cleanEntry))) {
+      return true;
+    }
   }
+  return false;
+}
 
-  selectModalScheduleDay(targetDay);
+function switchTimetableViewMode(mode) {
+  CURRENT_TIMETABLE_VIEW_MODE = mode;
+  const btnGrid = document.getElementById('tt-btn-view-grid');
+  const btnDay = document.getElementById('tt-btn-view-day');
+  const gridView = document.getElementById('tt-modal-grid-view');
+  const dayView = document.getElementById('tt-modal-day-view');
+
+  if (btnGrid) btnGrid.classList.toggle('active', mode === 'grid');
+  if (btnDay) btnDay.classList.toggle('active', mode === 'day');
+
+  if (mode === 'grid') {
+    if (gridView) gridView.style.display = 'block';
+    if (dayView) dayView.style.display = 'none';
+    renderWeeklyTimetableGrid();
+  } else {
+    if (gridView) gridView.style.display = 'none';
+    if (dayView) dayView.style.display = 'block';
+    selectModalScheduleDay(CURRENT_MODAL_SCHEDULE_DAY);
+  }
   refreshIcons();
 }
 
-function closeTimetableModal() {
-  const modal = document.getElementById('timetable-modal-overlay');
-  if (modal) modal.style.display = 'none';
+function onTimetableFilterChange(filterVal) {
+  CURRENT_TIMETABLE_FILTER = filterVal;
+  if (CURRENT_TIMETABLE_VIEW_MODE === 'grid') {
+    renderWeeklyTimetableGrid();
+  } else {
+    selectModalScheduleDay(CURRENT_MODAL_SCHEDULE_DAY);
+  }
+}
+
+function renderWeeklyTimetableGrid() {
+  const container = document.getElementById('tt-modal-grid-view');
+  if (!container) return;
+
+  if (typeof TIMETABLE_ENTRIES === 'undefined' || TIMETABLE_ENTRIES.length === 0) {
+    container.innerHTML = `
+      <div style="padding: 32px; text-align: center; color: var(--text-muted); font-size: 13.5px;">
+        <i data-lucide="calendar-off" class="icon-md" style="margin-bottom: 8px; display: inline-block;"></i>
+        <div>No timetable data loaded yet. Connecting to authoritative academic repository...</div>
+      </div>
+    `;
+    refreshIcons();
+    return;
+  }
+
+  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const periods = [
+    { id: 'I', label: 'Period I', time: '09:00 – 09:50' },
+    { id: 'II', label: 'Period II', time: '09:50 – 10:40' },
+    { id: 'III', label: 'Period III', time: '10:40 – 11:30' },
+    { id: 'IV', label: 'Period IV', time: '11:30 – 12:20' },
+    { id: 'V', label: 'Period V', time: '13:00 – 13:50' },
+    { id: 'VI', label: 'Period VI', time: '13:50 – 14:40' },
+    { id: 'VII', label: 'Period VII', time: '14:40 – 15:20' },
+    { id: 'VIII', label: 'Period VIII', time: '15:20 – 16:00' }
+  ];
+
+  let tableHtml = `
+    <table class="tt-grid-table">
+      <thead>
+        <tr>
+          <th>Period</th>
+          ${days.map(d => `<th>${d.slice(0, 3).toUpperCase()}</th>`).join('')}
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  periods.forEach(p => {
+    tableHtml += `
+      <tr>
+        <td>
+          <div class="tt-grid-period-lbl">${p.id}</div>
+          <div class="tt-grid-time-lbl">${p.time}</div>
+        </td>
+    `;
+
+    days.forEach(day => {
+      let slots = TIMETABLE_ENTRIES.filter(e => {
+        if (e.day.toLowerCase() !== day.toLowerCase()) return false;
+        const pId = p.id;
+        const ep = (e.period || '').replace(/[–—]/g, '-');
+        if (ep === pId) return true;
+        if (ep === 'III-IV' && (pId === 'III' || pId === 'IV')) return true;
+        if (ep === 'V-VI' && (pId === 'V' || pId === 'VI')) return true;
+        if (ep === 'VI-VII' && (pId === 'VI' || pId === 'VII')) return true;
+        if (ep === 'VII-VIII' && (pId === 'VII' || pId === 'VIII')) return true;
+        return false;
+      });
+
+      if (CURRENT_TIMETABLE_FILTER === 'mine') {
+        slots = slots.filter(e => isFacultySlotAssigned(e, CURRENT_USER));
+      }
+
+      if (slots.length === 0) {
+        tableHtml += `<td><div class="tt-slot-empty">—</div></td>`;
+      } else {
+        const slotCellsHtml = slots.map(slot => {
+          const isMine = isFacultySlotAssigned(slot, CURRENT_USER);
+
+          if (isMine) {
+            return `
+              <div class="tt-slot-card-mine">
+                <div>
+                  <span class="tt-badge-mine"><i data-lucide="check" style="width:10px;height:10px;"></i> YOUR CLASS</span>
+                  <div class="tt-slot-subj-mine">${escapeHtml(slot.subjectName || slot.subjectCodeShort)}</div>
+                  <div class="tt-slot-sec-mine">Section ${escapeHtml(slot.section)} &middot; ${escapeHtml(slot.type)}</div>
+                  <div class="tt-slot-meta-mine">${escapeHtml(slot.room || 'Classroom')}</div>
+                </div>
+                <button type="button" class="btn-tt-take" onclick="closeTimetableModal(); startAttendanceFromTimetable('${escapeHtml(slot.subjectName)}', '${escapeHtml(slot.section)}', 'Period ${escapeHtml(slot.period)}', '${escapeHtml(slot.timeDisplay)}')">
+                  <i data-lucide="check-square" style="width:11px;height:11px;"></i>
+                  <span>Take &rarr;</span>
+                </button>
+              </div>
+            `;
+          } else {
+            return `
+              <div class="tt-slot-card-other" title="Taught by ${escapeHtml(slot.facultyName || slot.facultyShort)}">
+                <div class="tt-slot-subj-other">${escapeHtml(slot.subjectName || slot.subjectCodeShort)}</div>
+                <div class="tt-slot-sec-other">Sec ${escapeHtml(slot.section)} &middot; ${escapeHtml(slot.room || '')}</div>
+                <div class="tt-slot-fac-other">${escapeHtml(slot.facultyName || slot.facultyShort)}</div>
+              </div>
+            `;
+          }
+        }).join('');
+
+        tableHtml += `<td>${slotCellsHtml}</td>`;
+      }
+    });
+
+    tableHtml += `</tr>`;
+  });
+
+  tableHtml += `</tbody></table>`;
+  container.innerHTML = tableHtml;
+  refreshIcons();
 }
 
 function selectModalScheduleDay(day) {
@@ -1517,36 +1798,95 @@ function selectModalScheduleDay(day) {
   const listEl = document.getElementById('tt-modal-schedule-list');
   if (!listEl) return;
 
-  const facName = (CURRENT_USER && CURRENT_USER.facultyName) || 'Devbrat Sahu';
-  const entries = getTimetableEntriesForFaculty(facName, day, null)
+  if (typeof TIMETABLE_ENTRIES === 'undefined') {
+    listEl.innerHTML = `<div style="padding: 24px; text-align: center; color: var(--text-muted);">Timetable data loading...</div>`;
+    return;
+  }
+
+  let entries = TIMETABLE_ENTRIES.filter(e => e.day.toLowerCase() === day.toLowerCase())
     .sort((a, b) => timeStringToMinutes(a.startTime) - timeStringToMinutes(b.startTime));
+
+  if (CURRENT_TIMETABLE_FILTER === 'mine') {
+    entries = entries.filter(e => isFacultySlotAssigned(e, CURRENT_USER));
+  }
+
+  const facName = (CURRENT_USER && CURRENT_USER.facultyName) || 'Faculty Member';
 
   if (entries.length === 0) {
     listEl.innerHTML = `
       <div style="grid-column: 1 / -1; padding: 24px; text-align: center; background: var(--surface-muted); border-radius: var(--radius-sm); border: 1px dashed var(--border); color: var(--text-muted); font-size: 13px;">
         <i data-lucide="calendar-off" class="icon-sm" style="margin-bottom: 6px; display: inline-block;"></i>
-        <div>No instructional classes scheduled on <strong>${day}</strong>.</div>
+        <div>No instructional classes scheduled ${CURRENT_TIMETABLE_FILTER === 'mine' ? `for <strong>${escapeHtml(facName)}</strong>` : ''} on <strong>${day}</strong>.</div>
       </div>
     `;
     refreshIcons();
     return;
   }
 
-  listEl.innerHTML = entries.map(e => `
-    <div class="card" style="padding: 14px 16px; border: 1px solid var(--border); background: var(--surface); border-left: 3px solid ${e.type === 'lab' ? 'var(--warning)' : 'var(--primary)'};">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <span class="badge" style="background: var(--primary-subtle); color: var(--primary); font-size: 11px; font-weight: 700;">Period ${escapeHtml(e.period)} (${escapeHtml(e.timeDisplay)})</span>
-        <span class="badge" style="background: var(--surface-muted); border: 1px solid var(--border); font-size: 11px;">Sec ${escapeHtml(e.section)}</span>
-      </div>
-      <div style="font-size: 14.5px; font-weight: 700; color: var(--text-primary); margin-top: 6px;">${escapeHtml(e.subjectName)}</div>
-      <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">Room: <strong>${escapeHtml(e.room)}</strong> &middot; ${escapeHtml(e.type)}</div>
-      <button class="btn btn-primary btn-xs" onclick="closeTimetableModal(); startAttendanceFromTimetable('${escapeHtml(e.subjectName)}', '${escapeHtml(e.section)}', 'Period ${escapeHtml(e.period)}', '${escapeHtml(e.timeDisplay)}')" style="margin-top: 10px; width: 100%; justify-content: center; gap: 6px;">
-        <i data-lucide="check-square" class="icon-xs"></i>
-        <span>Take Attendance &rarr;</span>
-      </button>
-    </div>
-  `).join('');
+  listEl.innerHTML = entries.map(e => {
+    const isMine = isFacultySlotAssigned(e, CURRENT_USER);
+
+    if (isMine) {
+      return `
+        <div class="card" style="padding: 16px; border: 2px solid var(--primary); background: var(--primary-subtle); border-radius: var(--radius-md);">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span class="tt-badge-mine"><i data-lucide="check" style="width:10px;height:10px;"></i> YOUR CLASS</span>
+            <span class="badge" style="background: var(--surface); border: 1px solid var(--border); font-size: 11px;">Sec ${escapeHtml(e.section)}</span>
+          </div>
+          <div style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-top: 6px;">${escapeHtml(e.subjectName)}</div>
+          <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">Period ${escapeHtml(e.period)} (${escapeHtml(e.timeDisplay)}) &middot; Room: <strong>${escapeHtml(e.room)}</strong></div>
+          <button class="btn btn-primary btn-sm" onclick="closeTimetableModal(); startAttendanceFromTimetable('${escapeHtml(e.subjectName)}', '${escapeHtml(e.section)}', 'Period ${escapeHtml(e.period)}', '${escapeHtml(e.timeDisplay)}')" style="margin-top: 12px; width: 100%; justify-content: center; gap: 6px;">
+            <i data-lucide="check-square" class="icon-xs"></i>
+            <span>Take Attendance &rarr;</span>
+          </button>
+        </div>
+      `;
+    } else {
+      return `
+        <div class="card" style="padding: 14px 16px; border: 1px solid var(--border); background: var(--surface-muted); opacity: 0.82;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span class="badge" style="background: var(--surface); border: 1px solid var(--border); font-size: 11px; color: var(--text-secondary);">Period ${escapeHtml(e.period)} (${escapeHtml(e.timeDisplay)})</span>
+            <span class="badge" style="background: var(--surface); border: 1px solid var(--border); font-size: 11px;">Sec ${escapeHtml(e.section)}</span>
+          </div>
+          <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-top: 6px;">${escapeHtml(e.subjectName)}</div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Faculty: <strong>${escapeHtml(e.facultyName || e.facultyShort)}</strong> &middot; Room: ${escapeHtml(e.room)}</div>
+        </div>
+      `;
+    }
+  }).join('');
+
   refreshIcons();
+}
+
+function openTimetableModalOrView(day) {
+  const modal = document.getElementById('timetable-modal-overlay');
+  if (!modal) return;
+  const targetDay = day || CURRENT_SCHEDULE_DAY || getSystemDayOfWeek();
+  CURRENT_MODAL_SCHEDULE_DAY = targetDay;
+  modal.style.display = 'flex';
+
+  const subEl = document.getElementById('tt-modal-fac-subtitle');
+  const countBadge = document.getElementById('tt-modal-slots-count-badge');
+  if (CURRENT_USER) {
+    if (subEl) subEl.textContent = `${CURRENT_USER.facultyName} · ${CURRENT_USER.subjectName} · Department of CSE`;
+    if (countBadge && typeof TIMETABLE_ENTRIES !== 'undefined') {
+      const myWeeklySlots = TIMETABLE_ENTRIES.filter(e => isFacultySlotAssigned(e, CURRENT_USER)).length;
+      countBadge.textContent = `${myWeeklySlots} Weekly Teaching Slots`;
+    }
+  }
+
+  // Choose appropriate view based on screen width
+  if (window.innerWidth < 768) {
+    switchTimetableViewMode('day');
+  } else {
+    switchTimetableViewMode(CURRENT_TIMETABLE_VIEW_MODE || 'grid');
+  }
+  refreshIcons();
+}
+
+function closeTimetableModal() {
+  const modal = document.getElementById('timetable-modal-overlay');
+  if (modal) modal.style.display = 'none';
 }
 
 function getNextLectureNumber(subjectName, section) {
@@ -1976,16 +2316,29 @@ function showPage(pageId, linkEl) {
 
   refreshIcons();
 
-  // Close sidebar on mobile
-  if (window.innerWidth < 900) {
-    const sidebar = document.getElementById('sidebar');
-    if (sidebar) sidebar.classList.remove('open');
-  }
+  // Close collapsible sidebar on navigation
+  toggleSidebar(false);
 }
 
-function toggleSidebar() {
+function toggleSidebar(forceState) {
   const sidebar = document.getElementById('sidebar');
-  if (sidebar) sidebar.classList.toggle('open');
+  const overlay = document.getElementById('sidebar-overlay');
+  const isOpen = sidebar ? sidebar.classList.contains('open') : false;
+  const shouldOpen = typeof forceState === 'boolean' ? forceState : !isOpen;
+
+  if (sidebar) {
+    if (shouldOpen) sidebar.classList.add('open');
+    else sidebar.classList.remove('open');
+  }
+  if (overlay) {
+    if (shouldOpen) {
+      overlay.classList.add('open');
+      overlay.classList.add('active');
+    } else {
+      overlay.classList.remove('open');
+      overlay.classList.remove('active');
+    }
+  }
 }
 
 // ── 6. LIVE DATE DISPLAY ─────────────────────────────────────
@@ -3367,14 +3720,25 @@ async function openStudentProfile(studentIdOrRoll) {
 
   // Phase 7C.4A: Authoritative Backend Live Attendance metrics on profile
   let backendSummary = null;
+  let studentHistory = [];
   const token = getStoredAuthToken();
-  if (token && student.id && typeof AcademicDataService !== 'undefined' && AcademicDataService.loadStudentSummary) {
-    try {
-      backendSummary = await AcademicDataService.loadStudentSummary(student.id);
-    } catch (err) {
-      console.warn('Backend student summary read failed in profile:', err);
+  if (token && student.id && typeof AcademicDataService !== 'undefined') {
+    if (AcademicDataService.loadStudentSummary) {
+      try {
+        backendSummary = await AcademicDataService.loadStudentSummary(student.id);
+      } catch (err) {
+        console.warn('Backend student summary read failed in profile:', err);
+      }
+    }
+    if (AcademicDataService.loadStudentHistory) {
+      try {
+        studentHistory = await AcademicDataService.loadStudentHistory(student.id);
+      } catch (err) {
+        console.warn('Backend student history read failed in profile:', err);
+      }
     }
   }
+  student._history = studentHistory;
 
   let totalCompleted = 0;
   let liveAttendedCount = 0;
@@ -3414,6 +3778,70 @@ async function openStudentProfile(studentIdOrRoll) {
   if (spAtt) spAtt.textContent = liveAttendedCount;
   if (spAbs) spAbs.textContent = liveMissedCount;
   if (spPct) spPct.textContent = livePct !== null ? `${livePct}%` : '--';
+
+  const spMainConducted = document.getElementById('sp-main-conducted');
+  if (spMainConducted) spMainConducted.textContent = totalCompleted;
+
+  const spStatusBadge = document.getElementById('sp-status-badge');
+  if (spStatusBadge) {
+    if (totalCompleted === 0) {
+      spStatusBadge.textContent = 'PRE-COMMENCEMENT';
+      spStatusBadge.className = 'badge';
+    } else if (livePct >= ATTENDANCE_THRESHOLD) {
+      spStatusBadge.textContent = 'GOOD ATTENDANCE (≥ 75%)';
+      spStatusBadge.className = 'badge badge-ok';
+    } else {
+      spStatusBadge.textContent = 'BELOW 75%';
+      spStatusBadge.className = 'badge badge-risk';
+    }
+  }
+
+  const sessHistContainer = document.getElementById('sp-session-history-container');
+  if (sessHistContainer) {
+    if (studentHistory && studentHistory.length > 0) {
+      sessHistContainer.innerHTML = `
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Lecture No.</th>
+                <th>Course / Subject</th>
+                <th>Period</th>
+                <th>Faculty</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${studentHistory.map(h => {
+                const isPres = (h.status || '').toUpperCase() === 'PRESENT';
+                return `
+                  <tr>
+                    <td><strong>${escapeHtml(h.date || '—')}</strong></td>
+                    <td>Lecture No. ${escapeHtml(h.lectureNumber || '—')}</td>
+                    <td>${escapeHtml(h.courseName || '—')}</td>
+                    <td>${escapeHtml(h.period || '—')}</td>
+                    <td>${escapeHtml(h.facultyName || 'Faculty')}</td>
+                    <td>
+                      <span class="badge ${isPres ? 'badge-ok' : 'badge-risk'}">
+                        ${isPres ? 'PRESENT' : 'ABSENT'}
+                      </span>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    } else {
+      sessHistContainer.innerHTML = `
+        <div style="padding: 28px 20px; text-align: center; color: var(--text-muted); font-size: 13.5px; background: var(--surface-muted); border-radius: var(--radius-md); border: 1px dashed var(--border);">
+          No lecture sessions conducted yet for 3rd Semester 2026.
+        </div>
+      `;
+    }
+  }
 
   // Populate Course Modules with 5 official subjects
   const coursesBody = document.getElementById('sp-courses-body');
@@ -4168,6 +4596,8 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     closeStudentDrawer();
     closeModal();
+    closeTimetableModal();
+    toggleSidebar(false);
   }
 });
 
