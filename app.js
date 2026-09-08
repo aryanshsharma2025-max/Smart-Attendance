@@ -127,6 +127,261 @@ const apiClient = {
 };
 window.apiClient = apiClient;
 
+// ── CANONICAL ACADEMIC DATA SERVICE & ADAPTER LAYER (PHASE 7C.2) ──
+const AcademicDataService = {
+  isLoaded: false,
+  isLoading: false,
+
+  /**
+   * STEP 8 Adapter: StudentDto -> Canonical Frontend Student Record
+   * Preserves roll number as authoritative identity and keeps Section A historical snapshots intact.
+   */
+  adaptStudent(dto, index = 0) {
+    const attended = (dto.attendance && dto.attendance.attendedLectures !== undefined) ? dto.attendance.attendedLectures : 0;
+    const total = (dto.attendance && dto.attendance.totalLectures !== undefined) ? dto.attendance.totalLectures : 0;
+    const absent = Math.max(0, total - attended);
+    const pct = total > 0 ? Number(((attended / total) * 100).toFixed(1)) : null;
+    const pctDisplay = pct !== null ? `${pct}%` : '--';
+    const status = total > 0 ? (pct >= ATTENDANCE_THRESHOLD ? 'COMPLIANT' : 'BELOW THRESHOLD') : 'NO RECORDS';
+    const risk = total > 0 ? calculateRisk(pct) : 'PENDING';
+
+    // Preserve historical attendance snapshot if available in existing dataset (Section A)
+    const existingRaw = (typeof RAW_STUDENTS !== 'undefined' && RAW_STUDENTS.length > 0)
+      ? RAW_STUDENTS.find(rs => (rs.rollNumber || rs.roll) === dto.rollNumber)
+      : ((typeof AUTHORITATIVE_STUDENTS !== 'undefined')
+          ? AUTHORITATIVE_STUDENTS.find(rs => (rs.rollNumber || rs.roll) === dto.rollNumber)
+          : null);
+    const historicalSnapshot = dto.historicalSnapshot || (existingRaw && existingRaw.historicalSnapshot) || null;
+    const sno = (existingRaw && existingRaw.sno) ? existingRaw.sno : (dto.sno || (index + 1));
+    const studentId = dto.studentId || (existingRaw && existingRaw.studentId) || dto.rollNumber;
+    const enrollmentNumber = dto.enrollmentNumber || (existingRaw && existingRaw.enrollmentNumber) || null;
+
+    return {
+      ...dto,
+      id: dto.id,
+      studentId,
+      sno,
+      roll: dto.rollNumber,
+      rollNumber: dto.rollNumber,
+      name: dto.name,
+      sem: dto.semester || 3,
+      semester: dto.semester || 3,
+      sec: dto.section,
+      section: dto.section,
+      dept: dto.department || 'CSE',
+      department: dto.department || 'CSE',
+      enrollmentNumber,
+      enrollmentStatus: dto.enrollmentStatus || 'verified',
+      admissionType: dto.admissionType || 'regular',
+      attended,
+      absent,
+      total,
+      pct,
+      pctDisplay,
+      risk,
+      status,
+      historicalSnapshot,
+      safeAbsences: total > 0 ? calculatePermissibleAbsences(attended, total) : 0,
+      sessionsNeeded: total > 0 ? calculateSessionsNeededToReachThreshold(attended, total) : 0
+    };
+  },
+
+  /**
+   * STEP 8 Adapter: FacultyDto -> Canonical Frontend Faculty Record
+   * Maps 5 primary teaching faculty correctly; ensures HOD Dr. Anand Tamrakar remains HOD and not teaching faculty.
+   */
+  adaptFaculty(dto) {
+    const normId = (dto.facultyCode || '').replace('_', '-');
+    const primarySubject = (dto.assignedSubjects && dto.assignedSubjects[0]) || 'Operating System';
+    const initials = (dto.name || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+
+    const shortCodeMap = {
+      'faculty_os': 'DS',
+      'faculty_dm': 'PS',
+      'faculty_oops': 'VC',
+      'faculty_web': 'SS',
+      'faculty_de': 'NK'
+    };
+    const subjectShortMap = {
+      'faculty_os': 'OS',
+      'faculty_dm': 'DM',
+      'faculty_oops': 'OOPS',
+      'faculty_web': 'WT',
+      'faculty_de': 'DELD'
+    };
+    const cleanSubjectMap = {
+      'faculty_os': 'Operating System',
+      'faculty_dm': 'Discrete Mathematics',
+      'faculty_oops': 'OOPS in C++',
+      'faculty_web': 'Web Technology',
+      'faculty_de': 'Digital Electronics'
+    };
+
+    const finalSubject = cleanSubjectMap[dto.facultyCode] || primarySubject;
+    const finalShortCode = shortCodeMap[dto.facultyCode] || initials;
+    const finalSubjectCodeShort = subjectShortMap[dto.facultyCode] || 'CSE';
+
+    return {
+      id: normId,
+      facultyId: dto.id,
+      facultyCode: dto.facultyCode,
+      name: dto.name,
+      email: dto.email,
+      role: dto.role,
+      designation: dto.designation || 'Assistant Professor',
+      department: dto.department || 'CSE',
+      subjectName: finalSubject,
+      subjectId: finalSubject.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+      subjectCodeShort: finalSubjectCodeShort,
+      shortCode: finalShortCode,
+      assignedSubject: finalSubject,
+      assignedSubjectId: dto.id,
+      assignedSubjects: dto.assignedSubjects || [finalSubject],
+      assignedSections: dto.assignedSections || ['A', 'B'],
+      sectionAllocationStatus: (dto.assignedSections && dto.assignedSections.length > 0)
+        ? `Sections ${dto.assignedSections.join(', ')} Confirmed (Sections C, D Pending)`
+        : 'Section allocation pending'
+    };
+  },
+
+  /**
+   * STEP 8 Adapter: TimetableDto -> Canonical Frontend Timetable Entry
+   * Preserves published tt-b-wed-55 entry exactly as supplied by backend without rewriting Anand Sir's conflict.
+   */
+  adaptTimetableEntry(dto) {
+    const initials = (dto.facultyName || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    const cleanPeriod = (dto.period || '').replace(/\?+/g, '–');
+    return {
+      id: dto.timetableCode || `tt-${dto.id}`,
+      timetableCode: dto.timetableCode,
+      section: dto.section,
+      day: dto.day,
+      dayIndex: dto.dayIndex,
+      period: cleanPeriod,
+      periodLabel: `Period ${cleanPeriod}`,
+      periodStart: dto.periodStart,
+      periodEnd: dto.periodEnd,
+      startTime: dto.startTime,
+      endTime: dto.endTime,
+      timeDisplay: dto.timeDisplay || `${dto.startTime} – ${dto.endTime}`,
+      subject: dto.subjectName,
+      subjectName: dto.subjectName,
+      subjectCodeShort: dto.subjectCodeShort,
+      subjectKey: (dto.subjectName || '').toLowerCase().replace(/[^a-z0-9]/g, '-'),
+      faculty: dto.facultyName,
+      facultyName: dto.facultyName,
+      facultyShort: initials,
+      facultyId: dto.facultyId,
+      type: dto.type || 'lecture',
+      room: dto.room || 'Room 201',
+      effectiveDate: dto.effectiveDate || '17/08/2026'
+    };
+  },
+
+  /**
+   * Centralized Academic Data loader connecting to all Step 3-7 REST endpoints:
+   * - GET /api/students (or by section)
+   * - GET /api/faculty
+   * - GET /api/subjects?primaryOnly=true
+   * - GET /api/timetable?section=A / B / C / D
+   */
+  async loadAllAcademicData() {
+    if (this.isLoading) return;
+    this.isLoading = true;
+
+    try {
+      // 1. Fetch Authoritative Students (GET /api/students)
+      const studentsData = await apiClient.get('/students');
+      if (Array.isArray(studentsData) && studentsData.length > 0) {
+        STUDENTS.length = 0;
+        studentsData.forEach((s, idx) => STUDENTS.push(this.adaptStudent(s, idx)));
+
+        // Rebuild student lookup map in-place
+        for (const k in STUDENT_MAP) delete STUDENT_MAP[k];
+        STUDENTS.forEach(s => {
+          if (s.roll) STUDENT_MAP[s.roll] = s;
+          if (s.id !== undefined) STUDENT_MAP[s.id] = s;
+          if (s.studentId) STUDENT_MAP[s.studentId] = s;
+        });
+        console.log(`[AcademicDataService] Loaded ${STUDENTS.length} authoritative students from Spring Boot`);
+      }
+
+      // 2. Fetch Authoritative Faculty (GET /api/faculty)
+      const facultyData = await apiClient.get('/faculty');
+      if (Array.isArray(facultyData) && facultyData.length > 0) {
+        AcademicDataService.allFaculty = facultyData;
+        if (typeof AUTHORITATIVE_FACULTY !== 'undefined') {
+          AUTHORITATIVE_FACULTY.length = 0;
+          // Step 4: Verify 13 faculty exist; map 5 primary teaching faculty; Anand Sir remains HOD
+          const primaryFacultyCodes = ['faculty_os', 'faculty_dm', 'faculty_oops', 'faculty_web', 'faculty_de'];
+          facultyData
+            .filter(f => primaryFacultyCodes.includes(f.facultyCode))
+            .forEach(f => {
+              AUTHORITATIVE_FACULTY.push(this.adaptFaculty(f));
+            });
+        }
+        console.log(`[AcademicDataService] Loaded ${facultyData.length} faculty from Spring Boot (teaching staff: ${AUTHORITATIVE_FACULTY.length})`);
+      }
+
+      // 3. Fetch Primary Subjects (GET /api/subjects?primaryOnly=true)
+      const subjectsData = await apiClient.get('/subjects?primaryOnly=true');
+      if (Array.isArray(subjectsData) && subjectsData.length > 0) {
+        OFFICIAL_SUBJECTS.length = 0;
+        subjectsData.forEach(s => OFFICIAL_SUBJECTS.push(s.name));
+        console.log(`[AcademicDataService] Loaded ${subjectsData.length} primary subjects from Spring Boot`);
+      }
+
+      // 4. Fetch Timetable Entries (GET /api/timetable?section=A & section=B)
+      const [ttA, ttB, ttC, ttD] = await Promise.all([
+        apiClient.get('/timetable?section=A').catch(() => []),
+        apiClient.get('/timetable?section=B').catch(() => []),
+        apiClient.get('/timetable?section=C').catch(() => []),
+        apiClient.get('/timetable?section=D').catch(() => [])
+      ]);
+
+      if (Array.isArray(ttA) && Array.isArray(ttB)) {
+        if (typeof TIMETABLE_ENTRIES !== 'undefined') {
+          TIMETABLE_ENTRIES.length = 0;
+          ttA.forEach(e => TIMETABLE_ENTRIES.push(this.adaptTimetableEntry(e)));
+          ttB.forEach(e => TIMETABLE_ENTRIES.push(this.adaptTimetableEntry(e)));
+        }
+        console.log(`[AcademicDataService] Loaded ${TIMETABLE_ENTRIES.length} timetable entries (Sec A: ${ttA.length}, Sec B: ${ttB.length}, Sec C: ${ttC.length}, Sec D: ${ttD.length})`);
+      }
+
+      this.isLoaded = true;
+
+      // Re-render UI components with authoritative backend data
+      if (typeof renderStudents === 'function') renderStudents(STUDENTS);
+      if (typeof updateFacultyDashboardLiveMetrics === 'function') updateFacultyDashboardLiveMetrics();
+      if (typeof renderHodOverview === 'function') renderHodOverview();
+      if (typeof renderHodMasterTimetable === 'function') renderHodMasterTimetable(typeof CURRENT_DASHBOARD_SECTION !== 'undefined' ? CURRENT_DASHBOARD_SECTION : 'A');
+      if (typeof renderFacultySchedule === 'function' && typeof CURRENT_SCHEDULE_DAY !== 'undefined') {
+        renderFacultySchedule(CURRENT_SCHEDULE_DAY);
+      }
+      if (typeof updateCurrentAndNextClassBanner === 'function') updateCurrentAndNextClassBanner();
+      if (typeof refreshIcons === 'function') refreshIcons();
+
+    } catch (err) {
+      console.warn('[AcademicDataService] Backend read failed, keeping static fallback:', err);
+    } finally {
+      this.isLoading = false;
+    }
+  },
+
+  /**
+   * Section-filtered student retrieval (GET /api/students/section/{section})
+   */
+  async loadStudentsBySection(section) {
+    if (!section || section === 'All') {
+      const data = await apiClient.get('/students');
+      return (data || []).map((s, idx) => this.adaptStudent(s, idx));
+    }
+    const data = await apiClient.get(`/students/section/${section}`);
+    return (data || []).map((s, idx) => this.adaptStudent(s, idx));
+  }
+};
+window.AcademicDataService = AcademicDataService;
+
 // ── 1. CENTRALIZED DOMAIN CONFIGURATION & ATTENDANCE ENGINE ──
 const ATTENDANCE_THRESHOLD = 75; // Application-level threshold percentage (75%)
 const TOTAL_TERM_SESSIONS = 40;  // Standard term instructional session count
@@ -328,14 +583,21 @@ const FACULTY_SUBJECT_MAP = {
   'Operating System': 'Devbrat Sahu',
   'Discrete Mathematics': 'Pranjali Sharma',
   'OOPS in C++': 'Vaibhav Chandrakar',
+  'Object Oriented Programming in C++': 'Vaibhav Chandrakar',
   'Web Technology': 'Suman K. Swarnkar',
   'Digital Electronics': 'Navdeep Khare'
 };
 
 function getFacultyForSubject(subjectName) {
   if (!subjectName) return 'Devbrat Sahu';
+  const lower = subjectName.toLowerCase();
+  if (lower.includes('discrete') || lower.includes('dm')) return 'Pranjali Sharma';
+  if (lower.includes('oops') || lower.includes('object oriented') || lower.includes('c++')) return 'Vaibhav Chandrakar';
+  if (lower.includes('web') || lower.includes('wt')) return 'Suman K. Swarnkar';
+  if (lower.includes('digital') || lower.includes('deld') || lower.includes('electronics')) return 'Navdeep Khare';
+  if (lower.includes('operating') || lower.includes('os')) return 'Devbrat Sahu';
   for (const [sub, fac] of Object.entries(FACULTY_SUBJECT_MAP)) {
-    if (subjectName.toLowerCase().includes(sub.toLowerCase())) {
+    if (lower.includes(sub.toLowerCase())) {
       return fac;
     }
   }
@@ -3173,6 +3435,13 @@ async function handleLoginSubmit(event) {
     // Persist JWT token in local/session storage using canonical key 'smartattend_token'
     setStoredAuthToken(loginRes.token, remember);
 
+    // Sync academic read APIs with authenticated context
+    try {
+      await AcademicDataService.loadAllAcademicData();
+    } catch (e) {
+      console.warn('Academic data sync on login encountered an issue:', e);
+    }
+
     // ── STEP 4: GET /api/auth/me verification ──
     const meProfile = await apiClient.get('/auth/me');
     if (!meProfile || !meProfile.role) {
@@ -3514,6 +3783,24 @@ function applySessionUI(session) {
       sectionAllocationStatus: faculty.sectionAllocationStatus || 'Sections A, B Confirmed (Sections C, D Pending)'
     };
 
+    // Step 6: Dynamic allocations query (GET /api/faculty/{id}/allocations)
+    const backendFacId = faculty.facultyId || (typeof session.facultyId === 'number' ? session.facultyId : null);
+    if (backendFacId) {
+      apiClient.get(`/faculty/${backendFacId}/allocations`).then(allocations => {
+        if (Array.isArray(allocations) && allocations.length > 0) {
+          const confirmedSecs = [...new Set(allocations.map(a => a.sectionName || a.section))].filter(Boolean);
+          if (confirmedSecs.length > 0) {
+            CURRENT_USER.assignedSections = confirmedSecs;
+            CURRENT_USER.sectionAllocationStatus = `Sections ${confirmedSecs.join(', ')} Confirmed (Sections C, D Pending)`;
+            const dashSecStatus = document.getElementById('dash-fac-sec-status');
+            if (dashSecStatus) dashSecStatus.textContent = CURRENT_USER.sectionAllocationStatus;
+          }
+        }
+      }).catch(err => {
+        console.warn('Could not fetch faculty allocations from backend:', err);
+      });
+    }
+
     const initials = faculty.name.split(' ').map(w => w[0]).join('').slice(0, 2);
 
     if (portalLabel) portalLabel.textContent = 'Faculty Workspace';
@@ -3585,6 +3872,11 @@ function applySessionUI(session) {
 }
 
 async function initAuth() {
+  if (typeof AcademicDataService !== 'undefined' && !AcademicDataService.isLoaded) {
+    try {
+      await AcademicDataService.loadAllAcademicData();
+    } catch (_) {}
+  }
   const token = getStoredAuthToken();
   const sessionStr = localStorage.getItem(AUTH_SESSION_KEY) || sessionStorage.getItem(AUTH_SESSION_KEY);
 
@@ -4230,8 +4522,15 @@ function renderHodMasterTimetable(section = 'A') {
 }
 
 // ── 22. DOM READY INITIALIZATION ─────────────────────────────
-window.addEventListener('DOMContentLoaded', () => {
-  initAuth();
+window.addEventListener('DOMContentLoaded', async () => {
+  try {
+    if (typeof AcademicDataService !== 'undefined') {
+      await AcademicDataService.loadAllAcademicData();
+    }
+  } catch (err) {
+    console.warn('[SmartAttend] Backend data load failed, using fallback:', err);
+  }
+  await initAuth();
   updateDate();
   renderStudents(STUDENTS);
   renderRecentAttendanceLogs();
