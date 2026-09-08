@@ -18,8 +18,8 @@ def run_phase_7a_verification():
 
     # Convert MySQL dialect to SQLite compatible syntax for in-memory execution
     sqlite_sql = sql_content
-    sqlite_sql = re.sub(r'CREATE DATABASE IF NOT EXISTS smart_attendance;', '', sqlite_sql)
-    sqlite_sql = re.sub(r'USE smart_attendance;', '', sqlite_sql)
+    sqlite_sql = re.sub(r'CREATE DATABASE IF NOT EXISTS \w+;', '', sqlite_sql)
+    sqlite_sql = re.sub(r'USE \w+;', '', sqlite_sql)
     sqlite_sql = re.sub(r'ENGINE=InnoDB DEFAULT CHARSET=utf8mb4', '', sqlite_sql)
     sqlite_sql = re.sub(r'INT AUTO_INCREMENT PRIMARY KEY', 'INTEGER PRIMARY KEY AUTOINCREMENT', sqlite_sql)
     sqlite_sql = re.sub(r'TINYINT', 'INTEGER', sqlite_sql)
