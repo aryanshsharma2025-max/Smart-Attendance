@@ -1460,11 +1460,21 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(UnauthorizedActionException.class)
     public ResponseEntity<Map<String, Object>> handleUnauthorized(UnauthorizedActionException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+            "timestamp", LocalDateTime.now(),
+            "status", 401,
+            "error", "Unauthorized",
+            "message", ex.getMessage()
+        ));
+    }
+
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccessDenied(org.springframework.security.access.AccessDeniedException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
             "timestamp", LocalDateTime.now(),
             "status", 403,
             "error", "Forbidden",
-            "message", ex.getMessage()
+            "message", ex.getMessage() != null ? ex.getMessage() : "Access Denied"
         ));
     }
 

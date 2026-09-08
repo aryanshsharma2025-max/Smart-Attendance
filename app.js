@@ -6,7 +6,126 @@
 
 'use strict';
 
-const API_BASE = 'http://localhost:8080/api'; // Mock endpoint base
+// ── CANONICAL BACKEND API CLIENT (SPRING BOOT 3 + MYSQL 8.0) ──
+const API_BASE = 'http://localhost:8080/api';
+const AUTH_TOKEN_KEY = 'smartattend_token';
+const AUTH_SESSION_KEY = 'smartattend_session';
+
+/**
+ * Global token helpers
+ */
+function getStoredAuthToken() {
+  return localStorage.getItem(AUTH_TOKEN_KEY) || sessionStorage.getItem(AUTH_TOKEN_KEY) || null;
+}
+
+function setStoredAuthToken(token, remember = true) {
+  if (remember) {
+    localStorage.setItem(AUTH_TOKEN_KEY, token);
+    sessionStorage.removeItem(AUTH_TOKEN_KEY);
+  } else {
+    sessionStorage.setItem(AUTH_TOKEN_KEY, token);
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+  }
+}
+
+function clearAuthTokens() {
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+  sessionStorage.removeItem(AUTH_TOKEN_KEY);
+  localStorage.removeItem(AUTH_SESSION_KEY);
+  sessionStorage.removeItem(AUTH_SESSION_KEY);
+}
+
+/**
+ * Centralized API Client
+ * Supports: GET, POST, PUT, DELETE
+ * Automatically attaches Authorization: Bearer <JWT>
+ * Handles 401 Unauthorized globally by clearing credentials
+ */
+const apiClient = {
+  async request(endpoint, options = {}) {
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const url = `${API_BASE}${cleanEndpoint}`;
+
+    const headers = Object.assign({
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    }, options.headers || {});
+
+    const token = getStoredAuthToken();
+    if (token && !headers['Authorization']) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const config = {
+      method: (options.method || 'GET').toUpperCase(),
+      headers
+    };
+
+    if (options.body && config.method !== 'GET' && config.method !== 'HEAD') {
+      config.body = typeof options.body === 'string' ? options.body : JSON.stringify(options.body);
+    }
+
+    let response;
+    try {
+      response = await fetch(url, config);
+    } catch (networkErr) {
+      const err = new Error(`Connection to backend failed at ${API_BASE}. Please verify that the Spring Boot server is running.`);
+      err.status = 0;
+      err.isNetworkError = true;
+      throw err;
+    }
+
+    // 401 Unauthorized: token expired or invalid credentials
+    if (response.status === 401) {
+      if (token) {
+        clearAuthTokens();
+      }
+      let errPayload = null;
+      try { errPayload = await response.json(); } catch (_) {}
+      const err = new Error((errPayload && errPayload.message) || 'Unauthorized: Invalid credentials or session expired.');
+      err.status = 401;
+      err.data = errPayload;
+      throw err;
+    }
+
+    if (!response.ok) {
+      let errPayload = null;
+      try { errPayload = await response.json(); } catch (_) {}
+      const msg = (errPayload && errPayload.message) || `Request failed with HTTP status ${response.status}`;
+      const err = new Error(msg);
+      err.status = response.status;
+      err.data = errPayload;
+      throw err;
+    }
+
+    if (response.status === 204) {
+      return null;
+    }
+
+    try {
+      return await response.json();
+    } catch (_) {
+      return null;
+    }
+  },
+
+  get(endpoint, headers = {}) {
+    return this.request(endpoint, { method: 'GET', headers });
+  },
+
+  post(endpoint, body, headers = {}) {
+    return this.request(endpoint, { method: 'POST', body, headers });
+  },
+
+  put(endpoint, body, headers = {}) {
+    return this.request(endpoint, { method: 'PUT', body, headers });
+  },
+
+  delete(endpoint, headers = {}) {
+    return this.request(endpoint, { method: 'DELETE', headers });
+  }
+};
+window.apiClient = apiClient;
 
 // ── 1. CENTRALIZED DOMAIN CONFIGURATION & ATTENDANCE ENGINE ──
 const ATTENDANCE_THRESHOLD = 75; // Application-level threshold percentage (75%)
@@ -3015,70 +3134,182 @@ function handleForgotPassword(event) {
   showToast('Institutional password reset: please contact your departmental IT administrator or Dean of Academics.');
 }
 
-function handleLoginSubmit(event) {
+async function handleLoginSubmit(event) {
   if (event) event.preventDefault();
   const username = (document.getElementById('login-username').value || '').trim();
   const password = (document.getElementById('login-password').value || '').trim();
+  const rememberCheckbox = document.getElementById('login-remember');
+  const remember = rememberCheckbox ? rememberCheckbox.checked : true;
   const errEl = document.getElementById('login-error-msg');
+  const submitBtn = document.getElementById('login-submit-btn');
 
-  let authenticated = false;
-  let sessionData = null;
-
-  // Check matching demo accounts or faculty accounts
-  let matchedDemo = null;
-  for (const [key, d] of Object.entries(DEMO_ACCOUNTS)) {
-    const isHodAlias = (currentLoginRole === 'hod' && ['hod_cse', 'anand_sir', 'anand', 'anandsir', 'hod'].includes(username.toLowerCase()) && key === 'hod');
-    if (
-      (isHodAlias ||
-       d.id.toLowerCase() === username.toLowerCase() ||
-       (d.roll && d.roll.toUpperCase() === username.toUpperCase()) ||
-       (d.name && d.name.toLowerCase() === username.toLowerCase())) &&
-      d.role === currentLoginRole &&
-      password === d.pass
-    ) {
-      matchedDemo = d;
-      break;
+  if (!username || !password) {
+    if (errEl) {
+      errEl.textContent = 'Please enter both Institutional User ID and Password.';
+      errEl.style.display = 'block';
     }
+    return;
   }
 
-  if (matchedDemo) {
-    authenticated = true;
-    sessionData = {
-      role: matchedDemo.role,
-      userId: matchedDemo.id,
-      displayName: matchedDemo.name,
-      dept: matchedDemo.dept,
-      roll: matchedDemo.roll || null,
-      sem: matchedDemo.sem || null,
-      sec: matchedDemo.sec || null,
-      assignedSubject: matchedDemo.assignedSubject || null
-    };
-  } else if (password === 'demo123') {
-    const foundStu = STUDENTS.find(s => s.roll.toUpperCase() === username.toUpperCase() || s.name.toLowerCase() === username.toLowerCase());
-    if (foundStu && currentLoginRole === 'student') {
-      authenticated = true;
+  if (errEl) {
+    errEl.textContent = '';
+    errEl.style.display = 'none';
+  }
+
+  const originalBtnHtml = submitBtn ? submitBtn.innerHTML : '';
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="att-spinner" style="display:inline-block;width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 0.6s linear infinite;margin-right:8px;vertical-align:middle;"></span> Authenticating...';
+  }
+
+  try {
+    // ── STEP 3: POST /api/auth/login ──
+    const loginRes = await apiClient.post('/auth/login', { username, password });
+
+    if (!loginRes || !loginRes.token) {
+      throw new Error('Authentication failed: Missing token from backend response.');
+    }
+
+    // Persist JWT token in local/session storage using canonical key 'smartattend_token'
+    setStoredAuthToken(loginRes.token, remember);
+
+    // ── STEP 4: GET /api/auth/me verification ──
+    const meProfile = await apiClient.get('/auth/me');
+    if (!meProfile || !meProfile.role) {
+      throw new Error('Failed to verify user profile via /api/auth/me');
+    }
+
+    // Determine normalized role directly from backend response (STUDENT, FACULTY, HOD)
+    const backendRole = (meProfile.role || loginRes.role || '').toLowerCase();
+
+    let sessionData = null;
+
+    if (backendRole === 'student') {
+      const studentRoll = meProfile.username || loginRes.rollNumber || username;
+      const foundStu = (typeof STUDENTS !== 'undefined' ? STUDENTS : []).find(s => s.roll === studentRoll) || null;
       sessionData = {
         role: 'student',
-        userId: foundStu.roll,
-        displayName: foundStu.name,
-        dept: foundStu.dept,
-        roll: foundStu.roll,
-        sem: foundStu.sem,
-        sec: foundStu.sec
+        userId: studentRoll,
+        displayName: meProfile.displayName || (foundStu && foundStu.name) || studentRoll,
+        dept: (foundStu && foundStu.dept) || 'CSE',
+        roll: studentRoll,
+        sem: (foundStu && foundStu.sem) || 3,
+        sec: (foundStu && foundStu.sec) || 'A',
+        isBackendAuthenticated: true
+      };
+    } else if (backendRole === 'hod') {
+      sessionData = {
+        role: 'hod',
+        userId: meProfile.username || 'hod_cse',
+        displayName: meProfile.displayName || 'Dr. Anand Tamrakar',
+        name: meProfile.displayName || 'Dr. Anand Tamrakar',
+        department: 'Computer Science & Engineering',
+        institution: 'SSIPMT, Raipur',
+        isBackendAuthenticated: true
+      };
+    } else {
+      // faculty
+      const facCode = loginRes.facultyCode || meProfile.username || 'faculty_os';
+      const normId = facCode.replace('_', '-');
+      const matchedFac = (typeof AUTHORITATIVE_FACULTY !== 'undefined' ? AUTHORITATIVE_FACULTY : [])
+        .find(f => f.id === normId || f.id.replace('-', '_') === facCode || f.name === meProfile.displayName) || null;
+
+      sessionData = {
+        role: 'faculty',
+        userId: facCode,
+        facultyId: meProfile.facultyId || (matchedFac && matchedFac.id) || facCode,
+        facultyName: meProfile.displayName || (matchedFac && matchedFac.name) || 'Faculty Member',
+        name: meProfile.displayName || (matchedFac && matchedFac.name) || 'Faculty Member',
+        displayName: meProfile.displayName || (matchedFac && matchedFac.name) || 'Faculty Member',
+        subjectName: (matchedFac && matchedFac.subjectName) || 'Operating System',
+        subjectId: matchedFac && matchedFac.subjectId,
+        subjectCodeShort: (matchedFac && matchedFac.subjectCodeShort) || 'OS',
+        shortCode: (matchedFac && matchedFac.shortCode) || 'DS',
+        assignedSections: (matchedFac && matchedFac.assignedSections) || ['A', 'B'],
+        sectionAllocationStatus: (matchedFac && matchedFac.sectionAllocationStatus) || 'Sections A, B Confirmed (Sections C, D Pending)',
+        dept: 'CSE',
+        isBackendAuthenticated: true
       };
     }
-  }
 
-  if (authenticated && sessionData) {
-    localStorage.setItem('smartattend_session', JSON.stringify(sessionData));
+    if (remember) {
+      localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(sessionData));
+    } else {
+      sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(sessionData));
+      localStorage.removeItem(AUTH_SESSION_KEY);
+    }
+
     if (errEl) errEl.style.display = 'none';
     applySessionUI(sessionData);
     showToast(`Signed in as ${sessionData.displayName} (${sessionData.role.toUpperCase()})`);
-  } else {
+
+  } catch (err) {
+    console.error('handleLoginSubmit error:', err);
+
+    // If network connection error, support offline demo mode for evaluation accounts
+    if (err.isNetworkError) {
+      console.warn('Backend unavailable; checking evaluation demo accounts...');
+      let matchedDemo = null;
+      for (const [key, d] of Object.entries(DEMO_ACCOUNTS)) {
+        const isHodAlias = (currentLoginRole === 'hod' && ['hod_cse', 'anand_sir', 'anand', 'anandsir', 'hod'].includes(username.toLowerCase()) && key === 'hod');
+        if (
+          (isHodAlias ||
+           d.id.toLowerCase() === username.toLowerCase() ||
+           (d.roll && d.roll.toUpperCase() === username.toUpperCase()) ||
+           (d.name && d.name.toLowerCase() === username.toLowerCase())) &&
+          d.role === currentLoginRole &&
+          password === d.pass
+        ) {
+          matchedDemo = d;
+          break;
+        }
+      }
+
+      if (matchedDemo) {
+        const sessionData = {
+          role: matchedDemo.role,
+          userId: matchedDemo.id,
+          displayName: matchedDemo.name,
+          dept: matchedDemo.dept,
+          roll: matchedDemo.roll || null,
+          sem: matchedDemo.sem || null,
+          sec: matchedDemo.sec || null,
+          assignedSubject: matchedDemo.assignedSubject || null,
+          isBackendAuthenticated: false
+        };
+        localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(sessionData));
+        if (errEl) errEl.style.display = 'none';
+        applySessionUI(sessionData);
+        showToast(`Offline Demo Mode: Signed in as ${sessionData.displayName} (${sessionData.role.toUpperCase()})`);
+        return;
+      }
+    }
+
+    // Specific error messages
+    let msg = 'Invalid credentials. Please verify your Institutional User ID and password.';
+    if (err.status === 401) {
+      msg = 'Invalid credentials. Please verify your Institutional User ID and password.';
+    } else if (err.status === 403) {
+      msg = 'Access Denied: You do not have permissions for this portal.';
+    } else if (err.status === 400) {
+      msg = err.message || 'Invalid request format.';
+    } else if (err.status === 404) {
+      msg = 'Authentication endpoint not found (404).';
+    } else if (err.isNetworkError || err.status === 0) {
+      msg = 'Unable to connect to backend at http://localhost:8080/api. Ensure Spring Boot is running.';
+    } else if (err.status >= 500) {
+      msg = `Server error (${err.status}). Please try again later.`;
+    }
+
     if (errEl) {
-      const demo = DEMO_ACCOUNTS[currentLoginRole] || DEMO_ACCOUNTS.faculty;
-      errEl.textContent = `Invalid credentials for ${currentLoginRole.toUpperCase()} role. Use evaluation account: ${demo.id} / ${demo.pass}`;
+      errEl.textContent = msg;
       errEl.style.display = 'block';
+    }
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalBtnHtml;
+      refreshIcons();
     }
   }
 }
@@ -3142,9 +3373,17 @@ function selectFacultyProfile(facultyId) {
 }
 
 function doSignOut() {
-  localStorage.removeItem('smartattend_session');
+  clearAuthTokens();
+  CURRENT_USER = null;
   document.body.classList.remove('app-mode');
   document.body.classList.add('landing-mode');
+  const pInput = document.getElementById('login-password');
+  const errEl = document.getElementById('login-error-msg');
+  if (pInput) pInput.value = '';
+  if (errEl) {
+    errEl.textContent = '';
+    errEl.style.display = 'none';
+  }
   showToast('Signed out of SmartAttend');
   refreshIcons();
 }
@@ -3260,8 +3499,8 @@ function applySessionUI(session) {
     renderHodOverview();
   } else {
     // Faculty (Phase 4 Real Faculty Context)
-    const normId = ((session.facultyId || session.userId || 'faculty-os')).replace('_', '-');
-    const faculty = AUTHORITATIVE_FACULTY.find(f => f.id === normId || f.name === session.displayName || f.name === session.facultyName) || AUTHORITATIVE_FACULTY[0];
+    const normId = String(session.facultyCode || session.userId || session.facultyId || 'faculty-os').replace('_', '-');
+    const faculty = AUTHORITATIVE_FACULTY.find(f => f.id === normId || f.id.replace('-', '_') === normId || f.name === session.displayName || f.name === session.facultyName) || AUTHORITATIVE_FACULTY[0];
 
     CURRENT_USER = {
       role: 'faculty',
@@ -3345,19 +3584,108 @@ function applySessionUI(session) {
   refreshIcons();
 }
 
-function initAuth() {
-  const sessionStr = localStorage.getItem('smartattend_session');
-  if (sessionStr) {
+async function initAuth() {
+  const token = getStoredAuthToken();
+  const sessionStr = localStorage.getItem(AUTH_SESSION_KEY) || sessionStorage.getItem(AUTH_SESSION_KEY);
+
+  if (token) {
+    try {
+      // Authoritatively verify token with GET /api/auth/me
+      const me = await apiClient.get('/auth/me');
+      if (me && me.role) {
+        const backendRole = (me.role || '').toLowerCase();
+        let session = null;
+
+        if (backendRole === 'student') {
+          const studentRoll = me.username;
+          const foundStu = (typeof STUDENTS !== 'undefined' ? STUDENTS : []).find(s => s.roll === studentRoll) || null;
+          session = {
+            role: 'student',
+            userId: studentRoll,
+            displayName: me.displayName || (foundStu && foundStu.name) || studentRoll,
+            dept: (foundStu && foundStu.dept) || 'CSE',
+            roll: studentRoll,
+            sem: (foundStu && foundStu.sem) || 3,
+            sec: (foundStu && foundStu.sec) || 'A',
+            isBackendAuthenticated: true
+          };
+        } else if (backendRole === 'hod') {
+          session = {
+            role: 'hod',
+            userId: me.username || 'hod_cse',
+            displayName: me.displayName || 'Dr. Anand Tamrakar',
+            name: me.displayName || 'Dr. Anand Tamrakar',
+            department: 'Computer Science & Engineering',
+            institution: 'SSIPMT, Raipur',
+            isBackendAuthenticated: true
+          };
+        } else {
+          // faculty
+          const facCode = me.username || 'faculty_os';
+          const normId = facCode.replace('_', '-');
+          const matchedFac = (typeof AUTHORITATIVE_FACULTY !== 'undefined' ? AUTHORITATIVE_FACULTY : [])
+            .find(f => f.id === normId || f.id.replace('-', '_') === facCode || f.name === me.displayName) || null;
+
+          session = {
+            role: 'faculty',
+            userId: facCode,
+            facultyId: me.facultyId || (matchedFac && matchedFac.id) || facCode,
+            facultyName: me.displayName || (matchedFac && matchedFac.name) || 'Faculty Member',
+            name: me.displayName || (matchedFac && matchedFac.name) || 'Faculty Member',
+            displayName: me.displayName || (matchedFac && matchedFac.name) || 'Faculty Member',
+            subjectName: (matchedFac && matchedFac.subjectName) || 'Operating System',
+            subjectId: matchedFac && matchedFac.subjectId,
+            subjectCodeShort: (matchedFac && matchedFac.subjectCodeShort) || 'OS',
+            shortCode: (matchedFac && matchedFac.shortCode) || 'DS',
+            assignedSections: (matchedFac && matchedFac.assignedSections) || ['A', 'B'],
+            sectionAllocationStatus: (matchedFac && matchedFac.sectionAllocationStatus) || 'Sections A, B Confirmed (Sections C, D Pending)',
+            dept: 'CSE',
+            isBackendAuthenticated: true
+          };
+        }
+
+        // Cache refreshed profile
+        if (localStorage.getItem(AUTH_TOKEN_KEY)) {
+          localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
+        } else {
+          sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
+        }
+
+        applySessionUI(session);
+        return;
+      } else {
+        clearAuthTokens();
+      }
+    } catch (err) {
+      console.warn('Authentication verification via /me failed:', err);
+      // Clear token & session if unauthorized / invalid
+      clearAuthTokens();
+      // If network error occurred, check if there was a cached offline demo session
+      if (err.isNetworkError && sessionStr) {
+        try {
+          const cachedSession = JSON.parse(sessionStr);
+          if (cachedSession && cachedSession.role && !cachedSession.isBackendAuthenticated) {
+            applySessionUI(cachedSession);
+            return;
+          }
+        } catch (_) {}
+      }
+    }
+  } else if (sessionStr) {
+    // No token, check if there is an active offline demo session
     try {
       const session = JSON.parse(sessionStr);
-      if (session && session.role) {
+      if (session && session.role && !session.isBackendAuthenticated) {
         applySessionUI(session);
         return;
       }
     } catch (e) {
-      localStorage.removeItem('smartattend_session');
+      clearAuthTokens();
     }
   }
+
+  // Not authenticated -> return to landing
+  clearAuthTokens();
   document.body.classList.remove('app-mode');
   document.body.classList.add('landing-mode');
   setLoginRole('faculty');
