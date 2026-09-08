@@ -1619,11 +1619,34 @@ function renderStudentAttendanceVisualizations(student, livePct, liveAttendedCou
 }
 
 /**
- * PHASE 8.1: WEEKLY TIMETABLE ENGINE (AUTHORITATIVE & DYNAMIC)
+ * PHASE 8.2: OFFICIAL WEEKLY TIMETABLE ENGINE (AUTHORITATIVE, ROWSPAN MERGED & SUBJECT HIGHLIGHTED)
  */
 let CURRENT_TIMETABLE_VIEW_MODE = 'grid'; // 'grid' | 'day'
-let CURRENT_TIMETABLE_FILTER = 'mine';    // 'mine' | 'all'
+let CURRENT_TIMETABLE_FILTER = 'mine';    // 'mine' | 'A' | 'B' | 'all'
 let CURRENT_MODAL_SCHEDULE_DAY = 'Monday';
+
+/**
+ * Maps timetable entries to consistent subject categories (Requirement Part F)
+ * OS    -> Royal Blue (#2563eb)
+ * DM    -> Royal Violet (#7c3aed)
+ * OOPS  -> Emerald Green (#059669)
+ * WT    -> Warm Amber (#d97706)
+ * DELD  -> Clean Cyan (#0891b2)
+ */
+function getSubjectCategory(entry) {
+  if (!entry) return 'GENERAL';
+  const code = ((entry.subjectCodeShort || '') + ' ' + (entry.subjectName || '') + ' ' + (entry.subjectKey || '')).toUpperCase();
+  if (code.includes('OPERATING') || code.includes('OS-LAB') || code.includes('OS(T)') || /\bOS\b/.test(code)) return 'OS';
+  if (code.includes('DISCRETE') || /\bDM\b/.test(code)) return 'DM';
+  if (code.includes('OOPS') || code.includes('OBJECT ORIENTED') || code.includes('C++')) return 'OOPS';
+  if (code.includes('WEB TECH') || /\bWT\b/.test(code)) return 'WT';
+  if (code.includes('DIGITAL') || /\bDELD\b/.test(code) || code.includes('IDEA')) return 'DELD';
+  if (code.includes('DSA')) return 'DSA';
+  if (code.includes('GITA')) return 'GITA';
+  if (code.includes('LIB')) return 'LIB';
+  if (code.includes('PROJECT')) return 'PROJECT';
+  return 'GENERAL';
+}
 
 function isFacultySlotAssigned(entry, faculty) {
   if (!entry) return false;
@@ -1708,76 +1731,144 @@ function renderWeeklyTimetableGrid() {
     { id: 'VIII', label: 'Period VIII', time: '15:20 – 16:00' }
   ];
 
+  // Filter entries based on CURRENT_TIMETABLE_FILTER
+  // 'mine': Show authenticated faculty's classes (free periods rendered as '—')
+  // 'A': Full Section A timetable (official institutional view)
+  // 'B': Full Section B timetable (official institutional view)
+  // 'all': Combined entries from both sections
+  let baseEntries = TIMETABLE_ENTRIES;
+  if (CURRENT_TIMETABLE_FILTER === 'A') {
+    baseEntries = TIMETABLE_ENTRIES.filter(e => e.section === 'A');
+  } else if (CURRENT_TIMETABLE_FILTER === 'B') {
+    baseEntries = TIMETABLE_ENTRIES.filter(e => e.section === 'B');
+  } else if (CURRENT_TIMETABLE_FILTER === 'mine') {
+    baseEntries = TIMETABLE_ENTRIES.filter(e => isFacultySlotAssigned(e, CURRENT_USER));
+  }
+
+  // Track skipped cells due to multi-period rowspans (Requirement Part C)
+  const skipCells = {};
+
   let tableHtml = `
     <table class="tt-grid-table">
       <thead>
         <tr>
-          <th>Period</th>
-          ${days.map(d => `<th>${d.slice(0, 3).toUpperCase()}</th>`).join('')}
+          <th>Period / Time</th>
+          <th>MON</th>
+          <th>TUE</th>
+          <th>WED</th>
+          <th>THU</th>
+          <th>FRI</th>
+          <th>SAT</th>
         </tr>
       </thead>
       <tbody>
   `;
 
-  periods.forEach(p => {
+  periods.forEach((p, pIdx) => {
+    // Insert dedicated neutral LUNCH BREAK row between Period IV and Period V (Requirement Part D)
+    if (p.id === 'V') {
+      tableHtml += `
+        <tr class="tt-lunch-row">
+          <td class="tt-lunch-period-cell">
+            <div class="tt-grid-period-lbl">LUNCH</div>
+            <div class="tt-grid-time-lbl">12:20 – 13:00</div>
+          </td>
+          <td colspan="6" class="tt-lunch-content-cell">
+            <div class="tt-lunch-text">
+              <i data-lucide="coffee" class="icon-xs" style="margin-right: 6px;"></i>
+              <span>LUNCH BREAK &middot; 12:20 PM &ndash; 01:00 PM</span>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+
     tableHtml += `
       <tr>
-        <td>
-          <div class="tt-grid-period-lbl">${p.id}</div>
+        <td class="tt-grid-period-cell">
+          <div class="tt-grid-period-lbl">${p.label}</div>
           <div class="tt-grid-time-lbl">${p.time}</div>
         </td>
     `;
 
     days.forEach(day => {
-      let slots = TIMETABLE_ENTRIES.filter(e => {
-        if (e.day.toLowerCase() !== day.toLowerCase()) return false;
-        const pId = p.id;
-        const ep = (e.period || '').replace(/[–—]/g, '-');
-        if (ep === pId) return true;
-        if (ep === 'III-IV' && (pId === 'III' || pId === 'IV')) return true;
-        if (ep === 'V-VI' && (pId === 'V' || pId === 'VI')) return true;
-        if (ep === 'VI-VII' && (pId === 'VI' || pId === 'VII')) return true;
-        if (ep === 'VII-VIII' && (pId === 'VII' || pId === 'VIII')) return true;
-        return false;
-      });
-
-      if (CURRENT_TIMETABLE_FILTER === 'mine') {
-        slots = slots.filter(e => isFacultySlotAssigned(e, CURRENT_USER));
+      const cellKey = `${day}_${p.id}`;
+      if (skipCells[cellKey]) {
+        // Skip emitting <td> because this period was covered by a multi-period block started in an earlier period
+        return;
       }
+
+      // Find slots starting at this period
+      const slots = baseEntries.filter(e => {
+        if (e.day.toLowerCase() !== day.toLowerCase()) return false;
+        const ep = (e.period || '').replace(/[–—]/g, '-');
+        if (ep.includes('-')) {
+          const parts = ep.split('-');
+          return parts[0] === p.id;
+        }
+        return ep === p.id;
+      });
 
       if (slots.length === 0) {
         tableHtml += `<td><div class="tt-slot-empty">—</div></td>`;
       } else {
+        // Check if any slot is multi-period
+        let rowspan = 1;
+        slots.forEach(slot => {
+          const ep = (slot.period || '').replace(/[–—]/g, '-');
+          if (ep.includes('-')) {
+            const parts = ep.split('-');
+            const startId = parts[0];
+            const endId = parts[1];
+            const sIdx = periods.findIndex(x => x.id === startId);
+            const eIdx = periods.findIndex(x => x.id === endId);
+            if (sIdx !== -1 && eIdx !== -1 && eIdx > sIdx) {
+              const span = eIdx - sIdx + 1;
+              if (span > rowspan) rowspan = span;
+              // Mark subsequent periods as skipped for this day
+              for (let k = sIdx + 1; k <= eIdx; k++) {
+                skipCells[`${day}_${periods[k].id}`] = true;
+              }
+            }
+          }
+        });
+
         const slotCellsHtml = slots.map(slot => {
           const isMine = isFacultySlotAssigned(slot, CURRENT_USER);
+          const subjCat = getSubjectCategory(slot);
+          const isCombined = (slot.period || '').includes('-') || (slot.period || '').includes('–') || (slot.period || '').includes('—');
 
           if (isMine) {
             return `
-              <div class="tt-slot-card-mine">
+              <div class="tt-slot-card-mine tt-sub-${subjCat.toLowerCase()}" ${isCombined ? 'style="height: 100%; min-height: 130px;"' : ''}>
                 <div>
                   <span class="tt-badge-mine"><i data-lucide="check" style="width:10px;height:10px;"></i> YOUR CLASS</span>
-                  <div class="tt-slot-subj-mine">${escapeHtml(slot.subjectName || slot.subjectCodeShort)}</div>
+                  <div class="tt-slot-subj-mine">${escapeHtml(slot.subjectCodeShort || slot.subjectName)}</div>
+                  <div class="tt-slot-fullname">${escapeHtml(slot.subjectName)}</div>
+                  ${isCombined ? `<div class="tt-slot-span-lbl">Periods ${escapeHtml(slot.period)} (${escapeHtml(slot.timeDisplay)})</div>` : ''}
                   <div class="tt-slot-sec-mine">Section ${escapeHtml(slot.section)} &middot; ${escapeHtml(slot.type)}</div>
                   <div class="tt-slot-meta-mine">${escapeHtml(slot.room || 'Classroom')}</div>
                 </div>
                 <button type="button" class="btn-tt-take" onclick="closeTimetableModal(); startAttendanceFromTimetable('${escapeHtml(slot.subjectName)}', '${escapeHtml(slot.section)}', 'Period ${escapeHtml(slot.period)}', '${escapeHtml(slot.timeDisplay)}')">
                   <i data-lucide="check-square" style="width:11px;height:11px;"></i>
-                  <span>Take &rarr;</span>
+                  <span>Take Attendance &rarr;</span>
                 </button>
               </div>
             `;
           } else {
             return `
-              <div class="tt-slot-card-other" title="Taught by ${escapeHtml(slot.facultyName || slot.facultyShort)}">
-                <div class="tt-slot-subj-other">${escapeHtml(slot.subjectName || slot.subjectCodeShort)}</div>
+              <div class="tt-slot-card-other" title="Taught by ${escapeHtml(slot.facultyName || slot.facultyShort)}" ${isCombined ? 'style="height: 100%; min-height: 130px;"' : ''}>
+                <div class="tt-slot-subj-other">${escapeHtml(slot.subjectCodeShort || slot.subjectName)}</div>
+                <div class="tt-slot-fullname-other">${escapeHtml(slot.subjectName)}</div>
+                ${isCombined ? `<div class="tt-slot-span-lbl" style="color:var(--text-muted);">Periods ${escapeHtml(slot.period)} (${escapeHtml(slot.timeDisplay)})</div>` : ''}
                 <div class="tt-slot-sec-other">Sec ${escapeHtml(slot.section)} &middot; ${escapeHtml(slot.room || '')}</div>
-                <div class="tt-slot-fac-other">${escapeHtml(slot.facultyName || slot.facultyShort)}</div>
+                <div class="tt-slot-fac-other">(${escapeHtml(slot.facultyShort || '')}) ${escapeHtml(slot.facultyName || '')}</div>
               </div>
             `;
           }
         }).join('');
 
-        tableHtml += `<td>${slotCellsHtml}</td>`;
+        tableHtml += `<td ${rowspan > 1 ? `rowspan="${rowspan}" style="vertical-align: middle;"` : ''}>${slotCellsHtml}</td>`;
       }
     });
 
@@ -1792,7 +1883,7 @@ function renderWeeklyTimetableGrid() {
 function selectModalScheduleDay(day) {
   CURRENT_MODAL_SCHEDULE_DAY = day;
   document.querySelectorAll('#tt-modal-day-tabs .sched-tab').forEach(tab => {
-    tab.classList.toggle('active', tab.dataset.day === day);
+    tab.classList.toggle('active', tab.dataset.day.toLowerCase() === day.toLowerCase());
   });
 
   const listEl = document.getElementById('tt-modal-schedule-list');
@@ -1806,11 +1897,15 @@ function selectModalScheduleDay(day) {
   let entries = TIMETABLE_ENTRIES.filter(e => e.day.toLowerCase() === day.toLowerCase())
     .sort((a, b) => timeStringToMinutes(a.startTime) - timeStringToMinutes(b.startTime));
 
-  if (CURRENT_TIMETABLE_FILTER === 'mine') {
+  if (CURRENT_TIMETABLE_FILTER === 'A') {
+    entries = entries.filter(e => e.section === 'A');
+  } else if (CURRENT_TIMETABLE_FILTER === 'B') {
+    entries = entries.filter(e => e.section === 'B');
+  } else if (CURRENT_TIMETABLE_FILTER === 'mine') {
     entries = entries.filter(e => isFacultySlotAssigned(e, CURRENT_USER));
   }
 
-  const facName = (CURRENT_USER && CURRENT_USER.facultyName) || 'Faculty Member';
+  const facName = (CURRENT_USER && (CURRENT_USER.facultyName || CURRENT_USER.name)) || 'Faculty Member';
 
   if (entries.length === 0) {
     listEl.innerHTML = `
@@ -1825,17 +1920,20 @@ function selectModalScheduleDay(day) {
 
   listEl.innerHTML = entries.map(e => {
     const isMine = isFacultySlotAssigned(e, CURRENT_USER);
+    const subjCat = getSubjectCategory(e);
+    const isCombined = (e.period || '').includes('-') || (e.period || '').includes('–') || (e.period || '').includes('—');
 
     if (isMine) {
       return `
-        <div class="card" style="padding: 16px; border: 2px solid var(--primary); background: var(--primary-subtle); border-radius: var(--radius-md);">
+        <div class="card tt-slot-card-mine tt-sub-${subjCat.toLowerCase()}" style="padding: 16px; border-radius: var(--radius-md);">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <span class="tt-badge-mine"><i data-lucide="check" style="width:10px;height:10px;"></i> YOUR CLASS</span>
             <span class="badge" style="background: var(--surface); border: 1px solid var(--border); font-size: 11px;">Sec ${escapeHtml(e.section)}</span>
           </div>
-          <div style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-top: 6px;">${escapeHtml(e.subjectName)}</div>
-          <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">Period ${escapeHtml(e.period)} (${escapeHtml(e.timeDisplay)}) &middot; Room: <strong>${escapeHtml(e.room)}</strong></div>
-          <button class="btn btn-primary btn-sm" onclick="closeTimetableModal(); startAttendanceFromTimetable('${escapeHtml(e.subjectName)}', '${escapeHtml(e.section)}', 'Period ${escapeHtml(e.period)}', '${escapeHtml(e.timeDisplay)}')" style="margin-top: 12px; width: 100%; justify-content: center; gap: 6px;">
+          <div class="tt-slot-subj-mine" style="font-size: 16px; font-weight: 700; margin-top: 6px;">${escapeHtml(e.subjectCodeShort || e.subjectName)}</div>
+          <div class="tt-slot-fullname" style="font-size: 12.5px; color: var(--text-secondary);">${escapeHtml(e.subjectName)}</div>
+          <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Period ${escapeHtml(e.period)} (${escapeHtml(e.timeDisplay)}) &middot; Room: <strong>${escapeHtml(e.room || 'Classroom')}</strong></div>
+          <button class="btn btn-primary btn-sm btn-tt-take" onclick="closeTimetableModal(); startAttendanceFromTimetable('${escapeHtml(e.subjectName)}', '${escapeHtml(e.section)}', 'Period ${escapeHtml(e.period)}', '${escapeHtml(e.timeDisplay)}')" style="margin-top: 12px; width: 100%; justify-content: center; gap: 6px;">
             <i data-lucide="check-square" class="icon-xs"></i>
             <span>Take Attendance &rarr;</span>
           </button>
@@ -1843,13 +1941,14 @@ function selectModalScheduleDay(day) {
       `;
     } else {
       return `
-        <div class="card" style="padding: 14px 16px; border: 1px solid var(--border); background: var(--surface-muted); opacity: 0.82;">
+        <div class="card tt-slot-card-other" style="padding: 14px 16px; border: 1px solid var(--border); background: var(--surface-muted); opacity: 0.85; border-radius: var(--radius-md);">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <span class="badge" style="background: var(--surface); border: 1px solid var(--border); font-size: 11px; color: var(--text-secondary);">Period ${escapeHtml(e.period)} (${escapeHtml(e.timeDisplay)})</span>
             <span class="badge" style="background: var(--surface); border: 1px solid var(--border); font-size: 11px;">Sec ${escapeHtml(e.section)}</span>
           </div>
-          <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-top: 6px;">${escapeHtml(e.subjectName)}</div>
-          <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Faculty: <strong>${escapeHtml(e.facultyName || e.facultyShort)}</strong> &middot; Room: ${escapeHtml(e.room)}</div>
+          <div class="tt-slot-subj-other" style="font-size: 14px; font-weight: 700; margin-top: 6px; color: var(--text-primary);">${escapeHtml(e.subjectCodeShort || e.subjectName)}</div>
+          <div class="tt-slot-fullname-other" style="font-size: 12px;">${escapeHtml(e.subjectName)}</div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Faculty: <strong>${escapeHtml(e.facultyName || e.facultyShort)}</strong> &middot; Room: ${escapeHtml(e.room || 'Classroom')}</div>
         </div>
       `;
     }
@@ -1865,10 +1964,13 @@ function openTimetableModalOrView(day) {
   CURRENT_MODAL_SCHEDULE_DAY = targetDay;
   modal.style.display = 'flex';
 
+  const facNameEl = document.getElementById('tt-modal-fac-name');
   const subEl = document.getElementById('tt-modal-fac-subtitle');
   const countBadge = document.getElementById('tt-modal-slots-count-badge');
   if (CURRENT_USER) {
-    if (subEl) subEl.textContent = `${CURRENT_USER.facultyName} · ${CURRENT_USER.subjectName} · Department of CSE`;
+    const rawName = CURRENT_USER.facultyName || CURRENT_USER.name || 'Faculty Member';
+    if (facNameEl) facNameEl.textContent = rawName;
+    if (subEl) subEl.textContent = `${CURRENT_USER.subjectName || 'Computer Science'} · Department of CSE · July–December 2026 · SSIPMT Raipur`;
     if (countBadge && typeof TIMETABLE_ENTRIES !== 'undefined') {
       const myWeeklySlots = TIMETABLE_ENTRIES.filter(e => isFacultySlotAssigned(e, CURRENT_USER)).length;
       countBadge.textContent = `${myWeeklySlots} Weekly Teaching Slots`;
@@ -2252,6 +2354,10 @@ const ATTENDANCE_STATE = {
 // ── 5. PAGE ROUTER ───────────────────────────────────────────
 function showPage(pageId, linkEl) {
   if (pageId === 'live') pageId = 'take-attendance';
+
+  // Ensure modal overlays and drawer menu close cleanly on page navigation
+  if (typeof closeTimetableModal === 'function') closeTimetableModal();
+  if (typeof toggleSidebar === 'function') toggleSidebar(false);
 
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));

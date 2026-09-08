@@ -3598,6 +3598,107 @@ body.app-mode #app-shell {
   box-shadow: var(--shadow-sm);
 }
 
+/* ── PHASE 8.2: TOPBAR BRAND & HOME BUTTON STYLES ── */
+.topbar-brand-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
+}
+
+.topbar-brand-link:hover {
+  background: var(--surface-muted);
+}
+
+.topbar-home-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+}
+
+/* ── PHASE 8.2: OFFICIAL WEEKLY TIMETABLE GRID & SUBJECT HIGHLIGHTING ── */
+.timetable-view-toggle {
+  display: inline-flex;
+  background: var(--surface-muted);
+  padding: 3px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  gap: 3px;
+}
+
+.tt-view-btn {
+  border: none !important;
+  background: transparent !important;
+  color: var(--text-secondary) !important;
+  font-weight: 600 !important;
+  padding: 5px 12px !important;
+  border-radius: var(--radius-sm) !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.tt-view-btn.active {
+  background: var(--surface) !important;
+  color: var(--primary) !important;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Subject Legend (Requirement Part H) */
+.tt-legend-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 8px 14px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 11.5px;
+  margin-bottom: 12px;
+}
+
+.tt-legend-title {
+  font-weight: 700;
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  letter-spacing: 0.03em;
+  font-size: 11.5px;
+}
+
+.tt-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+}
+
+.tt-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.tt-dot-os   { background: #2563eb; }
+.tt-dot-dm   { background: #7c3aed; }
+.tt-dot-oops { background: #059669; }
+.tt-dot-wt   { background: #d97706; }
+.tt-dot-deld { background: #0891b2; }
+
+/* Grid Table Structure (Institutional CSVTU Layout) */
 .timetable-grid-wrap {
   width: 100%;
   overflow-x: auto;
@@ -3609,8 +3710,8 @@ body.app-mode #app-shell {
 
 .tt-grid-table {
   width: 100%;
-  min-width: 780px;
-  border-collapse: separate;
+  min-width: 840px;
+  border-collapse: collapse;
   border-spacing: 0;
 }
 
@@ -3621,25 +3722,35 @@ body.app-mode #app-shell {
   font-weight: 700;
   text-align: center;
   padding: 10px 8px;
-  border-bottom: 2px solid var(--border);
-  border-right: 1px solid var(--border-subtle);
+  border: 1px solid var(--border);
   position: sticky;
   top: 0;
   z-index: 10;
+  letter-spacing: 0.03em;
 }
 
 .tt-grid-table th:first-child {
-  width: 100px;
-  text-align: left;
-  padding-left: 12px;
+  width: 115px;
+  min-width: 115px;
+  text-align: center;
 }
 
 .tt-grid-table td {
   padding: 6px;
-  border-bottom: 1px solid var(--border-subtle);
-  border-right: 1px solid var(--border-subtle);
+  border: 1px solid var(--border);
   vertical-align: top;
   height: 96px;
+  position: relative;
+}
+
+.tt-grid-period-cell {
+  background: var(--surface-muted);
+  width: 115px;
+  min-width: 115px;
+  text-align: center;
+  padding: 8px 6px !important;
+  vertical-align: middle !important;
+  border: 1px solid var(--border) !important;
 }
 
 .tt-grid-period-lbl {
@@ -3650,28 +3761,64 @@ body.app-mode #app-shell {
 }
 
 .tt-grid-time-lbl {
-  font-size: 10.5px;
+  font-size: 10px;
   color: var(--text-muted);
-  margin-top: 2px;
+  margin-top: 3px;
+  font-weight: 500;
 }
 
-/* Faculty-Owned Slot (Strong Visual Emphasis) */
+/* Institutional Neutral Lunch Row (Part D) */
+.tt-lunch-row {
+  background: var(--surface-muted) !important;
+}
+
+.tt-lunch-period-cell {
+  background: var(--surface-muted);
+  text-align: center;
+  padding: 6px !important;
+  vertical-align: middle !important;
+  border: 1px solid var(--border) !important;
+}
+
+.tt-lunch-content-cell {
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 8px 12px !important;
+  vertical-align: middle !important;
+  border: 1px solid var(--border) !important;
+}
+
+.tt-lunch-text {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  opacity: 0.85;
+}
+
+/* Faculty-Owned Slot (Strong Subject-Specific Emphasis & Clear Border) */
 .tt-slot-card-mine {
   background: var(--primary-subtle);
   border: 2px solid var(--primary);
   border-radius: var(--radius-sm);
   padding: 8px 10px;
   height: 100%;
+  min-height: 84px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.12);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
   transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .tt-slot-card-mine:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .tt-badge-mine {
@@ -3690,17 +3837,31 @@ body.app-mode #app-shell {
 }
 
 .tt-slot-subj-mine {
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1.2;
 }
 
+.tt-slot-fullname {
+  font-size: 10.5px;
+  color: var(--text-secondary);
+  margin-top: 1px;
+  line-height: 1.2;
+}
+
+.tt-slot-span-lbl {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
 .tt-slot-sec-mine {
   font-size: 11px;
   font-weight: 600;
-  color: var(--primary);
-  margin-top: 2px;
+  color: var(--text-primary);
+  margin-top: 3px;
 }
 
 .tt-slot-meta-mine {
@@ -3712,8 +3873,8 @@ body.app-mode #app-shell {
 .btn-tt-take {
   margin-top: 6px;
   width: 100%;
-  padding: 3px 6px;
-  font-size: 11px;
+  padding: 4px 6px;
+  font-size: 10.5px;
   font-weight: 600;
   border-radius: var(--radius-sm);
   background: var(--primary);
@@ -3731,13 +3892,117 @@ body.app-mode #app-shell {
   opacity: 0.9;
 }
 
-/* Other Faculty's Slot (Neutral / Subdued Visual) */
+/* ── SUBJECT-SPECIFIC THEMES FOR OWNED PERIODS (Part F) ── */
+/* 1. Operating System (OS) */
+.tt-slot-card-mine.tt-sub-os {
+  background: rgba(37, 99, 235, 0.08);
+  border: 2px solid #2563eb;
+}
+.tt-slot-card-mine.tt-sub-os .tt-badge-mine,
+.tt-slot-card-mine.tt-sub-os .btn-tt-take {
+  background: #2563eb;
+}
+.tt-slot-card-mine.tt-sub-os .tt-slot-subj-mine {
+  color: #1d4ed8;
+}
+
+/* 2. Discrete Mathematics (DM) */
+.tt-slot-card-mine.tt-sub-dm {
+  background: rgba(124, 58, 237, 0.08);
+  border: 2px solid #7c3aed;
+}
+.tt-slot-card-mine.tt-sub-dm .tt-badge-mine,
+.tt-slot-card-mine.tt-sub-dm .btn-tt-take {
+  background: #7c3aed;
+}
+.tt-slot-card-mine.tt-sub-dm .tt-slot-subj-mine {
+  color: #6d28d9;
+}
+
+/* 3. Object Oriented Programming (OOPS) */
+.tt-slot-card-mine.tt-sub-oops {
+  background: rgba(5, 150, 105, 0.08);
+  border: 2px solid #059669;
+}
+.tt-slot-card-mine.tt-sub-oops .tt-badge-mine,
+.tt-slot-card-mine.tt-sub-oops .btn-tt-take {
+  background: #059669;
+}
+.tt-slot-card-mine.tt-sub-oops .tt-slot-subj-mine {
+  color: #047857;
+}
+
+/* 4. Web Technology (WT) */
+.tt-slot-card-mine.tt-sub-wt {
+  background: rgba(217, 119, 6, 0.08);
+  border: 2px solid #d97706;
+}
+.tt-slot-card-mine.tt-sub-wt .tt-badge-mine,
+.tt-slot-card-mine.tt-sub-wt .btn-tt-take {
+  background: #d97706;
+}
+.tt-slot-card-mine.tt-sub-wt .tt-slot-subj-mine {
+  color: #b45309;
+}
+
+/* 5. Digital Electronics (DELD) */
+.tt-slot-card-mine.tt-sub-deld {
+  background: rgba(8, 145, 178, 0.08);
+  border: 2px solid #0891b2;
+}
+.tt-slot-card-mine.tt-sub-deld .tt-badge-mine,
+.tt-slot-card-mine.tt-sub-deld .btn-tt-take {
+  background: #0891b2;
+}
+.tt-slot-card-mine.tt-sub-deld .tt-slot-subj-mine {
+  color: #0e7490;
+}
+
+/* Dark Mode Subject Overrides */
+[data-theme="dark"] .tt-slot-card-mine.tt-sub-os {
+  background: rgba(59, 130, 246, 0.16);
+  border-color: #60a5fa;
+}
+[data-theme="dark"] .tt-slot-card-mine.tt-sub-os .tt-slot-subj-mine {
+  color: #93c5fd;
+}
+[data-theme="dark"] .tt-slot-card-mine.tt-sub-dm {
+  background: rgba(139, 92, 246, 0.16);
+  border-color: #a78bfa;
+}
+[data-theme="dark"] .tt-slot-card-mine.tt-sub-dm .tt-slot-subj-mine {
+  color: #c4b5fd;
+}
+[data-theme="dark"] .tt-slot-card-mine.tt-sub-oops {
+  background: rgba(16, 185, 129, 0.16);
+  border-color: #34d399;
+}
+[data-theme="dark"] .tt-slot-card-mine.tt-sub-oops .tt-slot-subj-mine {
+  color: #6ee7b7;
+}
+[data-theme="dark"] .tt-slot-card-mine.tt-sub-wt {
+  background: rgba(245, 158, 11, 0.16);
+  border-color: #fbbf24;
+}
+[data-theme="dark"] .tt-slot-card-mine.tt-sub-wt .tt-slot-subj-mine {
+  color: #fcd34d;
+}
+[data-theme="dark"] .tt-slot-card-mine.tt-sub-deld {
+  background: rgba(6, 182, 212, 0.16);
+  border-color: #22d3ee;
+}
+[data-theme="dark"] .tt-slot-card-mine.tt-sub-deld .tt-slot-subj-mine {
+  color: #67e8f9;
+}
+
+/* Other Faculty's Slot (Neutral / Subdued Visual - Requirement Part G) */
 .tt-slot-card-other {
   background: var(--surface-muted);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 6px 8px;
   height: 100%;
+  min-height: 84px;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -3753,6 +4018,12 @@ body.app-mode #app-shell {
   font-weight: 600;
   color: var(--text-secondary);
   line-height: 1.2;
+}
+
+.tt-slot-fullname-other {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 1px;
 }
 
 .tt-slot-sec-other {
