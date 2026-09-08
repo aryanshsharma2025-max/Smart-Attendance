@@ -48,7 +48,7 @@ public class AttendanceSessionService {
             throw new ValidationException("Faculty ID or code is required");
         }
 
-        // Enforce HOD restriction
+        // Enforce HOD restriction (Dr. Anand Tamrakar has 0 allocations and cannot teach)
         if (faculty.getRole() == Faculty.FacultyRole.hod) {
             throw new UnauthorizedActionException("403 Forbidden: HOD Dr. Anand Tamrakar is not teaching faculty and cannot start attendance sessions");
         }
@@ -246,7 +246,7 @@ public class AttendanceSessionService {
             .id(s.getSessionId())
             .subjectId(s.getCourse().getCourseId())
             .subjectName(s.getCourse().getCourseName())
-            .subjectCode(s.getCourse().getCourseCodeShort())
+            .subjectCode(s.getCourseCodeShort())
             .facultyId(s.getFaculty().getFacultyId())
             .facultyCode(s.getFaculty().getFacultyCode())
             .facultyName(s.getFaculty().getName())
@@ -299,6 +299,28 @@ public class AttendanceSessionService {
                 .status(s.getStatus().name())
                 .startedAt(s.getStartedAt())
                 .completedAt(s.getCompletedAt())
+                .build())
+            .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<SessionDto> getActiveSessions() {
+        return sessionRepo.findAll().stream()
+            .filter(s -> s.getStatus() == AttendanceSession.SessionStatus.RECORDING)
+            .map(s -> SessionDto.builder()
+                .id(s.getSessionId())
+                .subjectId(s.getCourse().getCourseId())
+                .subjectName(s.getCourse().getCourseName())
+                .subjectCode(s.getCourse().getCourseCodeShort())
+                .facultyId(s.getFaculty().getFacultyId())
+                .facultyCode(s.getFaculty().getFacultyCode())
+                .facultyName(s.getFaculty().getName())
+                .section(s.getSection().getSectionName())
+                .semester(s.getSemester())
+                .date(s.getSessionDate())
+                .lectureNumber(s.getLectureNumber())
+                .status(s.getStatus().name())
+                .startedAt(s.getStartedAt())
                 .build())
             .collect(Collectors.toList());
     }

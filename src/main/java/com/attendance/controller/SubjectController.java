@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/subjects")
@@ -22,5 +23,20 @@ public class SubjectController {
             return ResponseEntity.ok(courseService.getPrimarySubjects());
         }
         return ResponseEntity.ok(courseService.getAllSubjects());
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<CourseDto> getSubjectById(@PathVariable String id) {
+        try {
+            Long numId = Long.parseLong(id);
+            return ResponseEntity.ok(courseService.getSubjectById(numId));
+        } catch (NumberFormatException e) {
+            return ResponseEntity.ok(courseService.getSubjectByCode(id));
+        }
+    }
+
+    @GetMapping("/scheme/{schemeId}")
+    public ResponseEntity<Map<String, Object>> getSchemeDetails(@PathVariable String schemeId) {
+        return ResponseEntity.ok(courseService.getScheme(schemeId));
     }
 }

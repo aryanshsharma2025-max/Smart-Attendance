@@ -23,6 +23,7 @@ def generate_schema_sql():
     lines.append("-- ------------------------------------------------------------")
     lines.append("-- Drop Tables in Reverse Dependency Order")
     lines.append("-- ------------------------------------------------------------")
+    lines.append("DROP TABLE IF EXISTS users;")
     lines.append("DROP TABLE IF EXISTS attendance_records;")
     lines.append("DROP TABLE IF EXISTS attendance_sessions;")
     lines.append("DROP TABLE IF EXISTS timetable_entries;")
@@ -186,6 +187,22 @@ def generate_schema_sql():
     UNIQUE KEY uq_session_student (session_id, student_id),
     FOREIGN KEY (session_id) REFERENCES attendance_sessions(session_id) ON DELETE CASCADE,
     FOREIGN KEY (student_id) REFERENCES students(student_id)            ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;\n""")
+
+    lines.append("-- ------------------------------------------------------------")
+    lines.append("-- Table: users (Authentication & Role Credentials)")
+    lines.append("-- ------------------------------------------------------------")
+    lines.append("""CREATE TABLE users (
+    user_id       INT AUTO_INCREMENT PRIMARY KEY,
+    username      VARCHAR(60) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    role          ENUM('STUDENT','FACULTY','HOD','ADMIN') NOT NULL,
+    faculty_id    INT NULL UNIQUE,
+    student_id    INT NULL UNIQUE,
+    is_active     BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (faculty_id) REFERENCES faculty(faculty_id) ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;\n""")
 
     lines.append("-- ============================================================")
@@ -407,6 +424,25 @@ GROUP BY sec.section_id, c.course_id;\n""")
         tt_lines.append(f"  ({i}, '{tt_code}', {sec_id}, '{day}', {day_idx}, '{period}', {p_start}, {p_end}, {st}, {et}, {c_id}, {f_id}, '{stype}', {room}, '{eff}')")
 
     lines.append("INSERT INTO timetable_entries (entry_id, timetable_code, section_id, day_of_week, day_index, period, period_start, period_end, start_time, end_time, course_id, faculty_id, slot_type, room, effective_date) VALUES\n" + ",\n".join(tt_lines) + ";\n")
+
+    # 8. User Accounts (Authentication Credentials for HOD, Faculty, Students)
+    lines.append("-- 8. User Accounts (Authentication Credentials for HOD, Faculty, Students)")
+    user_lines = []
+    demo_hash = "$2a$10$PTuTjhLreHw4vcq3ofAeHuf25E0g1ZkTLYbRwLqlrU1ND.bdF5grG"
+    # HOD account (Dr. Anand Tamrakar, faculty_id = 6)
+    user_lines.append(f"  (1, 'hod_cse', '{demo_hash}', 'HOD', 6, NULL, TRUE)")
+    # 5 Confirmed Faculty accounts (faculty_id = 1..5)
+    fac_usernames = ['faculty_os', 'faculty_dm', 'faculty_oops', 'faculty_wt', 'faculty_de']
+    for idx, u in enumerate(fac_usernames, start=1):
+        user_lines.append(f"  ({idx+1}, '{u}', '{demo_hash}', 'FACULTY', {idx}, NULL, TRUE)")
+    # 252 Student accounts (student_id = 1..252)
+    for idx, s in enumerate(students, start=1):
+        s_id = s['id']
+        u_id = 6 + idx
+        roll = s['rollNumber'].replace("'", "''")
+        user_lines.append(f"  ({u_id}, '{roll}', '{demo_hash}', 'STUDENT', NULL, {s_id}, TRUE)")
+
+    lines.append("INSERT INTO users (user_id, username, password_hash, role, faculty_id, student_id, is_active) VALUES\n" + ",\n".join(user_lines) + ";\n")
 
     lines.append("-- ============================================================")
     lines.append("-- NOTE: Initial live state remains 0 sessions and 0 attendance records")

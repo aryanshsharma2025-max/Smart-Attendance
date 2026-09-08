@@ -1,5 +1,6 @@
 package com.attendance.service;
 
+import com.attendance.dto.FacultyAllocationDto;
 import com.attendance.dto.FacultyDto;
 import com.attendance.exception.ResourceNotFoundException;
 import com.attendance.model.CourseAllocation;
@@ -35,6 +36,27 @@ public class FacultyService {
     public FacultyDto getFacultyByCode(String code) {
         return facultyRepo.findByFacultyCode(code).map(this::toDto)
             .orElseThrow(() -> new ResourceNotFoundException("Faculty not found: " + code));
+    }
+
+    @Transactional(readOnly = true)
+    public List<FacultyAllocationDto> getFacultyAllocations(Long facultyId) {
+        if (!facultyRepo.existsById(facultyId)) {
+            throw new ResourceNotFoundException("Faculty not found: " + facultyId);
+        }
+        return allocationRepo.findByFacultyFacultyId(facultyId).stream()
+            .map(a -> FacultyAllocationDto.builder()
+                .allocationId(a.getAllocationId())
+                .courseId(a.getCourse().getCourseId())
+                .courseCodeShort(a.getCourse().getCourseCodeShort())
+                .courseCode(a.getCourse().getCourseCode())
+                .courseName(a.getCourse().getCourseName())
+                .sectionId(a.getSection().getSectionId())
+                .sectionName(a.getSection().getSectionName())
+                .semester(a.getSemester())
+                .academicYear(a.getAcademicYear())
+                .status(a.getStatus().name())
+                .build())
+            .collect(Collectors.toList());
     }
 
     private FacultyDto toDto(Faculty f) {

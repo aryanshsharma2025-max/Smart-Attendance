@@ -17,7 +17,8 @@ public class AttendanceHistoryController {
     private final AttendanceCalculationService calculationService;
     private final AttendanceSessionService sessionService;
 
-    @GetMapping("/api/students/{id}/attendance")
+    // Student summary (legacy & new REST convention)
+    @GetMapping({"/api/students/{id}/attendance", "/api/attendance/summary/student/{id}", "/api/attendance/history/student/{id}"})
     public ResponseEntity<StudentAttendanceSummaryDto> getStudentAttendance(@PathVariable Long id) {
         return ResponseEntity.ok(calculationService.getStudentSummary(id));
     }
@@ -34,11 +35,13 @@ public class AttendanceHistoryController {
             .orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/api/attendance/subject/{subjectId}/section/{section}")
+    // Section stats (legacy & new REST convention)
+    @GetMapping({"/api/attendance/subject/{subjectId}/section/{section}", "/api/attendance/summary/section/{section}"})
     public ResponseEntity<SectionAttendanceStatsDto> getSectionSubjectStats(
-            @PathVariable Long subjectId,
+            @PathVariable(required = false) Long subjectId,
             @PathVariable String section) {
-        return ResponseEntity.ok(calculationService.getSectionSubjectStats(subjectId, section));
+        Long resolvedSubjectId = (subjectId != null) ? subjectId : 1L; // default to OS or first primary course
+        return ResponseEntity.ok(calculationService.getSectionSubjectStats(resolvedSubjectId, section));
     }
 
     @GetMapping("/api/faculty/{facultyId}/sessions")

@@ -1,5 +1,6 @@
 package com.attendance.controller;
 
+import com.attendance.dto.FacultyAllocationDto;
 import com.attendance.dto.FacultyDto;
 import com.attendance.service.FacultyService;
 import lombok.RequiredArgsConstructor;
@@ -29,5 +30,10 @@ public class FacultyController {
         } catch (NumberFormatException e) {
             return ResponseEntity.ok(facultyService.getFacultyByCode(id));
         }
+    }
+
+    @GetMapping("/{id}/allocations")
+    public ResponseEntity<List<FacultyAllocationDto>> getFacultyAllocations(@PathVariable Long id) {
+        return ResponseEntity.ok(facultyService.getFacultyAllocations(id));
     }
 }
