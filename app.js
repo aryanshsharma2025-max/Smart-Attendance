@@ -1452,7 +1452,7 @@ function setQuickDefaultFilters() {
   refreshIcons();
 }
 
-function loadStudentsAction() {
+async function loadStudentsAction() {
   const dateInput = document.getElementById('att-date');
   const deptSelect = document.getElementById('att-dept');
   const semSelect = document.getElementById('att-sem');
@@ -1482,63 +1482,183 @@ function loadStudentsAction() {
   const faculty = (CURRENT_USER && CURRENT_USER.role === 'faculty') ? CURRENT_USER.facultyName : getFacultyForSubject(subject);
   const facultyId = (CURRENT_USER && CURRENT_USER.role === 'faculty') ? CURRENT_USER.facultyId : ('faculty_' + faculty.toLowerCase().replace(/[^a-z]/g, ''));
   const effectiveSubject = (CURRENT_USER && CURRENT_USER.role === 'faculty') ? CURRENT_USER.subjectName : subject;
-  const lectureNo = getNextLectureNumber(effectiveSubject, sec);
   const nowTimeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
-  // Phase 6: Standardized Live Session Model (Status: recording)
-  ACTIVE_LECTURE = {
-    id: `sess-${Date.now()}`,
-    subject: effectiveSubject,
-    subjectName: effectiveSubject,
-    subjectId: (CURRENT_USER && CURRENT_USER.subjectId) || 'operating-system',
-    subjectCodeShort: (CURRENT_USER && CURRENT_USER.subjectCodeShort) || 'OS',
-    faculty: faculty,
-    facultyId: facultyId,
-    facultyName: faculty,
-    section: sec,
-    sec: sec,
-    semester: parseInt(sem) || 3,
-    date: date,
-    timetableEntryId: ACTIVE_LECTURE && ACTIVE_LECTURE.timetableEntryId ? ACTIVE_LECTURE.timetableEntryId : null,
-    period: ACTIVE_LECTURE && ACTIVE_LECTURE.period ? ACTIVE_LECTURE.period : 'I',
-    periodStart: ACTIVE_LECTURE && ACTIVE_LECTURE.periodStart ? ACTIVE_LECTURE.periodStart : 1,
-    periodEnd: ACTIVE_LECTURE && ACTIVE_LECTURE.periodEnd ? ACTIVE_LECTURE.periodEnd : 1,
-    startTime: ACTIVE_LECTURE && ACTIVE_LECTURE.startTime ? ACTIVE_LECTURE.startTime : '09:00 AM',
-    endTime: ACTIVE_LECTURE && ACTIVE_LECTURE.endTime ? ACTIVE_LECTURE.endTime : '09:50 AM',
-    lectureNumber: lectureNo,
-    status: 'recording',
-    completedAt: null,
-    startedAt: nowTimeStr,
-    startTimeTs: Date.now()
+  // Resolve subject code and IDs from authoritative curriculum
+  const cleanSubjectMap = {
+    'Operating System': { code: 'OS', id: 1 },
+    'Discrete Mathematics': { code: 'DM', id: 2 },
+    'OOPS in C++': { code: 'OOPS', id: 3 },
+    'Object Oriented Programming in C++': { code: 'OOPS', id: 3 },
+    'Web Technology': { code: 'WT', id: 4 },
+    'Digital Electronics': { code: 'DELD', id: 5 }
   };
+  const resolvedSubj = cleanSubjectMap[effectiveSubject] || {
+    code: (CURRENT_USER && CURRENT_USER.subjectCodeShort) || 'OS',
+    id: (CURRENT_USER && CURRENT_USER.assignedSubjectId) || 1
+  };
+  const subjectShort = resolvedSubj.code;
+  const subjectId = resolvedSubj.id;
+  const secMap = { 'A': 1, 'B': 2, 'C': 3, 'D': 4 };
+  const sectionId = secMap[sec] || 1;
 
-  ATTENDANCE_STATE.classInfo = {
-    date,
-    dept,
-    deptName: deptNameMap[dept] || dept,
-    sem,
-    sec,
-    subject: effectiveSubject,
-    faculty,
-    lectureNumber: lectureNo,
-    lectureNoDisplay: `Lecture No. ${lectureNo}`
-  };
+  // Resolve timetable entry
+  const ttEntry = (typeof TIMETABLE_ENTRIES !== 'undefined' ? TIMETABLE_ENTRIES : []).find(e =>
+    e.section === sec && (e.subjectName === effectiveSubject || e.subjectCodeShort === subjectShort)
+  ) || null;
 
   ATTENDANCE_STATE.status = 'loading';
   renderAttendanceView();
   updateTakeAttendanceHeader();
   updateFacultyDashboardLiveMetrics();
 
-  setTimeout(() => {
-    ATTENDANCE_STATE.students = getRosterForClass(dept, sem, sec);
-    ATTENDANCE_STATE.searchQuery = '';
-    ATTENDANCE_STATE.status = 'loaded';
-    renderAttendanceView();
-    updateTakeAttendanceHeader();
-    updateFacultyDashboardLiveMetrics();
-    showToast(`Lecture No. ${lectureNo} started: ${ATTENDANCE_STATE.students.length} students rostered (Recording)`);
-    refreshIcons();
-  }, 280);
+  const token = getStoredAuthToken();
+
+  if (token) {
+    try {
+      const sessionReq = {
+        facultyCode: (CURRENT_USER && (CURRENT_USER.facultyCode || CURRENT_USER.userId)) || undefined,
+        facultyId: (CURRENT_USER && typeof CURRENT_USER.facultyId === 'number') ? CURRENT_USER.facultyId : undefined,
+        subjectCodeShort: subjectShort,
+        subjectId: subjectId,
+        section: sec,
+        sectionId: sectionId,
+        sessionDate: date,
+        timetableCode: ttEntry ? ttEntry.timetableCode : undefined,
+        timetableEntryId: ttEntry && typeof ttEntry.id === 'number' ? ttEntry.id : undefined,
+        startTime: ttEntry ? ttEntry.startTime : '09:00 AM',
+        endTime: ttEntry ? ttEntry.endTime : '09:50 AM'
+      };
+
+      const sessionDto = await apiClient.post('/sessions/start', sessionReq);
+      if (!sessionDto || !sessionDto.id) {
+        throw new Error('Failed to create session on backend: Missing session ID');
+      }
+
+      // Authoritative section roster from backend
+      let roster = [];
+      try {
+        roster = await AcademicDataService.loadStudentsBySection(sec);
+      } catch (_) {}
+      if (!roster || roster.length === 0) {
+        roster = getRosterForClass(dept, sem, sec);
+      }
+
+      ACTIVE_LECTURE = {
+        id: sessionDto.id,
+        sessionId: sessionDto.id,
+        backendSessionId: sessionDto.id,
+        subject: sessionDto.subjectName || effectiveSubject,
+        subjectName: sessionDto.subjectName || effectiveSubject,
+        subjectId: sessionDto.subjectId || subjectId,
+        subjectCodeShort: sessionDto.subjectCode || subjectShort,
+        faculty: sessionDto.facultyName || faculty,
+        facultyId: sessionDto.facultyId || facultyId,
+        facultyCode: sessionDto.facultyCode,
+        section: sessionDto.section || sec,
+        sec: sessionDto.section || sec,
+        semester: sessionDto.semester || parseInt(sem) || 3,
+        date: sessionDto.date || date,
+        timetableEntryId: ttEntry ? ttEntry.id : null,
+        period: ttEntry ? ttEntry.period : 'I',
+        periodStart: ttEntry ? ttEntry.periodStart : 1,
+        periodEnd: ttEntry ? ttEntry.periodEnd : 1,
+        startTime: ttEntry ? ttEntry.startTime : '09:00 AM',
+        endTime: ttEntry ? ttEntry.endTime : '09:50 AM',
+        lectureNumber: sessionDto.lectureNumber,
+        lectureNo: sessionDto.lectureNumber,
+        status: 'recording',
+        completedAt: null,
+        startedAt: sessionDto.startedAt ? new Date(sessionDto.startedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : nowTimeStr,
+        startTimeTs: Date.now()
+      };
+
+      ATTENDANCE_STATE.classInfo = {
+        date: sessionDto.date || date,
+        dept,
+        deptName: deptNameMap[dept] || dept,
+        sem: String(sessionDto.semester || sem),
+        sec: sessionDto.section || sec,
+        subject: sessionDto.subjectName || effectiveSubject,
+        faculty: sessionDto.facultyName || faculty,
+        lectureNumber: sessionDto.lectureNumber,
+        lectureNoDisplay: `Lecture No. ${sessionDto.lectureNumber}`
+      };
+
+      ATTENDANCE_STATE.students = roster.map(s => ({
+        ...s,
+        status: 'pending'
+      }));
+      ATTENDANCE_STATE.searchQuery = '';
+      ATTENDANCE_STATE.status = 'loaded';
+
+      renderAttendanceView();
+      updateTakeAttendanceHeader();
+      updateFacultyDashboardLiveMetrics();
+      showToast(`Lecture No. ${sessionDto.lectureNumber} started: ${ATTENDANCE_STATE.students.length} students rostered (Recording)`);
+      refreshIcons();
+
+    } catch (err) {
+      console.error('Failed to start attendance session:', err);
+      ATTENDANCE_STATE.status = 'initial';
+      ACTIVE_LECTURE = null;
+      renderAttendanceView();
+      updateTakeAttendanceHeader();
+      showToast(err.message || 'Failed to start session on backend', 'danger');
+      return;
+    }
+  } else {
+    // Offline / Demo evaluation fallback
+    const lectureNo = getNextLectureNumber(effectiveSubject, sec);
+    ACTIVE_LECTURE = {
+      id: `sess-${Date.now()}`,
+      subject: effectiveSubject,
+      subjectName: effectiveSubject,
+      subjectId: (CURRENT_USER && CURRENT_USER.subjectId) || 'operating-system',
+      subjectCodeShort: (CURRENT_USER && CURRENT_USER.subjectCodeShort) || 'OS',
+      faculty: faculty,
+      facultyId: facultyId,
+      facultyName: faculty,
+      section: sec,
+      sec: sec,
+      semester: parseInt(sem) || 3,
+      date: date,
+      timetableEntryId: ttEntry ? ttEntry.id : null,
+      period: ttEntry ? ttEntry.period : 'I',
+      periodStart: ttEntry ? ttEntry.periodStart : 1,
+      periodEnd: ttEntry ? ttEntry.periodEnd : 1,
+      startTime: ttEntry ? ttEntry.startTime : '09:00 AM',
+      endTime: ttEntry ? ttEntry.endTime : '09:50 AM',
+      lectureNumber: lectureNo,
+      status: 'recording',
+      completedAt: null,
+      startedAt: nowTimeStr,
+      startTimeTs: Date.now()
+    };
+
+    ATTENDANCE_STATE.classInfo = {
+      date,
+      dept,
+      deptName: deptNameMap[dept] || dept,
+      sem,
+      sec,
+      subject: effectiveSubject,
+      faculty,
+      lectureNumber: lectureNo,
+      lectureNoDisplay: `Lecture No. ${lectureNo}`
+    };
+
+    setTimeout(() => {
+      ATTENDANCE_STATE.students = getRosterForClass(dept, sem, sec);
+      ATTENDANCE_STATE.searchQuery = '';
+      ATTENDANCE_STATE.status = 'loaded';
+      renderAttendanceView();
+      updateTakeAttendanceHeader();
+      updateFacultyDashboardLiveMetrics();
+      showToast(`Lecture No. ${lectureNo} started: ${ATTENDANCE_STATE.students.length} students rostered (Recording)`);
+      refreshIcons();
+    }, 200);
+  }
 }
 
 function getAttendanceMetrics() {
@@ -2172,7 +2292,7 @@ function filterAttendanceTable(query) {
   }
 }
 
-function saveAttendanceAction() {
+async function saveAttendanceAction() {
   if (!ATTENDANCE_STATE.students || ATTENDANCE_STATE.students.length === 0) {
     showToast('No class roster loaded to record');
     return;
@@ -2208,35 +2328,58 @@ function saveAttendanceAction() {
     }
   }
 
-  const lectureNo = ACTIVE_LECTURE.lectureNumber || getNextLectureNumber(effectiveSubject, sectionName);
-  const lectureNoDisplay = `Lecture No. ${lectureNo}`;
-
-  // Duplicate Check
-  const duplicate = SESSIONS_DATA.find(s =>
-    s.status === 'completed' &&
-    (s.course === effectiveSubject || s.subject === effectiveSubject) &&
-    s.sec === sectionName &&
-    (s.lectureNo === lectureNo || s.lectureNumber === lectureNo)
-  );
-  if (duplicate) {
-    showToast(`Lecture ${lectureNo} for ${effectiveSubject} (Section ${sectionName}) has already been saved. Duplicate rejected.`, 'danger');
-    return;
-  }
-
   const now = new Date();
   const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
   const completedDate = ATTENDANCE_STATE.classInfo.date || 'Today';
 
+  const token = getStoredAuthToken();
+  const isBackendSession = typeof ACTIVE_LECTURE.id === 'number';
+  let backendResponse = null;
+
+  if (token && isBackendSession) {
+    const submissionPayload = {
+      facultyId: (typeof CURRENT_USER.facultyId === 'number') ? CURRENT_USER.facultyId : undefined,
+      facultyCode: CURRENT_USER.facultyCode || undefined,
+      records: ATTENDANCE_STATE.students.map(s => ({
+        studentId: (typeof s.id === 'number') ? s.id : undefined,
+        rollNumber: s.roll || s.rollNumber,
+        status: (s.status === 'present' ? 'PRESENT' : 'ABSENT')
+      }))
+    };
+
+    try {
+      backendResponse = await apiClient.post(`/sessions/${ACTIVE_LECTURE.id}/submit`, submissionPayload);
+      if (!backendResponse || backendResponse.status !== 'SUCCESS') {
+        throw new Error((backendResponse && backendResponse.message) || 'Backend submission returned failure');
+      }
+    } catch (err) {
+      console.error('Attendance submission failed on backend:', err);
+      showToast(err.message || 'Attendance submission failed on server. Roster preserved.', 'danger');
+      // STEP 16: Never simulate local success when backend returns error!
+      return;
+    }
+  }
+
+  // ONLY after backend returns successful submission (or offline demo):
+  const actualSessionId = (backendResponse && backendResponse.sessionId) || ACTIVE_LECTURE.id;
+  const actualLectureNo = (backendResponse && backendResponse.lectureNumber) || ACTIVE_LECTURE.lectureNumber || getNextLectureNumber(effectiveSubject, sectionName);
+  const lectureNoDisplay = `Lecture No. ${actualLectureNo}`;
+
+  const finalPresentCount = (backendResponse && backendResponse.presentCount !== undefined) ? backendResponse.presentCount : metrics.presentCount;
+  const finalAbsentCount = (backendResponse && backendResponse.absentCount !== undefined) ? backendResponse.absentCount : metrics.absentCount;
+  const finalTotal = (backendResponse && backendResponse.totalRecorded !== undefined) ? backendResponse.totalRecorded : metrics.total;
+  const finalPct = finalTotal > 0 ? Number(((finalPresentCount / finalTotal) * 100).toFixed(1)) : metrics.presentPct;
+
   const newSessionRecord = {
-    id: `sess-${Date.now()}`,
-    lectureNo,
-    lectureNumber: lectureNo,
+    id: actualSessionId,
+    lectureNo: actualLectureNo,
+    lectureNumber: actualLectureNo,
     lectureNoDisplay,
     course: effectiveSubject,
     subject: effectiveSubject,
-    subjectId: (CURRENT_USER && CURRENT_USER.subjectId) || 'operating-system',
+    subjectId: ACTIVE_LECTURE.subjectId || (CURRENT_USER && CURRENT_USER.subjectId) || 1,
     subjectName: effectiveSubject,
-    subjectCodeShort: (CURRENT_USER && CURRENT_USER.subjectCodeShort) || 'OS',
+    subjectCodeShort: ACTIVE_LECTURE.subjectCodeShort || (CURRENT_USER && CURRENT_USER.subjectCodeShort) || 'OS',
     dept: ATTENDANCE_STATE.classInfo.dept || 'CSE',
     sem: parseInt(ATTENDANCE_STATE.classInfo.sem) || 3,
     semester: parseInt(ATTENDANCE_STATE.classInfo.sem) || 3,
@@ -2255,10 +2398,10 @@ function saveAttendanceAction() {
     faculty: facultyName,
     facultyName: facultyName,
     facultyId: facultyId,
-    total: metrics.total,
-    present: metrics.presentCount,
-    absent: metrics.absentCount,
-    pct: metrics.presentPct,
+    total: finalTotal,
+    present: finalPresentCount,
+    absent: finalAbsentCount,
+    pct: finalPct,
     status: 'completed'
   };
 
@@ -2271,7 +2414,6 @@ function saveAttendanceAction() {
     markedAt: timeStr
   }));
 
-  // Enforce duplicate uniqueness for student records
   const uniqueRecords = [];
   const seenStudent = new Set();
   studentRecords.forEach(r => {
@@ -2314,21 +2456,20 @@ function saveAttendanceAction() {
 
   ATTENDANCE_STATE.savedSummary = {
     ...newSessionRecord,
-    total: metrics.total,
-    present: metrics.presentCount,
-    absent: metrics.absentCount,
-    pct: metrics.presentPct,
+    total: finalTotal,
+    present: finalPresentCount,
+    absent: finalAbsentCount,
+    pct: finalPct,
     time: timeStr
   };
 
   ATTENDANCE_STATE.status = 'saved';
   renderAttendanceView();
 
-  // Phase 6: Refresh live counters on Faculty Dashboard & Take Attendance
   updateFacultyDashboardLiveMetrics();
   updateTakeAttendanceHeader();
 
-  showToast(`Attendance recorded: Lecture ${lectureNo} (${metrics.presentCount} Present, ${metrics.absentCount} Absent)`);
+  showToast(`Attendance recorded: Lecture ${actualLectureNo} (${finalPresentCount} Present, ${finalAbsentCount} Absent)`);
 }
 
 function resetAttendanceAction() {

@@ -28,13 +28,19 @@ public class SessionController {
             @AuthenticationPrincipal UserPrincipal principal) {
         
         // Identity Spoofing Protection: enforce or safely derive facultyId from authentication
-        if (principal != null && "FACULTY".equalsIgnoreCase(principal.getRole())) {
-            if (request.getFacultyId() != null && !request.getFacultyId().equals(principal.getFacultyId())) {
-                throw new UnauthorizedActionException("403 Forbidden: Identity spoofing detected - authenticated faculty ID (" 
-                    + principal.getFacultyId() + ") does not match requested facultyId (" + request.getFacultyId() + ")");
-            }
-            if (request.getFacultyId() == null) {
-                request.setFacultyId(principal.getFacultyId());
+        if (principal != null) {
+            if ("FACULTY".equalsIgnoreCase(principal.getRole())) {
+                if (request.getFacultyId() != null && !request.getFacultyId().equals(principal.getFacultyId())) {
+                    throw new UnauthorizedActionException("403 Forbidden: Identity spoofing detected - authenticated faculty ID (" 
+                        + principal.getFacultyId() + ") does not match requested facultyId (" + request.getFacultyId() + ")");
+                }
+                if (request.getFacultyId() == null) {
+                    request.setFacultyId(principal.getFacultyId());
+                }
+            } else if ("HOD".equalsIgnoreCase(principal.getRole())) {
+                if (request.getFacultyId() == null && request.getFacultyCode() == null) {
+                    request.setFacultyId(principal.getFacultyId());
+                }
             }
         }
 
