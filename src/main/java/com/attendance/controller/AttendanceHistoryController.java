@@ -7,6 +7,7 @@ import com.attendance.service.AttendanceCalculationService;
 import com.attendance.service.AttendanceSessionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,20 +21,42 @@ public class AttendanceHistoryController {
     private final AttendanceCalculationService calculationService;
     private final AttendanceSessionService sessionService;
 
-    // Student summary (legacy & new REST convention)
-    @GetMapping({"/api/students/{id}/attendance", "/api/attendance/summary/student/{id}", "/api/attendance/history/student/{id}"})
+    // Student summary (canonical & aliases)
+    @GetMapping({"/api/students/{id}/attendance", "/api/attendance/summary/student/{id}"})
     public ResponseEntity<StudentAttendanceSummaryDto> getStudentAttendance(
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal principal) {
         
-        // Identity Spoofing Protection: student can only access own attendance
-        if (principal != null && "STUDENT".equalsIgnoreCase(principal.getRole())) {
+        // Authorization & Identity Spoofing Protection:
+        if (principal == null) {
+            throw new UnauthorizedActionException("401 Unauthorized: Authentication required to access student attendance summary");
+        }
+        if ("STUDENT".equalsIgnoreCase(principal.getRole())) {
             if (principal.getStudentId() != null && !principal.getStudentId().equals(id)) {
-                throw new UnauthorizedActionException("403 Forbidden: Students are restricted from accessing attendance records of other students");
+                throw new AccessDeniedException("403 Forbidden: Students are restricted from accessing attendance records of other students");
             }
         }
 
         return ResponseEntity.ok(calculationService.getStudentSummary(id));
+    }
+
+    // Student detailed history (lecture-by-lecture)
+    @GetMapping("/api/attendance/history/student/{id}")
+    public ResponseEntity<List<StudentAttendanceHistoryDto>> getStudentHistory(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        
+        // Authorization & Identity Spoofing Protection:
+        if (principal == null) {
+            throw new UnauthorizedActionException("401 Unauthorized: Authentication required to access student attendance history");
+        }
+        if ("STUDENT".equalsIgnoreCase(principal.getRole())) {
+            if (principal.getStudentId() != null && !principal.getStudentId().equals(id)) {
+                throw new AccessDeniedException("403 Forbidden: Students are restricted from accessing attendance records of other students");
+            }
+        }
+
+        return ResponseEntity.ok(calculationService.getStudentHistory(id));
     }
 
     @GetMapping("/api/students/{id}/attendance/subject/{subjectId}")
@@ -42,10 +65,12 @@ public class AttendanceHistoryController {
             @PathVariable Long subjectId,
             @AuthenticationPrincipal UserPrincipal principal) {
         
-        // Identity Spoofing Protection: student can only access own attendance
-        if (principal != null && "STUDENT".equalsIgnoreCase(principal.getRole())) {
+        if (principal == null) {
+            throw new UnauthorizedActionException("401 Unauthorized: Authentication required to access student attendance summary");
+        }
+        if ("STUDENT".equalsIgnoreCase(principal.getRole())) {
             if (principal.getStudentId() != null && !principal.getStudentId().equals(id)) {
-                throw new UnauthorizedActionException("403 Forbidden: Students are restricted from accessing attendance records of other students");
+                throw new AccessDeniedException("403 Forbidden: Students are restricted from accessing attendance records of other students");
             }
         }
 
@@ -57,13 +82,14 @@ public class AttendanceHistoryController {
             .orElse(ResponseEntity.notFound().build());
     }
 
-    // Section stats (legacy & new REST convention)
+    // Section stats (canonical & aliases)
     @GetMapping({"/api/attendance/subject/{subjectId}/section/{section}", "/api/attendance/summary/section/{section}"})
     public ResponseEntity<SectionAttendanceStatsDto> getSectionSubjectStats(
             @PathVariable(required = false) Long subjectId,
-            @PathVariable String section) {
-        Long resolvedSubjectId = (subjectId != null) ? subjectId : 1L; // default to OS or first primary course
-        return ResponseEntity.ok(calculationService.getSectionSubjectStats(resolvedSubjectId, section));
+            @PathVariable String section,
+            @RequestParam(required = false) Long courseId) {
+        Long resolvedCourseId = (courseId != null) ? courseId : subjectId;
+        return ResponseEntity.ok(calculationService.getSectionSubjectStats(resolvedCourseId, section));
     }
 
     @GetMapping("/api/faculty/{facultyId}/sessions")

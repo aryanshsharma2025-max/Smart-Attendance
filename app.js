@@ -378,6 +378,113 @@ const AcademicDataService = {
     }
     const data = await apiClient.get(`/students/section/${section}`);
     return (data || []).map((s, idx) => this.adaptStudent(s, idx));
+  },
+
+  /**
+   * Phase 7C.4A: Fetch sessions for a faculty member from Spring Boot (GET /api/sessions/faculty/{facultyId})
+   * Syncs completed sessions into SESSIONS_DATA.
+   */
+  async loadFacultySessions(facultyId) {
+    if (!facultyId) return [];
+    let cleanId = facultyId;
+    if (typeof facultyId === 'string') {
+      const parsed = parseInt(facultyId);
+      if (!isNaN(parsed)) cleanId = parsed;
+      else {
+        const norm = facultyId.replace('_', '-');
+        const match = (typeof AUTHORITATIVE_FACULTY !== 'undefined') ? AUTHORITATIVE_FACULTY.find(f => f.id === norm) : null;
+        cleanId = (match && match.facultyId) ? match.facultyId : 1;
+      }
+    }
+    try {
+      const data = await apiClient.get(`/sessions/faculty/${cleanId}`);
+      if (Array.isArray(data)) {
+        const completedOnly = data.filter(s => (s.status || '').toUpperCase() === 'COMPLETED');
+        completedOnly.forEach(backendSess => {
+          const existingIdx = SESSIONS_DATA.findIndex(s => s.id === backendSess.id);
+          const mapped = {
+            id: backendSess.id,
+            lectureNo: backendSess.lectureNumber,
+            lectureNumber: backendSess.lectureNumber,
+            lectureNoDisplay: `Lecture No. ${backendSess.lectureNumber}`,
+            course: backendSess.subjectName,
+            subject: backendSess.subjectName,
+            subjectId: backendSess.subjectId,
+            subjectName: backendSess.subjectName,
+            subjectCodeShort: backendSess.subjectCode,
+            dept: 'CSE',
+            sem: backendSess.semester || 3,
+            semester: backendSess.semester || 3,
+            sec: backendSess.section,
+            section: backendSess.section,
+            room: 'Classroom 301',
+            time: backendSess.startedAt ? new Date(backendSess.startedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '09:00 AM',
+            date: backendSess.date,
+            completedAt: backendSess.completedAt ? new Date(backendSess.completedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '09:50 AM',
+            faculty: backendSess.facultyName,
+            facultyName: backendSess.facultyName,
+            facultyId: backendSess.facultyId,
+            total: backendSess.totalRostered || 0,
+            present: backendSess.presentCount || 0,
+            absent: backendSess.absentCount || 0,
+            pct: (backendSess.totalRostered > 0) 
+              ? Number(((backendSess.presentCount / backendSess.totalRostered) * 100).toFixed(1)) 
+              : null,
+            status: 'completed'
+          };
+          if (existingIdx >= 0) {
+            SESSIONS_DATA[existingIdx] = mapped;
+          } else {
+            SESSIONS_DATA.push(mapped);
+          }
+        });
+        return completedOnly;
+      }
+    } catch (err) {
+      console.warn('[AcademicDataService] loadFacultySessions error:', err);
+    }
+    return [];
+  },
+
+  /**
+   * Phase 7C.4A: Fetch individual student attendance summary (GET /api/attendance/summary/student/{studentId})
+   */
+  async loadStudentSummary(studentId) {
+    if (!studentId) return null;
+    try {
+      return await apiClient.get(`/attendance/summary/student/${studentId}`);
+    } catch (err) {
+      console.warn(`[AcademicDataService] loadStudentSummary failed for student ${studentId}:`, err);
+      return null;
+    }
+  },
+
+  /**
+   * Phase 7C.4A: Fetch individual student attendance history (GET /api/attendance/history/student/{studentId})
+   */
+  async loadStudentHistory(studentId) {
+    if (!studentId) return [];
+    try {
+      const data = await apiClient.get(`/attendance/history/student/${studentId}`);
+      return Array.isArray(data) ? data : [];
+    } catch (err) {
+      console.warn(`[AcademicDataService] loadStudentHistory failed for student ${studentId}:`, err);
+      return [];
+    }
+  },
+
+  /**
+   * Phase 7C.4A: Fetch section attendance summary (GET /api/attendance/summary/section/{sectionIdOrName})
+   */
+  async loadSectionSummary(sectionParam, courseId = null) {
+    if (!sectionParam) return null;
+    try {
+      const query = courseId ? `?courseId=${courseId}` : '';
+      return await apiClient.get(`/attendance/summary/section/${sectionParam}${query}`);
+    } catch (err) {
+      console.warn(`[AcademicDataService] loadSectionSummary failed for section ${sectionParam}:`, err);
+      return null;
+    }
   }
 };
 window.AcademicDataService = AcademicDataService;
@@ -1284,7 +1391,16 @@ function updateDate() {
 updateDate();
 
 // ── 7. ATTENDANCE OVERVIEW PAGE ENGINE ───────────────────────
-function renderAttendanceOverviewPage() {
+async function renderAttendanceOverviewPage() {
+  const token = getStoredAuthToken();
+  if (token && CURRENT_USER && CURRENT_USER.facultyId) {
+    try {
+      await AcademicDataService.loadFacultySessions(CURRENT_USER.facultyId);
+    } catch (e) {
+      console.warn('Failed to load faculty sessions for overview:', e);
+    }
+  }
+
   // 1. Render class / session summaries
   const sessionsBody = document.getElementById('overview-sessions-body');
   if (sessionsBody) {
@@ -2526,7 +2642,7 @@ function editCurrentAttendance() {
 }
 
 // ── 9. FULL-SCREEN STUDENT PROFILE & DETAIL ENGINE ───────────
-function openStudentProfile(studentIdOrRoll) {
+async function openStudentProfile(studentIdOrRoll) {
   let student = null;
   if (typeof studentIdOrRoll === 'string') {
     const sIdStr = studentIdOrRoll.trim();
@@ -2641,28 +2757,45 @@ function openStudentProfile(studentIdOrRoll) {
     }
   }
 
-  // Live Attendance metrics on profile
-  const sectionCompleted = SESSIONS_DATA.filter(s => s.status === 'completed' && s.sec === student.sec);
-  const totalCompleted = sectionCompleted.length;
+  // Phase 7C.4A: Authoritative Backend Live Attendance metrics on profile
+  let backendSummary = null;
+  const token = getStoredAuthToken();
+  if (token && student.id && typeof AcademicDataService !== 'undefined' && AcademicDataService.loadStudentSummary) {
+    try {
+      backendSummary = await AcademicDataService.loadStudentSummary(student.id);
+    } catch (err) {
+      console.warn('Backend student summary read failed in profile:', err);
+    }
+  }
 
+  let totalCompleted = 0;
   let liveAttendedCount = 0;
   let liveMissedCount = 0;
+  let livePct = null;
 
-  sectionCompleted.forEach(sess => {
-    const liveRec = (typeof LIVE_ATTENDANCE_RECORDS !== 'undefined')
-      ? LIVE_ATTENDANCE_RECORDS.find(r => r.id === sess.id || (r.lectureNo === sess.lectureNo && r.subject === sess.subject && r.sec === sess.sec))
-      : null;
-    if (liveRec && liveRec.studentRecords) {
-      const sr = liveRec.studentRecords.find(r => r.roll === student.roll || r.studentId === student.roll || r.studentId === student.id);
-      if (sr && (sr.status || '').toUpperCase() === 'PRESENT') {
-        liveAttendedCount++;
-      } else {
-        liveMissedCount++;
+  if (backendSummary) {
+    totalCompleted = backendSummary.completedEligibleSessions || 0;
+    liveAttendedCount = backendSummary.attendedSessions || 0;
+    liveMissedCount = Math.max(0, totalCompleted - liveAttendedCount);
+    livePct = backendSummary.overallPercentage;
+  } else {
+    const sectionCompleted = SESSIONS_DATA.filter(s => s.status === 'completed' && s.sec === student.sec);
+    totalCompleted = sectionCompleted.length;
+    sectionCompleted.forEach(sess => {
+      const liveRec = (typeof LIVE_ATTENDANCE_RECORDS !== 'undefined')
+        ? LIVE_ATTENDANCE_RECORDS.find(r => r.id === sess.id || (r.lectureNo === sess.lectureNo && r.subject === sess.subject && r.sec === sess.sec))
+        : null;
+      if (liveRec && liveRec.studentRecords) {
+        const sr = liveRec.studentRecords.find(r => r.roll === student.roll || r.studentId === student.roll || r.studentId === student.id);
+        if (sr && (sr.status || '').toUpperCase() === 'PRESENT') {
+          liveAttendedCount++;
+        } else {
+          liveMissedCount++;
+        }
       }
-    }
-  });
-
-  const livePct = totalCompleted > 0 ? Number(((liveAttendedCount / totalCompleted) * 100).toFixed(1)) : null;
+    });
+    livePct = totalCompleted > 0 ? Number(((liveAttendedCount / totalCompleted) * 100).toFixed(1)) : null;
+  }
 
   const spTotal = document.getElementById('sp-total-held');
   const spAtt = document.getElementById('sp-attended');
@@ -2674,46 +2807,73 @@ function openStudentProfile(studentIdOrRoll) {
   if (spAbs) spAbs.textContent = liveMissedCount;
   if (spPct) spPct.textContent = livePct !== null ? `${livePct}%` : '--';
 
-  // Populate Course Modules with 5 official subjects using live records
+  // Populate Course Modules with 5 official subjects
   const coursesBody = document.getElementById('sp-courses-body');
   if (coursesBody) {
-    coursesBody.innerHTML = OFFICIAL_SUBJECTS.map(subj => {
-      const fac = getFacultyForSubject(subj);
-      const subjSessions = sectionCompleted.filter(s => (s.subject === subj || s.course === subj || s.subjectName === subj));
-      const sCompleted = subjSessions.length;
-      let sAttended = 0;
+    if (backendSummary && backendSummary.courses && backendSummary.courses.length > 0) {
+      coursesBody.innerHTML = backendSummary.courses.map(c => {
+        const fac = getFacultyForSubject(c.courseName);
+        const sCompleted = c.totalCompleted || 0;
+        const sAttended = c.attended || 0;
+        const sPct = c.percentage;
+        const sPctDisplay = sPct !== null ? `${sPct}%` : '--';
+        const isEligible = sPct !== null && sPct >= ATTENDANCE_THRESHOLD;
 
-      subjSessions.forEach(sess => {
-        const liveRec = (typeof LIVE_ATTENDANCE_RECORDS !== 'undefined')
-          ? LIVE_ATTENDANCE_RECORDS.find(r => r.id === sess.id || (r.lectureNo === sess.lectureNo && r.subject === sess.subject && r.sec === sess.sec))
-          : null;
-        if (liveRec && liveRec.studentRecords) {
-          const sr = liveRec.studentRecords.find(r => r.roll === student.roll || r.studentId === student.roll);
-          if (sr && (sr.status || '').toUpperCase() === 'PRESENT') sAttended++;
-        }
-      });
+        return `
+          <tr>
+            <td><strong>${escapeHtml(c.courseName)}</strong></td>
+            <td><span style="color: var(--text-muted); font-size: 12.5px;">Pending CSVTU Code</span></td>
+            <td><strong>${escapeHtml(fac)}</strong></td>
+            <td>${sCompleted}</td>
+            <td>${sAttended}</td>
+            <td><span style="font-weight: 600; color: ${sPct !== null ? (isEligible ? 'var(--text-primary)' : 'var(--danger)') : 'var(--text-muted)'};">${sPctDisplay}</span></td>
+            <td>
+              <span class="badge ${sPct === null ? '' : (isEligible ? 'badge-ok' : 'badge-risk')}" style="${sPct === null ? 'background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border);' : ''}">
+                ${sPct === null ? 'Pending Sessions' : (isEligible ? 'Eligible (≥ 75%)' : 'Below Threshold (< 75%)')}
+              </span>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    } else {
+      const sectionCompleted = SESSIONS_DATA.filter(s => s.status === 'completed' && s.sec === student.sec);
+      coursesBody.innerHTML = OFFICIAL_SUBJECTS.map(subj => {
+        const fac = getFacultyForSubject(subj);
+        const subjSessions = sectionCompleted.filter(s => (s.subject === subj || s.course === subj || s.subjectName === subj));
+        const sCompleted = subjSessions.length;
+        let sAttended = 0;
 
-      const sAbsent = sCompleted - sAttended;
-      const sPct = sCompleted > 0 ? Number(((sAttended / sCompleted) * 100).toFixed(1)) : null;
-      const sPctDisplay = sPct !== null ? `${sPct}%` : '--';
-      const isEligible = sPct !== null && sPct >= ATTENDANCE_THRESHOLD;
+        subjSessions.forEach(sess => {
+          const liveRec = (typeof LIVE_ATTENDANCE_RECORDS !== 'undefined')
+            ? LIVE_ATTENDANCE_RECORDS.find(r => r.id === sess.id || (r.lectureNo === sess.lectureNo && r.subject === sess.subject && r.sec === sess.sec))
+            : null;
+          if (liveRec && liveRec.studentRecords) {
+            const sr = liveRec.studentRecords.find(r => r.roll === student.roll || r.studentId === student.roll);
+            if (sr && (sr.status || '').toUpperCase() === 'PRESENT') sAttended++;
+          }
+        });
 
-      return `
-        <tr>
-          <td><strong>${escapeHtml(subj)}</strong></td>
-          <td><span style="color: var(--text-muted); font-size: 12.5px;">Pending CSVTU Code</span></td>
-          <td><strong>${escapeHtml(fac)}</strong></td>
-          <td>${sCompleted}</td>
-          <td>${sAttended}</td>
-          <td><span style="font-weight: 600; color: ${sPct !== null ? (isEligible ? 'var(--text-primary)' : 'var(--danger)') : 'var(--text-muted)'};">${sPctDisplay}</span></td>
-          <td>
-            <span class="badge ${sPct === null ? '' : (isEligible ? 'badge-ok' : 'badge-risk')}" style="${sPct === null ? 'background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border);' : ''}">
-              ${sPct === null ? 'Pending Sessions' : (isEligible ? 'Eligible (≥ 75%)' : 'Below Threshold (< 75%)')}
-            </span>
-          </td>
-        </tr>
-      `;
-    }).join('');
+        const sPct = sCompleted > 0 ? Number(((sAttended / sCompleted) * 100).toFixed(1)) : null;
+        const sPctDisplay = sPct !== null ? `${sPct}%` : '--';
+        const isEligible = sPct !== null && sPct >= ATTENDANCE_THRESHOLD;
+
+        return `
+          <tr>
+            <td><strong>${escapeHtml(subj)}</strong></td>
+            <td><span style="color: var(--text-muted); font-size: 12.5px;">Pending CSVTU Code</span></td>
+            <td><strong>${escapeHtml(fac)}</strong></td>
+            <td>${sCompleted}</td>
+            <td>${sAttended}</td>
+            <td><span style="font-weight: 600; color: ${sPct !== null ? (isEligible ? 'var(--text-primary)' : 'var(--danger)') : 'var(--text-muted)'};">${sPctDisplay}</span></td>
+            <td>
+              <span class="badge ${sPct === null ? '' : (isEligible ? 'badge-ok' : 'badge-risk')}" style="${sPct === null ? 'background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border);' : ''}">
+                ${sPct === null ? 'Pending Sessions' : (isEligible ? 'Eligible (≥ 75%)' : 'Below Threshold (< 75%)')}
+              </span>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
   }
 
   // Navigate to full-screen profile page (NOT drawer/modal)
@@ -2987,10 +3147,22 @@ function exportCSV() {
 }
 
 // ── 13. SESSION MANAGEMENT ───────────────────────────────────
-function renderSessions() {
+async function renderSessions() {
   const grid = document.getElementById('sessions-grid');
   if (!grid) return;
-  if (!SESSIONS_DATA || SESSIONS_DATA.length === 0) {
+
+  const token = getStoredAuthToken();
+  if (token && CURRENT_USER && CURRENT_USER.facultyId) {
+    try {
+      await AcademicDataService.loadFacultySessions(CURRENT_USER.facultyId);
+    } catch (e) {
+      console.warn('Failed to load faculty sessions:', e);
+    }
+  }
+
+  const completedSessions = (SESSIONS_DATA || []).filter(s => (s.status || '').toLowerCase() === 'completed');
+
+  if (completedSessions.length === 0) {
     grid.innerHTML = `
       <div style="grid-column: 1 / -1; padding: 40px 20px; text-align: center; color: var(--text-muted); background: var(--surface); border: 1px dashed var(--border); border-radius: var(--radius-md);">
         <i data-lucide="calendar" class="icon-md" style="margin-bottom: 8px; opacity: 0.5;"></i>
@@ -3001,7 +3173,7 @@ function renderSessions() {
     refreshIcons();
     return;
   }
-  grid.innerHTML = SESSIONS_DATA.map(s => `
+  grid.innerHTML = completedSessions.map(s => `
     <div class="session-card">
       <div class="session-card-header">
         <div>
@@ -3010,7 +3182,7 @@ function renderSessions() {
             ${escapeHtml(s.dept || 'CSE')} · Semester ${s.sem || s.semester || 3} (Section ${s.sec || s.section || 'A'})
           </div>
         </div>
-        <span class="badge badge-${s.status}">${(s.status || 'COMPLETED').toUpperCase()}</span>
+        <span class="badge badge-completed">COMPLETED</span>
       </div>
       <div class="session-card-meta">
         <div class="session-meta-row"><i data-lucide="hash" class="icon-sm"></i> ${escapeHtml(s.lectureNoDisplay || `Lecture No. ${s.lectureNumber || s.lectureNo || 1}`)} &middot; Period ${escapeHtml(s.period || 'I')}</div>
@@ -3914,7 +4086,9 @@ function applySessionUI(session) {
 
     CURRENT_USER = {
       role: 'faculty',
-      facultyId: faculty.id,
+      id: faculty.id,
+      facultyId: faculty.facultyId || 1,
+      facultyCode: faculty.facultyCode || 'faculty_os',
       facultyName: faculty.name,
       subjectId: faculty.subjectId,
       subjectName: faculty.subjectName,
@@ -3939,6 +4113,12 @@ function applySessionUI(session) {
         }
       }).catch(err => {
         console.warn('Could not fetch faculty allocations from backend:', err);
+      });
+
+      AcademicDataService.loadFacultySessions(backendFacId).then(() => {
+        updateFacultyDashboardLiveMetrics();
+      }).catch(err => {
+        console.warn('Could not sync faculty sessions:', err);
       });
     }
 
@@ -4472,8 +4652,14 @@ function validateAcademicUniverse() {
 
 
 
-function renderStudentDashboard(roll) {
-  const student = (STUDENTS || []).find(s => s.roll === roll || s.studentId === roll) || STUDENTS[0];
+async function renderStudentDashboard(roll) {
+  let student = null;
+  if (roll) {
+    student = (STUDENTS || []).find(s => s.roll === roll || s.studentId === roll || s.id === roll);
+  } else if (CURRENT_USER && CURRENT_USER.role === 'student') {
+    student = (STUDENTS || []).find(s => s.id === CURRENT_USER.studentId || s.roll === CURRENT_USER.rollNumber || s.roll === CURRENT_USER.userId);
+  }
+  if (!student) student = (STUDENTS || [])[0];
   if (!student) return;
 
   const welcomeTitle = document.getElementById('stu-welcome-title');
@@ -4481,50 +4667,149 @@ function renderStudentDashboard(roll) {
   if (welcomeTitle) welcomeTitle.textContent = `Good morning, ${student.name.split(' ')[0]}`;
   if (welcomeSub) welcomeSub.textContent = `Roll No: ${student.roll} · S.No #${student.sno || '—'} · Computer Science & Engineering · Semester ${student.sem} (Section ${student.sec})`;
 
-  // Calculate live completed sessions for student's section
-  const sectionCompleted = SESSIONS_DATA.filter(s => s.status === 'completed' && s.sec === student.sec);
-  const totalCompleted = sectionCompleted.length;
+  // Phase 7C.4A: Authoritative Student Attendance Summary & History from Spring Boot
+  let backendSummary = null;
+  let backendHistory = null;
+  const token = getStoredAuthToken();
 
+  if (token && student.id && typeof AcademicDataService !== 'undefined') {
+    try {
+      const [sumRes, histRes] = await Promise.allSettled([
+        AcademicDataService.loadStudentSummary(student.id),
+        AcademicDataService.loadStudentHistory(student.id)
+      ]);
+      if (sumRes.status === 'fulfilled') backendSummary = sumRes.value;
+      if (histRes.status === 'fulfilled') backendHistory = histRes.value;
+    } catch (e) {
+      console.warn('Backend student attendance read failed:', e);
+    }
+  }
+
+  let totalCompleted = 0;
   let attendedCount = 0;
   let missedCount = 0;
-  const historyRows = [];
+  let livePct = null;
+  let coursesList = null;
+  let historyRows = [];
 
-  sectionCompleted.forEach(sess => {
-    const liveRec = (typeof LIVE_ATTENDANCE_RECORDS !== 'undefined')
-      ? LIVE_ATTENDANCE_RECORDS.find(r => r.id === sess.id || (r.lectureNo === sess.lectureNo && r.subject === sess.subject && r.sec === sess.sec))
-      : null;
+  if (backendSummary) {
+    totalCompleted = backendSummary.completedEligibleSessions || 0;
+    attendedCount = backendSummary.attendedSessions || 0;
+    missedCount = Math.max(0, totalCompleted - attendedCount);
+    livePct = backendSummary.overallPercentage;
+    coursesList = backendSummary.courses;
+  } else {
+    // Fallback to local calculation
+    const sectionCompleted = SESSIONS_DATA.filter(s => s.status === 'completed' && s.sec === student.sec);
+    totalCompleted = sectionCompleted.length;
+    sectionCompleted.forEach(sess => {
+      const liveRec = (typeof LIVE_ATTENDANCE_RECORDS !== 'undefined')
+        ? LIVE_ATTENDANCE_RECORDS.find(r => r.id === sess.id || (r.lectureNo === sess.lectureNo && r.subject === sess.subject && r.sec === sess.sec))
+        : null;
 
-    let status = 'ABSENT';
-    let markedAt = sess.completedAt || sess.time || '—';
+      let status = 'ABSENT';
+      let markedAt = sess.completedAt || sess.time || '—';
 
-    if (liveRec && liveRec.studentRecords) {
-      const sr = liveRec.studentRecords.find(r => r.roll === student.roll || r.studentId === student.id || r.studentId === student.roll);
-      if (sr) {
-        status = (sr.status || '').toUpperCase() === 'PRESENT' ? 'PRESENT' : 'ABSENT';
-        markedAt = sr.markedAt || markedAt;
+      if (liveRec && liveRec.studentRecords) {
+        const sr = liveRec.studentRecords.find(r => r.roll === student.roll || r.studentId === student.id || r.studentId === student.roll);
+        if (sr) {
+          status = (sr.status || '').toUpperCase() === 'PRESENT' ? 'PRESENT' : 'ABSENT';
+          markedAt = sr.markedAt || markedAt;
+        }
       }
-    }
 
-    if (status === 'PRESENT') {
-      attendedCount++;
-    } else {
-      missedCount++;
-    }
+      if (status === 'PRESENT') {
+        attendedCount++;
+      } else {
+        missedCount++;
+      }
 
-    historyRows.push({
-      date: sess.date || 'Today',
-      time: markedAt,
-      subject: sess.subjectName || sess.course || sess.subject,
-      lectureNo: sess.lectureNumber || sess.lectureNo || 1,
-      period: sess.period || 'I',
-      faculty: sess.facultyName || sess.faculty || 'Devbrat Sahu',
-      room: sess.room || 'Classroom 301',
-      status: status,
-      markedAt: markedAt
+      historyRows.push({
+        date: sess.date || 'Today',
+        time: markedAt,
+        subject: sess.subjectName || sess.course || sess.subject,
+        lectureNo: sess.lectureNumber || sess.lectureNo || 1,
+        period: sess.period || 'I',
+        faculty: sess.facultyName || sess.faculty || 'Devbrat Sahu',
+        room: sess.room || 'Classroom 301',
+        status: status,
+        markedAt: markedAt
+      });
     });
-  });
+    livePct = totalCompleted > 0 ? Number(((attendedCount / totalCompleted) * 100).toFixed(1)) : null;
+  }
 
-  const livePct = totalCompleted > 0 ? Number(((attendedCount / totalCompleted) * 100).toFixed(1)) : null;
+  if (backendHistory && Array.isArray(backendHistory) && backendHistory.length > 0) {
+    historyRows = backendHistory.map(h => ({
+      date: h.date,
+      time: h.time || (h.markedAt ? new Date(h.markedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '—'),
+      markedAt: h.markedAt ? new Date(h.markedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : (h.time || '—'),
+      subject: h.courseName || h.courseCodeShort,
+      lectureNo: h.lectureNumber || 1,
+      period: h.period || 'I',
+      faculty: h.facultyName || 'Faculty',
+      room: h.room || 'Classroom 301',
+      status: (h.status || '').toUpperCase() === 'PRESENT' ? 'PRESENT' : 'ABSENT'
+    }));
+  }
+
+  // Update compliance banner
+  const bannerEl = document.getElementById('stu-compliance-banner');
+  if (bannerEl) {
+    if (totalCompleted === 0) {
+      const hasHist = student.historicalSnapshot && student.historicalSnapshot.available;
+      bannerEl.style.background = 'var(--surface-muted)';
+      bannerEl.style.borderColor = 'var(--border)';
+      bannerEl.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+          <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <i data-lucide="info" class="icon-sm"></i>
+          </div>
+          <div style="flex: 1;">
+            <div style="font-weight: 700; font-size: 14.5px; color: var(--text-primary);">
+              Academic Session Status: Pre-Commencement / Registered
+            </div>
+            <div style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">
+              Enrolled in B.Tech CSE Semester 3 (Session July–Dec 2026, W.E.F. 27/07/2026). ${
+                hasHist
+                  ? `Previous Attendance Snapshot: <strong>${student.historicalSnapshot.attendancePercent}%</strong> (Section A Attendance Sheet).`
+                  : 'Attendance compliance monitoring will begin after the first instructional lecture is recorded.'
+              }
+            </div>
+          </div>
+          <span class="badge" style="background: var(--surface); border: 1px solid var(--border); font-size: 12px; padding: 5px 10px;">
+            ${hasHist ? 'SNAPSHOT: ' + student.historicalSnapshot.attendancePercent + '%' : 'PRE-COMMENCEMENT'}
+          </span>
+        </div>
+      `;
+    } else {
+      const isCompliant = livePct !== null && livePct >= ATTENDANCE_THRESHOLD;
+      const margin = livePct !== null ? (livePct - ATTENDANCE_THRESHOLD).toFixed(1) : 0;
+      bannerEl.style.background = isCompliant ? 'var(--success-subtle)' : 'var(--danger-subtle)';
+      bannerEl.style.borderColor = isCompliant ? 'var(--success-border)' : 'var(--danger-border)';
+      bannerEl.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+          <div style="width: 36px; height: 36px; border-radius: 50%; background: ${isCompliant ? 'var(--success)' : 'var(--danger)'}; color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <i data-lucide="${isCompliant ? 'check' : 'alert-circle'}" class="icon-sm"></i>
+          </div>
+          <div style="flex: 1;">
+            <div style="font-weight: 700; font-size: 14.5px; color: ${isCompliant ? 'var(--success-hover)' : 'var(--danger)'};">
+              Examination Eligibility Status: ${isCompliant ? 'Eligible (≥ 75%)' : 'Below Threshold (< 75%)'}
+            </div>
+            <div style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">
+              ${isCompliant
+                ? `Your aggregate attendance rate of <strong>${livePct}%</strong> complies with criteria. Safety margin: <strong>+${margin}%</strong>.`
+                : `Your attendance rate of <strong>${livePct}%</strong> is below the 75% threshold.`
+              }
+            </div>
+          </div>
+          <span class="badge ${isCompliant ? 'badge-ok' : 'badge-risk'}" style="font-size: 12px; padding: 5px 10px;">
+            ${isCompliant ? 'IN COMPLIANCE' : 'BELOW THRESHOLD'}
+          </span>
+        </div>
+      `;
+    }
+  }
 
   // Update gauge and hero stats
   const gaugePct = document.getElementById('stu-gauge-pct');
@@ -4541,44 +4826,82 @@ function renderStudentDashboard(roll) {
   if (totalCountEl) totalCountEl.textContent = totalCompleted;
   if (threshFill) threshFill.style.width = `${Math.min(100, livePct || 0)}%`;
 
+  // Dynamic Academic Advisory
+  const advEl = document.getElementById('stu-advisory-desc');
+  if (advEl) {
+    if (totalCompleted === 0) {
+      advEl.innerHTML = `<strong>Term Advisory:</strong> Departmental lectures for 3rd Semester 2026 are preparing to commence. Attend all upcoming instructional sessions in your 5 core modules (<strong>Operating System, Discrete Mathematics, OOPS in C++, Web Technology, Digital Electronics</strong>) to build a solid compliance record early in the term.`;
+    } else if (livePct !== null && livePct >= ATTENDANCE_THRESHOLD) {
+      advEl.innerHTML = `Based on your attendance consistency over <strong>${totalCompleted} completed instructional sessions</strong>, you maintain an aggregate safety margin above the 75% threshold.`;
+    } else {
+      advEl.innerHTML = `<strong>Attention Required:</strong> Your current attendance is below the 75% threshold. Regular attendance is required before semester examination registration.`;
+    }
+  }
+
   // Update 5 Core Subject Breakdown
   const subjContainer = document.getElementById('stu-subjects-container');
   if (subjContainer) {
-    subjContainer.innerHTML = OFFICIAL_SUBJECTS.map(subj => {
-      const subjSessions = sectionCompleted.filter(s => (s.subject === subj || s.course === subj || s.subjectName === subj));
-      const sCompleted = subjSessions.length;
-      let sAttended = 0;
+    if (coursesList && coursesList.length > 0) {
+      subjContainer.innerHTML = coursesList.map((c, idx) => {
+        const fac = getFacultyForSubject(c.courseName);
+        const sCompleted = c.totalCompleted || 0;
+        const sAttended = c.attended || 0;
+        const sPct = c.percentage;
+        const sPctDisplay = sPct !== null ? `${sPct}%` : '--';
+        const isEligible = sPct !== null && sPct >= ATTENDANCE_THRESHOLD;
 
-      subjSessions.forEach(sess => {
-        const liveRec = (typeof LIVE_ATTENDANCE_RECORDS !== 'undefined')
-          ? LIVE_ATTENDANCE_RECORDS.find(r => r.id === sess.id || (r.lectureNo === sess.lectureNo && r.subject === sess.subject && r.sec === sess.sec))
-          : null;
-        if (liveRec && liveRec.studentRecords) {
-          const sr = liveRec.studentRecords.find(r => r.roll === student.roll || r.studentId === student.roll);
-          if (sr && (sr.status || '').toUpperCase() === 'PRESENT') sAttended++;
-        }
-      });
-
-      const sAbsent = sCompleted - sAttended;
-      const sPct = sCompleted > 0 ? Number(((sAttended / sCompleted) * 100).toFixed(1)) : null;
-      const sPctDisplay = sPct !== null ? `${sPct}%` : '--';
-      const isEligible = sPct !== null && sPct >= ATTENDANCE_THRESHOLD;
-
-      return `
-        <div class="card" style="padding: 16px; border: 1px solid var(--border); background: var(--surface);">
-          <div style="font-size: 11px; font-weight: 700; color: var(--primary); text-transform: uppercase;">${escapeHtml(subj)}</div>
-          <div style="font-size: 22px; font-weight: 700; color: var(--text-primary); margin: 6px 0 2px;">${sPctDisplay}</div>
-          <div style="font-size: 12px; color: var(--text-secondary);">
-            ${sCompleted > 0 ? `${sAttended} Attended / ${sCompleted} Held` : 'No live sessions recorded yet'}
+        return `
+          <div class="card" style="padding: 16px; border: 1px solid var(--border); background: var(--surface);">
+            <div style="font-size: 11px; font-weight: 700; color: var(--primary); text-transform: uppercase;">${escapeHtml(c.courseName)}</div>
+            <div style="font-size: 22px; font-weight: 700; color: var(--text-primary); margin: 6px 0 2px;">${sPctDisplay}</div>
+            <div style="font-size: 12px; color: var(--text-secondary);">
+              ${sCompleted > 0 ? `${sAttended} Attended / ${sCompleted} Held` : 'No live sessions recorded yet'}
+            </div>
+            <div style="margin-top: 10px;">
+              <span class="badge ${sPct === null ? '' : (isEligible ? 'badge-ok' : 'badge-risk')}" style="${sPct === null ? 'background: var(--surface-muted); color: var(--text-muted); border: 1px solid var(--border);' : ''} font-size: 11px;">
+                ${sPct === null ? 'Pending Sessions' : (isEligible ? 'Eligible (≥ 75%)' : 'Below Threshold (< 75%)')}
+              </span>
+            </div>
           </div>
-          <div style="margin-top: 10px;">
-            <span class="badge ${sPct === null ? '' : (isEligible ? 'badge-ok' : 'badge-risk')}" style="${sPct === null ? 'background: var(--surface-muted); color: var(--text-muted); border: 1px solid var(--border);' : ''} font-size: 11px;">
-              ${sPct === null ? 'Pending Sessions' : (isEligible ? 'Eligible (≥ 75%)' : 'Below Threshold (< 75%)')}
-            </span>
+        `;
+      }).join('');
+    } else {
+      const sectionCompleted = SESSIONS_DATA.filter(s => s.status === 'completed' && s.sec === student.sec);
+      subjContainer.innerHTML = OFFICIAL_SUBJECTS.map(subj => {
+        const subjSessions = sectionCompleted.filter(s => (s.subject === subj || s.course === subj || s.subjectName === subj));
+        const sCompleted = subjSessions.length;
+        let sAttended = 0;
+
+        subjSessions.forEach(sess => {
+          const liveRec = (typeof LIVE_ATTENDANCE_RECORDS !== 'undefined')
+            ? LIVE_ATTENDANCE_RECORDS.find(r => r.id === sess.id || (r.lectureNo === sess.lectureNo && r.subject === sess.subject && r.sec === sess.sec))
+            : null;
+          if (liveRec && liveRec.studentRecords) {
+            const sr = liveRec.studentRecords.find(r => r.roll === student.roll || r.studentId === student.roll);
+            if (sr && (sr.status || '').toUpperCase() === 'PRESENT') sAttended++;
+          }
+        });
+
+        const sPct = sCompleted > 0 ? Number(((sAttended / sCompleted) * 100).toFixed(1)) : null;
+        const sPctDisplay = sPct !== null ? `${sPct}%` : '--';
+        const isEligible = sPct !== null && sPct >= ATTENDANCE_THRESHOLD;
+
+        return `
+          <div class="card" style="padding: 16px; border: 1px solid var(--border); background: var(--surface);">
+            <div style="font-size: 11px; font-weight: 700; color: var(--primary); text-transform: uppercase;">${escapeHtml(subj)}</div>
+            <div style="font-size: 22px; font-weight: 700; color: var(--text-primary); margin: 6px 0 2px;">${sPctDisplay}</div>
+            <div style="font-size: 12px; color: var(--text-secondary);">
+              ${sCompleted > 0 ? `${sAttended} Attended / ${sCompleted} Held` : 'No live sessions recorded yet'}
+            </div>
+            <div style="margin-top: 10px;">
+              <span class="badge ${sPct === null ? '' : (isEligible ? 'badge-ok' : 'badge-risk')}" style="${sPct === null ? 'background: var(--surface-muted); color: var(--text-muted); border: 1px solid var(--border);' : ''} font-size: 11px;">
+                ${sPct === null ? 'Pending Sessions' : (isEligible ? 'Eligible (≥ 75%)' : 'Below Threshold (< 75%)')}
+              </span>
+            </div>
           </div>
-        </div>
-      `;
-    }).join('');
+        `;
+      }).join('');
+    }
   }
 
   // Update Personal Attendance History Table
@@ -4596,7 +4919,7 @@ function renderStudentDashboard(roll) {
       historyTbody.innerHTML = historyRows.map(r => `
         <tr>
           <td>${escapeHtml(r.date)}</td>
-          <td><code>${escapeHtml(r.markedAt)}</code></td>
+          <td><code>${escapeHtml(r.markedAt || r.time)}</code></td>
           <td><strong>${escapeHtml(r.subject)}</strong> (Lecture ${r.lectureNo} &middot; Period ${r.period})</td>
           <td>${escapeHtml(r.faculty)}</td>
           <td>${escapeHtml(r.room)}</td>

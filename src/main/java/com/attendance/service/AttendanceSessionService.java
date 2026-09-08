@@ -284,22 +284,36 @@ public class AttendanceSessionService {
     @Transactional(readOnly = true)
     public List<SessionDto> getSessionsForFaculty(Long facultyId) {
         return sessionRepo.findByFacultyFacultyIdOrderBySessionDateDesc(facultyId).stream()
-            .map(s -> SessionDto.builder()
-                .id(s.getSessionId())
-                .subjectId(s.getCourse().getCourseId())
-                .subjectName(s.getCourse().getCourseName())
-                .subjectCode(s.getCourse().getCourseCodeShort())
-                .facultyId(s.getFaculty().getFacultyId())
-                .facultyCode(s.getFaculty().getFacultyCode())
-                .facultyName(s.getFaculty().getName())
-                .section(s.getSection().getSectionName())
-                .semester(s.getSemester())
-                .date(s.getSessionDate())
-                .lectureNumber(s.getLectureNumber())
-                .status(s.getStatus().name())
-                .startedAt(s.getStartedAt())
-                .completedAt(s.getCompletedAt())
-                .build())
+            .map(s -> {
+                int pres = 0;
+                int abs = 0;
+                int total = 0;
+                if (s.getStatus() == AttendanceSession.SessionStatus.COMPLETED) {
+                    List<AttendanceRecord> recs = attendanceRecordRepo.findBySessionSessionId(s.getSessionId());
+                    pres = (int) recs.stream().filter(r -> r.getStatus() == AttendanceRecord.AttendanceStatus.PRESENT).count();
+                    total = recs.size();
+                    abs = total - pres;
+                }
+                return SessionDto.builder()
+                    .id(s.getSessionId())
+                    .subjectId(s.getCourse().getCourseId())
+                    .subjectName(s.getCourse().getCourseName())
+                    .subjectCode(s.getCourse().getCourseCodeShort())
+                    .facultyId(s.getFaculty().getFacultyId())
+                    .facultyCode(s.getFaculty().getFacultyCode())
+                    .facultyName(s.getFaculty().getName())
+                    .section(s.getSection().getSectionName())
+                    .semester(s.getSemester())
+                    .date(s.getSessionDate())
+                    .lectureNumber(s.getLectureNumber())
+                    .status(s.getStatus().name())
+                    .startedAt(s.getStartedAt())
+                    .completedAt(s.getCompletedAt())
+                    .totalRostered(total)
+                    .presentCount(pres)
+                    .absentCount(abs)
+                    .build();
+            })
             .collect(Collectors.toList());
     }
 
