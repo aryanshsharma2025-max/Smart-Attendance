@@ -525,408 +525,112 @@
       </div>
     </header>
 
-    <!-- ───────── PAGE 1: DASHBOARD ───────── -->
+    <!-- ───────── PAGE 1: DASHBOARD (PHASE 8 SIMPLIFIED FACULTY-FIRST) ───────── -->
     <section class="page active" id="page-dashboard">
-      <!-- Faculty Identity Header Card -->
-      <div class="card faculty-profile-header-card" style="margin-bottom: 20px; padding: 20px 24px; border: 1px solid var(--border); background: var(--surface); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
-        <div style="display: flex; align-items: center; gap: 16px;">
-          <div class="user-avatar" id="dash-fac-avatar" style="width: 52px; height: 52px; font-size: 20px; font-weight: 700; background: var(--primary-subtle); color: var(--primary); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; border: 1px solid var(--primary-border);">DS</div>
+      <!-- Top: Dynamic Greeting & Faculty Identity -->
+      <div class="dash-faculty-header">
+        <div class="dash-greeting-info">
+          <div class="dash-fac-avatar" id="dash-fac-avatar">DS</div>
           <div>
-            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-              <h2 id="dash-greeting-title" style="font-size: 22px; font-weight: 700; color: var(--text-primary); margin: 0;">Good morning, Devbrat Sahu</h2>
-              <span class="badge" style="background: var(--primary-subtle); color: var(--primary); border: 1px solid var(--primary-border); font-size: 12px; font-weight: 600;">Faculty</span>
-              <span class="badge badge-ok" id="dash-fac-sec-status" style="font-size: 11.5px; font-weight: 600;">Assigned Sections: A, B</span>
-              <span class="badge" id="dash-fac-cd-pending" style="background: var(--surface-muted); color: var(--text-muted); border: 1px solid var(--border); font-size: 11px;">Sections C, D Pending</span>
-            </div>
-            <div style="font-size: 13.5px; color: var(--text-secondary); margin-top: 4px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-              <span>Assigned Subject: <strong id="dash-fac-subject" style="color: var(--text-primary);">Operating System</strong></span>
-              <span>&middot;</span>
-              <span>Department of Computer Science &amp; Engineering</span>
+            <h2 id="dash-greeting-title" class="dash-greeting-title">Good morning, Devbrat Sir</h2>
+            <div class="dash-greeting-subtitle">
+              <span id="dash-fac-name" style="font-weight: 600; color: var(--text-primary);">Devbrat Sahu</span> &middot;
+              <span id="dash-fac-subject" style="font-weight: 600; color: var(--text-primary);">Operating System</span> &middot;
+              <span>Department of Computer Science &amp; Engineering &middot; SSIPMT Raipur</span>
+              <span class="badge badge-ok" id="dash-fac-sec-status" style="font-size: 11px; margin-left: 6px;">Sections A, B Confirmed</span>
             </div>
           </div>
         </div>
-        <button type="button" class="btn btn-outline btn-sm" onclick="openFacultyArea()" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600;">
-          <i data-lucide="arrow-left-right" class="icon-sm"></i>
-          <span>Switch Faculty</span>
-        </button>
-      </div>
-
-      <!-- ── PHASE 5: CURRENT / NEXT TIMETABLE CLASS BANNER ────────── -->
-      <div class="card current-next-class-card" id="dash-cnc-card" style="margin-bottom: 20px; padding: 18px 22px; border: 1px solid var(--border); border-left: 4px solid var(--primary); background: var(--surface);">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
-          <div style="display: flex; align-items: flex-start; gap: 14px; flex: 1; min-width: 280px;">
-            <div style="width: 42px; height: 42px; border-radius: var(--radius-md); background: var(--primary-subtle); color: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;">
-              <i data-lucide="clock" class="icon-sm"></i>
-            </div>
-            <div>
-              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                <span style="font-weight: 700; font-size: 15px; color: var(--text-primary);" id="cnc-title">Current / Next Timetable Slot</span>
-                <span class="badge" id="cnc-status-badge" style="font-size: 11px; background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border);">Configured Timetable</span>
-                <span class="badge" style="background: var(--surface-muted); color: var(--text-muted); border: 1px solid var(--border); font-size: 10.5px;">W.E.F. 17/08/2026</span>
-              </div>
-              <div style="font-size: 13.5px; color: var(--text-secondary); margin-top: 4px; line-height: 1.5;" id="cnc-description">
-                <!-- Computed dynamically by JS -->
-              </div>
-            </div>
-          </div>
-          <div id="cnc-action-wrap">
-            <button class="btn btn-primary btn-sm" id="cnc-action-btn" onclick="showPage('take-attendance', null)">
-              <i data-lucide="check-square" class="icon-sm"></i>
-              <span>Take Attendance</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── PHASE 5: TODAY'S TEACHING SCHEDULE ──────────────────────── -->
-      <div class="card" style="margin-bottom: 24px; padding: 22px 24px; border: 1px solid var(--border); background: var(--surface);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
-          <div>
-            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-              <h3 style="font-size: 17px; font-weight: 700; color: var(--text-primary); margin: 0;">Today's Teaching Schedule</h3>
-              <span class="badge badge-ok" id="dash-sched-day-badge">Today</span>
-              <span class="badge" style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border); font-size: 11px;">Timetable W.E.F. 17/08/2026</span>
-            </div>
-            <div style="font-size: 13px; color: var(--text-secondary); margin-top: 3px;">
-              Scheduled classroom and laboratory slots for <strong id="dash-sched-fac-name">Devbrat Sahu</strong> (<span id="dash-sched-fac-subj">Operating System</span>)
-            </div>
-          </div>
-
-          <!-- Day Tabs: Mon, Tue, Wed, Thu, Fri, Sat -->
-          <div class="schedule-day-tabs" style="display: flex; gap: 4px; background: var(--surface-muted); padding: 4px; border-radius: var(--radius-sm); border: 1px solid var(--border);" id="sched-day-tabs">
-            <button type="button" class="btn btn-ghost btn-xs sched-tab" data-day="Monday" onclick="selectScheduleDay('Monday')">Mon</button>
-            <button type="button" class="btn btn-ghost btn-xs sched-tab" data-day="Tuesday" onclick="selectScheduleDay('Tuesday')">Tue</button>
-            <button type="button" class="btn btn-ghost btn-xs sched-tab" data-day="Wednesday" onclick="selectScheduleDay('Wednesday')">Wed</button>
-            <button type="button" class="btn btn-ghost btn-xs sched-tab" data-day="Thursday" onclick="selectScheduleDay('Thursday')">Thu</button>
-            <button type="button" class="btn btn-ghost btn-xs sched-tab" data-day="Friday" onclick="selectScheduleDay('Friday')">Fri</button>
-            <button type="button" class="btn btn-ghost btn-xs sched-tab" data-day="Saturday" onclick="selectScheduleDay('Saturday')">Sat</button>
-          </div>
-        </div>
-
-        <!-- Schedule List Container -->
-        <div id="dash-schedule-list" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
-          <!-- Populated by JS dynamically -->
-        </div>
-      </div>
-
-      <!-- ── SECTION 1: LECTURE & SESSION STATUS (PHASE 5A) ────────── -->
-      <div style="margin-bottom: 20px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
-          <div>
-            <h3 style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0;">Lecture &amp; Attendance Summary</h3>
-            <div style="font-size: 12.5px; color: var(--text-secondary); margin-top: 2px;">Subject-scoped instructional session tracking &middot; Real-time status</div>
-          </div>
-          <button class="btn btn-primary btn-sm" onclick="showPage('take-attendance', null)">
-            <i data-lucide="check-square" class="icon-sm"></i>
-            <span>+ Record Attendance Session</span>
+        <div class="dash-header-actions">
+          <button type="button" class="btn btn-outline btn-sm" onclick="openFacultyArea()" title="Switch Faculty Profile" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
+            <i data-lucide="arrow-left-right" class="icon-xs"></i>
+            <span>Switch Faculty</span>
+          </button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="doSignOut()" title="Sign Out" style="display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted);">
+            <i data-lucide="log-out" class="icon-xs"></i>
+            <span>Sign Out</span>
           </button>
         </div>
-
-        <div class="faculty-shell-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px;">
-          <!-- Card 1: LECTURES CONDUCTED -->
-          <div class="card" style="padding: 18px 20px; border: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; justify-content: space-between;">
-            <div>
-              <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px;">Lectures Conducted</div>
-              <div id="dash-lec-conducted" style="font-size: 26px; font-weight: 700; color: var(--text-primary); line-height: 1.2;">0</div>
-              <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Completed in this subject &amp; section</div>
-            </div>
-            <div style="margin-top: 12px;">
-              <span class="badge" style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border); font-size: 11px;">Subject &amp; Section Scoped</span>
-            </div>
-          </div>
-
-          <!-- Card 2: CURRENT LECTURE -->
-          <div class="card" style="padding: 18px 20px; border: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; justify-content: space-between;">
-            <div>
-              <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px;">Current Lecture</div>
-              <div id="dash-lec-current" style="font-size: 22px; font-weight: 700; color: var(--text-primary); line-height: 1.2;">&mdash;</div>
-              <div id="dash-lec-current-sub" style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">No lecture currently running</div>
-            </div>
-            <div style="margin-top: 12px;">
-              <span id="dash-lec-current-badge" class="badge" style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border); font-size: 11px;">Status: Idle</span>
-            </div>
-          </div>
-
-          <!-- Card 3: NEXT LECTURE -->
-          <div class="card" style="padding: 18px 20px; border: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; justify-content: space-between;">
-            <div>
-              <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--primary); margin-bottom: 4px;">Next Lecture</div>
-              <div id="dash-lec-next" style="font-size: 26px; font-weight: 700; color: var(--primary); line-height: 1.2;">Lecture 1</div>
-              <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Sequential upcoming session</div>
-            </div>
-            <div style="margin-top: 12px;">
-              <span class="badge" style="background: var(--primary-subtle); color: var(--primary); border: 1px solid var(--primary-border); font-size: 11px;">Ready for Commencement</span>
-            </div>
-          </div>
-
-          <!-- Card 4: SESSION STATUS -->
-          <div class="card" style="padding: 18px 20px; border: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; justify-content: space-between;">
-            <div>
-              <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px;">Session Status</div>
-              <div id="dash-lec-status" style="font-size: 17px; font-weight: 700; color: var(--text-primary); line-height: 1.3; margin-top: 2px;">Ready to start</div>
-              <div id="dash-lec-status-sub" style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Awaiting lecture recording</div>
-            </div>
-            <div style="margin-top: 12px;">
-              <span id="dash-lec-status-badge" class="badge" style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border); font-size: 11px;">Pre-commencement</span>
-            </div>
-          </div>
-        </div>
       </div>
 
-      <!-- ── SECTION 2: SUBJECT ATTENDANCE ANALYTICS (PHASE 5A) ───── -->
-      <div class="card" style="margin-bottom: 24px; padding: 22px 24px; border: 1px solid var(--border); background: var(--surface);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 14px;">
-          <div>
-            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-              <h3 style="font-size: 17px; font-weight: 700; color: var(--text-primary); margin: 0;">Subject Attendance Analytics</h3>
-              <span class="badge" style="background: var(--primary-subtle); color: var(--primary); border: 1px solid var(--primary-border); font-size: 11.5px; font-weight: 600;" id="dash-active-subject-badge">Operating System</span>
-            </div>
-            <div style="font-size: 13px; color: var(--text-secondary); margin-top: 3px;">
-              Dynamic live compliance analytics calculated exclusively from completed instructional sessions
-            </div>
+      <!-- Two Dominant Primary Action Tiles (GPay/PhonePe Simplicity Principle) -->
+      <div class="primary-actions-grid">
+        <!-- Action 1: TAKE ATTENDANCE -->
+        <div class="primary-action-card action-take" onclick="handlePrimaryTakeAttendance()" role="button" tabindex="0" title="Take attendance for current or next scheduled lecture">
+          <div class="primary-action-icon-wrap">
+            <i data-lucide="clipboard-check" style="width: 28px; height: 28px;"></i>
           </div>
-
-          <!-- Section Selector for Faculty (with Allocation Pending indicator) -->
-          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <label for="dash-section-select" style="font-size: 12.5px; font-weight: 600; color: var(--text-secondary);">Section:</label>
-              <select id="dash-section-select" class="form-control" onchange="onDashboardSectionChange(this.value)" style="padding: 5px 10px; height: 34px; font-size: 13px; width: 180px;">
-                <option value="A" selected>Section A (Confirmed · 60)</option>
-                <option value="B">Section B (Confirmed · 59)</option>
-                <option value="C" disabled>Section C (Pending)</option>
-                <option value="D" disabled>Section D (Pending)</option>
-              </select>
-            </div>
-            <span class="badge" id="dash-sec-alloc-badge" style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border); font-size: 11px;">Section allocation pending</span>
+          <div class="primary-action-text">
+            <h3 class="primary-action-title">Take Attendance</h3>
+            <p class="primary-action-desc">Record classroom attendance for today's lecture</p>
           </div>
-        </div>
-
-        <!-- 6 KPI Grid for Selected Subject & Section -->
-        <div class="subject-kpis-grid">
-          <!-- KPI 1: Average Section Attendance -->
-          <div class="subject-kpi-card">
-            <div class="subject-kpi-label">Average Section Attendance</div>
-            <div class="subject-kpi-val" id="dash-stat-avg" style="color: var(--primary);">&mdash;</div>
-            <div class="subject-kpi-sub">Mean of student live %</div>
-          </div>
-
-          <!-- KPI 2: Present Today -->
-          <div class="subject-kpi-card">
-            <div class="subject-kpi-label">Present Today</div>
-            <div class="subject-kpi-val" id="dash-stat-present" style="color: var(--success);">&mdash;</div>
-            <div class="subject-kpi-sub">Latest lecture session</div>
-          </div>
-
-          <!-- KPI 3: Absent Today -->
-          <div class="subject-kpi-card">
-            <div class="subject-kpi-label">Absent Today</div>
-            <div class="subject-kpi-val" id="dash-stat-absent" style="color: var(--danger);">&mdash;</div>
-            <div class="subject-kpi-sub">Latest lecture session</div>
-          </div>
-
-          <!-- KPI 4: Students Below 75% -->
-          <div class="subject-kpi-card">
-            <div class="subject-kpi-label">Students Below 75%</div>
-            <div class="subject-kpi-val" id="dash-stat-risk" style="color: var(--warning);">&mdash;</div>
-            <div class="subject-kpi-sub">&lt; 75.0% threshold</div>
-          </div>
-
-          <!-- KPI 5: Highest Attendance -->
-          <div class="subject-kpi-card">
-            <div class="subject-kpi-label">Highest Attendance</div>
-            <div class="subject-kpi-val" id="dash-stat-high" style="color: var(--success);">&mdash;</div>
-            <div class="subject-kpi-sub">Top section student</div>
-          </div>
-
-          <!-- KPI 6: Lowest Attendance -->
-          <div class="subject-kpi-card">
-            <div class="subject-kpi-label">Lowest Attendance</div>
-            <div class="subject-kpi-val" id="dash-stat-low" style="color: var(--danger);">&mdash;</div>
-            <div class="subject-kpi-sub">Minimum live rate</div>
-          </div>
-        </div>
-
-        <!-- ── SECTION 3: ATTENDANCE TREND (CONDITIONAL) ───────────── -->
-        <div id="dash-trend-container" style="margin-top: 14px; padding-top: 16px; border-top: 1px solid var(--border);">
-          <div style="font-size: 13.5px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px;">Lecture Attendance Trend</div>
-          <div id="dash-trend-empty" style="padding: 24px; text-align: center; background: var(--surface-muted); border-radius: var(--radius-sm); border: 1px dashed var(--border); color: var(--text-muted); font-size: 13px;">
-            <i data-lucide="line-chart" class="icon-sm" style="margin-bottom: 6px; display: inline-block;"></i>
-            <div>No attendance trend available yet.</div>
-            <div style="font-size: 11.5px; margin-top: 2px;">Trend analytics activate after conducting multiple instructional sessions.</div>
-          </div>
-          <canvas id="dashTrendChart" height="140" style="display: none;"></canvas>
-        </div>
-      </div>
-
-      <!-- ── SECTION 4: STUDENT ATTENDANCE TABLE (SUBJECT & SECTION SCOPED) ── -->
-      <div class="card" style="margin-bottom: 24px; border: 1px solid var(--border); background: var(--surface);">
-        <div class="chart-header" style="flex-wrap: wrap; gap: 12px;">
-          <div>
-            <div class="chart-title" style="display: flex; align-items: center; gap: 8px;">
-              <span>Student Attendance Roster &middot; Section <span id="dash-roster-sec-title">A</span></span>
-              <span class="badge" style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border); font-size: 11px;" id="dash-roster-count-badge">60 Students</span>
-            </div>
-            <div class="chart-sub">Student live attendance calculated exclusively for active curricular subject</div>
-          </div>
-          <div style="min-width: 240px;">
-            <input type="text" id="dash-roster-search" class="search-box" style="padding: 6px 12px; font-size: 12.5px; height: 34px;" placeholder="Filter section students by name or roll..." oninput="filterDashboardStudents(this.value)"/>
-          </div>
-        </div>
-
-        <div class="table-responsive">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th style="width: 70px;">S.No.</th>
-                <th>Roll Number</th>
-                <th>Student Name</th>
-                <th>Subject &middot; Section</th>
-                <th>Lectures Attended</th>
-                <th>Live Attendance %</th>
-                <th>Examination Eligibility</th>
-              </tr>
-            </thead>
-            <tbody id="dash-student-table-body">
-              <!-- Populated by JS dynamically -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Section-A Historical Attendance Snapshot (Real Source-Backed Snapshot) -->
-      <div class="card" style="margin-bottom: 24px; padding: 20px; border: 1px solid var(--border); border-left: 4px solid var(--warning); background: var(--surface);">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
-          <div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="font-weight: 700; font-size: 15px; color: var(--text-primary);">Section A &middot; Previous Attendance Snapshot</span>
-              <span class="badge" style="background: var(--warning-subtle); color: var(--warning); border: 1px solid var(--warning-border); font-size: 11px;">HISTORICAL SNAPSHOT</span>
-            </div>
-            <div style="font-size: 12.5px; color: var(--text-secondary); margin-top: 3px;">
-              Source: Section-A Attendance Sheet (JULY&ndash;AUG 2026) &middot; Printed Date: <strong>25-08-2025</strong> <span style="color: var(--text-muted);">(Date Discrepancy / Requires HOD Verification)</span>
-            </div>
-          </div>
-          <span class="badge" id="hist-secA-total" style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border);">Cohort: 60 Enrolled Students</span>
-        </div>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
-          <div class="drawer-info-card" style="padding: 12px 16px;">
-            <div class="drawer-info-label">Section-A Snapshot Average</div>
-            <div class="drawer-info-val" id="hist-secA-avg" style="font-size: 20px; font-weight: 700; color: var(--primary);">64.8%</div>
-            <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">60 Students Recorded</div>
-          </div>
-          <div class="drawer-info-card" style="padding: 12px 16px;">
-            <div class="drawer-info-label">At or Above Threshold (&ge;75%)</div>
-            <div class="drawer-info-val" style="font-size: 20px; font-weight: 700; color: var(--success);">20 Students</div>
-            <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">33.3% of Section A</div>
-          </div>
-          <div class="drawer-info-card" style="padding: 12px 16px;">
-            <div class="drawer-info-label">Below Threshold (&lt;75%)</div>
-            <div class="drawer-info-val" style="font-size: 20px; font-weight: 700; color: var(--danger);">40 Students</div>
-            <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">Below Attendance Threshold &mdash; Historical Snapshot</div>
-          </div>
-        </div>
-        <div style="font-size: 12px; color: var(--text-muted); margin-top: 10px; font-style: italic;">
-          * Note: This historical percentage snapshot is isolated from live session attendance. Live lecture monitoring begins upon recording classroom sessions.
-        </div>
-      </div>
-
-      <!-- Charts & Academic Insights row (Section-to-section comparison removed) -->
-      <div class="charts-row">
-        <div class="chart-card">
-          <div class="chart-header">
-            <div>
-              <div class="chart-title">Weekly Attendance Trend</div>
-              <div class="chart-sub">Average percentage per instructional day</div>
-            </div>
-          </div>
-          <canvas id="weekChart" height="180"></canvas>
-        </div>
-
-        <!-- Academic Insights Card (Replaces removed section comparison chart) -->
-        <div class="chart-card academic-insights-card">
-          <div class="chart-header">
-            <div>
-              <div class="chart-title">Class Academic Insights</div>
-              <div class="chart-sub">Actionable intelligence &amp; attendance compliance</div>
-            </div>
-          </div>
-          <div class="insights-content">
-            <div class="insight-stat-row">
-              <div class="insight-mini-stat">
-                <span class="insight-mini-label">Roster Compliance</span>
-                <span class="insight-mini-val" style="color: var(--success);">91.7%</span>
-                <span class="insight-mini-sub">&ge; 75% threshold</span>
-              </div>
-              <div class="insight-mini-stat">
-                <span class="insight-mini-label">At-Risk Shortfall</span>
-                <span class="insight-mini-val" style="color: var(--danger);">14</span>
-                <span class="insight-mini-sub">Notice required</span>
-              </div>
-              <div class="insight-mini-stat">
-                <span class="insight-mini-label">Peak Session</span>
-                <span class="insight-mini-val" style="color: var(--primary);">09:00 AM</span>
-                <span class="insight-mini-sub">94% average</span>
-              </div>
-            </div>
-
-            <div class="insight-notes-list">
-              <div class="insight-note-item">
-                <i data-lucide="check-circle-2" class="icon-sm" style="color: var(--success); flex-shrink: 0; margin-top: 2px;"></i>
-                <div>
-                  <strong>High Subject Engagement:</strong>
-                  <span>Programming in Python and Physics laboratory sessions maintain steady &gt;85% attendance across instructional weeks.</span>
-                </div>
-              </div>
-              <div class="insight-note-item">
-                <i data-lucide="alert-circle" class="icon-sm" style="color: var(--warning); flex-shrink: 0; margin-top: 2px;"></i>
-                <div>
-                  <strong>Threshold Follow-up Needed:</strong>
-                  <span>12 flagged students in assigned CSE sections are currently between 59%–73%. Direct notices can be dispatched from Reports.</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="insight-action-bar">
-              <button class="btn btn-outline btn-sm" onclick="showPage('students', null)">
-                <i data-lucide="users" class="icon-sm"></i>
-                <span>Review Student Roster</span>
-              </button>
-              <button class="btn btn-primary btn-sm" onclick="showPage('reports', null)">
-                <i data-lucide="file-text" class="icon-sm"></i>
-                <span>View Compliance Notices</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Recent Attendance Activity -->
-      <div class="card" style="margin-top: 20px;">
-        <div class="chart-header">
-          <div>
-            <div class="chart-title">Recent Attendance Activity</div>
-            <div class="chart-sub">Latest recorded classroom sessions and attendance logs</div>
-          </div>
-          <button class="btn btn-outline btn-sm" onclick="showPage('attendance', null)">
-            <span>View Attendance Overview</span>
+          <div class="primary-action-arrow">
             <i data-lucide="arrow-right" class="icon-sm"></i>
-          </button>
+          </div>
         </div>
-        <div class="table-responsive">
-          <table class="data-table" id="recent-table">
-            <thead>
-              <tr>
-                <th>Student</th>
-                <th>Roll No.</th>
-                <th>Class / Subject</th>
-                <th>Marked At</th>
-                <th>Status</th>
-                <th>Recorded By</th>
-              </tr>
-            </thead>
-            <tbody id="recent-body">
-              <!-- Populated by JS -->
-            </tbody>
-          </table>
+
+        <!-- Action 2: WATCH ATTENDANCE -->
+        <div class="primary-action-card action-watch" onclick="showPage('attendance', null)" role="button" tabindex="0" title="Inspect attendance statistics and student attendance">
+          <div class="primary-action-icon-wrap">
+            <i data-lucide="bar-chart-2" style="width: 28px; height: 28px;"></i>
+          </div>
+          <div class="primary-action-text">
+            <h3 class="primary-action-title">Watch Attendance</h3>
+            <p class="primary-action-desc">Check class percentages and student attendance</p>
+          </div>
+          <div class="primary-action-arrow">
+            <i data-lucide="arrow-right" class="icon-sm"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Today's Lectures & Lecture Capacity -->
+      <div class="today-lectures-container card">
+        <div class="today-lectures-header">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <h3 class="today-lectures-title">Today's Lectures</h3>
+              <span class="badge badge-ok" id="dash-today-day-badge">Today</span>
+              <span class="badge" id="dash-today-slots-badge" style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border); font-size: 11px;">Timetable W.E.F. 17/08/2026</span>
+            </div>
+            <p class="today-lectures-subtitle">Scheduled timetable slots for today. Tap a lecture to start attendance immediately.</p>
+          </div>
+
+          <!-- Total Daily Lecture Capacity (visualizes 7 period slots) -->
+          <div class="daily-capacity-wrap">
+            <span class="capacity-label">Daily Capacity:</span>
+            <div class="capacity-pills-row" id="daily-capacity-pills">
+              <!-- Populated dynamically by JS: [1] [2] [3] [4] [5] [6] [7] -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Today's Lecture Cards Grid -->
+        <div class="today-lectures-grid" id="today-lectures-grid">
+          <!-- Populated dynamically by renderTodayLectures() -->
+        </div>
+      </div>
+
+      <!-- Direct Secondary Actions (Students and Timetable) -->
+      <div class="secondary-actions-grid">
+        <div class="secondary-action-card" onclick="showPage('students', null)" role="button" tabindex="0">
+          <div class="secondary-action-icon">
+            <i data-lucide="users" class="icon-sm"></i>
+          </div>
+          <div>
+            <div class="secondary-action-title">Students</div>
+            <div class="secondary-action-sub">Section rosters and student attendance profiles</div>
+          </div>
+        </div>
+
+        <div class="secondary-action-card" onclick="openTimetableModalOrView()" role="button" tabindex="0">
+          <div class="secondary-action-icon">
+            <i data-lucide="calendar" class="icon-sm"></i>
+          </div>
+          <div>
+            <div class="secondary-action-title">Weekly Timetable</div>
+            <div class="secondary-action-sub">Complete weekly teaching schedule and room allocations</div>
+          </div>
         </div>
       </div>
     </section>
@@ -965,146 +669,148 @@
     </section>
 
     <!-- ───────── PAGE 2: SIDEBAR "ATTENDANCE" (OVERVIEW & MANAGEMENT) ───────── -->
+    <!-- ───────── PAGE: WATCH ATTENDANCE (PHASE 8 RESHAPED) ───────── -->
     <section class="page" id="page-attendance">
-      <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+      <!-- Header bar with back button -->
+      <div class="watch-att-header-bar">
         <div>
-          <h2 class="page-title-main">Attendance Overview</h2>
-          <div class="page-subtitle">Department attendance tracking, class session summaries, and compliance records</div>
+          <button class="btn btn-outline btn-sm" onclick="showPage('dashboard', null)" style="margin-bottom: 8px; display: inline-flex; align-items: center; gap: 6px;">
+            <i data-lucide="arrow-left" class="icon-xs"></i>
+            <span>Back to Dashboard</span>
+          </button>
+          <h2 class="page-title-main">Watch Attendance</h2>
+          <div class="page-subtitle">Inspect attendance by subject, section, and student &middot; Plain academic records</div>
         </div>
-        <button class="btn btn-primary" onclick="showPage('take-attendance', null)">
-          <i data-lucide="check-square" class="icon-sm"></i>
-          <span>+ Take Attendance</span>
-        </button>
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <button class="btn btn-primary btn-sm" onclick="showPage('take-attendance', null)">
+            <i data-lucide="plus" class="icon-xs"></i>
+            <span>Take Attendance</span>
+          </button>
+        </div>
       </div>
 
-      <!-- Launch Action Callout Card -->
-      <div class="card" style="margin-bottom: 20px; background: var(--primary-subtle); border-color: var(--primary-border);">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+      <!-- Section / Class Level Attendance Card (Requirement 12) -->
+      <div class="card" style="padding: 20px 24px; margin-bottom: 20px; border: 1px solid var(--border); background: var(--surface);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
           <div>
-            <div style="font-weight: 600; font-size: 15px; color: var(--text-primary);">Record Classroom Attendance</div>
-            <div style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">
-              Launch the dedicated, focused attendance workspace to record or review a class session.
+            <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">Class &amp; Section Attendance</div>
+            <div style="display: flex; align-items: center; gap: 10px; margin-top: 4px; flex-wrap: wrap;">
+              <h3 id="watch-subject-title" style="font-size: 20px; font-weight: 700; color: var(--text-primary); margin: 0;">Operating System</h3>
+              <span class="badge" id="watch-faculty-badge" style="background: var(--surface-muted); border: 1px solid var(--border); font-size: 12px;">Devbrat Sahu</span>
             </div>
           </div>
-          <button class="btn btn-primary" onclick="showPage('take-attendance', null)">
-            <i data-lucide="plus-circle" class="icon-sm"></i>
-            <span>Launch Take Attendance</span>
-          </button>
+          <!-- Section Selector Tabs -->
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <label for="watch-section-select" style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">Section:</label>
+            <select id="watch-section-select" class="form-control" onchange="onWatchSectionChange(this.value)" style="padding: 6px 12px; height: 36px; font-size: 13px; width: 180px;">
+              <option value="A" selected>Section A (60 Students)</option>
+              <option value="B">Section B (59 Students)</option>
+              <option value="C" disabled>Section C (Pending)</option>
+              <option value="D" disabled>Section D (Pending)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Plain Academic Language Metrics Grid -->
+        <div class="watch-att-summary-grid">
+          <div class="watch-att-stat-card">
+            <div class="watch-att-stat-label">Total Enrolled</div>
+            <div class="watch-att-stat-val" id="watch-stat-enrolled" style="color: var(--text-primary);">60</div>
+            <div class="watch-att-stat-sub">Rostered students</div>
+          </div>
+          <div class="watch-att-stat-card">
+            <div class="watch-att-stat-label">Attendance</div>
+            <div class="watch-att-stat-val" id="watch-stat-pct" style="color: var(--primary);">--</div>
+            <div class="watch-att-stat-sub">Overall section percentage</div>
+          </div>
+          <div class="watch-att-stat-card">
+            <div class="watch-att-stat-label">Classes Conducted</div>
+            <div class="watch-att-stat-val" id="watch-stat-conducted">0</div>
+            <div class="watch-att-stat-sub">Completed sessions</div>
+          </div>
+          <div class="watch-att-stat-card">
+            <div class="watch-att-stat-label">Students Present</div>
+            <div class="watch-att-stat-val" id="watch-stat-present" style="color: var(--success);">0</div>
+            <div class="watch-att-stat-sub">Cumulative attendance marks</div>
+          </div>
+          <div class="watch-att-stat-card">
+            <div class="watch-att-stat-label">Students Absent</div>
+            <div class="watch-att-stat-val" id="watch-stat-absent" style="color: var(--danger);">0</div>
+            <div class="watch-att-stat-sub">Cumulative absence marks</div>
+          </div>
+          <div class="watch-att-stat-card">
+            <div class="watch-att-stat-label">Below 75%</div>
+            <div class="watch-att-stat-val" id="watch-stat-risk" style="color: var(--warning);">0</div>
+            <div class="watch-att-stat-sub">Students requiring follow-up</div>
+          </div>
         </div>
       </div>
 
-      <!-- Department Overview KPI Row -->
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-header">
-            <span class="stat-label">Today's Avg Attendance</span>
-            <div class="stat-icon-wrap" style="color: var(--primary);"><i data-lucide="percent" class="icon-sm"></i></div>
-          </div>
-          <div class="stat-value" id="overview-stat-avg" style="color: var(--primary);">--</div>
-          <div class="stat-sub">No recorded sessions yet</div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-header">
-            <span class="stat-label">Students Present Today</span>
-            <div class="stat-icon-wrap" style="color: var(--success);"><i data-lucide="user-check" class="icon-sm"></i></div>
-          </div>
-          <div class="stat-value" id="overview-stat-present" style="color: var(--success);">0</div>
-          <div class="stat-sub" id="overview-stat-present-sub">Out of 252 enrolled CSE students</div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-header">
-            <span class="stat-label">Students Absent Today</span>
-            <div class="stat-icon-wrap" style="color: var(--danger);"><i data-lucide="user-x" class="icon-sm"></i></div>
-          </div>
-          <div class="stat-value" id="overview-stat-absent" style="color: var(--danger);">0</div>
-          <div class="stat-sub" id="overview-stat-absent-sub">Across Sections A (60), B (59), C (66), D (67)</div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-header">
-            <span class="stat-label">Students At Risk</span>
-            <div class="stat-icon-wrap" style="color: var(--warning);"><i data-lucide="alert-triangle" class="icon-sm"></i></div>
-          </div>
-          <div class="stat-value" id="overview-stat-risk" style="color: var(--danger);">0</div>
-          <div class="stat-sub">Pre-commencement (no defaulters)</div>
-        </div>
-      </div>
-
-      <!-- Class / Session Attendance Summaries -->
-      <div class="card" style="margin-bottom: 24px;">
-        <div class="chart-header">
+      <!-- Students List for Selected Section -->
+      <div class="card" style="margin-bottom: 24px; border: 1px solid var(--border); background: var(--surface);">
+        <div class="chart-header" style="flex-wrap: wrap; gap: 12px; padding: 18px 24px;">
           <div>
-            <div class="chart-title">Class / Session Attendance Summaries</div>
-            <div class="chart-sub">Recent lecture compliance rates and faculty session logs</div>
+            <div class="chart-title" style="display: flex; align-items: center; gap: 8px;">
+              <span>Student Attendance &middot; Section <span id="watch-roster-sec-title">A</span></span>
+              <span class="badge" id="watch-roster-count-badge" style="background: var(--surface-muted); border: 1px solid var(--border); font-size: 11px;">60 Students</span>
+            </div>
+            <div class="chart-sub">Authoritative student attendance calculated from completed instructional sessions</div>
           </div>
-          <button class="btn btn-outline btn-sm" onclick="showPage('take-attendance', null)">
-            <i data-lucide="plus" class="icon-sm"></i>
-            <span>Record Session</span>
-          </button>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <input type="text" id="watch-roster-search" class="search-box" style="padding: 6px 12px; font-size: 12.5px; height: 34px; min-width: 220px;" placeholder="Search student by name or roll..." oninput="filterWatchStudents(this.value)"/>
+            <select id="watch-roster-filter" class="form-control" onchange="filterWatchStudents()" style="padding: 4px 8px; height: 34px; font-size: 12.5px; width: 140px;">
+              <option value="all">All Students</option>
+              <option value="compliant">Eligible (≥ 75%)</option>
+              <option value="defaulter">Below 75%</option>
+            </select>
+          </div>
         </div>
+
         <div class="table-responsive">
           <table class="data-table">
             <thead>
               <tr>
-                <th>Class / Section</th>
-                <th>Subject</th>
-                <th>Instructor</th>
-                <th>Time & Room</th>
+                <th style="width: 60px;">S.No</th>
+                <th>Student Name</th>
+                <th>Roll Number</th>
+                <th>Classes Attended</th>
                 <th>Attendance %</th>
                 <th>Status</th>
-                <th style="text-align: right;">Action</th>
+                <th style="text-align: right;">Inspect</th>
               </tr>
             </thead>
-            <tbody id="overview-sessions-body">
+            <tbody id="watch-student-table-body">
               <!-- Populated by JS -->
             </tbody>
           </table>
         </div>
       </div>
 
-      <!-- Recent Records & At-Risk Watchlist Row -->
-      <div class="charts-row">
-        <!-- Recent Attendance Log -->
-        <div class="card">
-          <div class="chart-header">
-            <div>
-              <div class="chart-title">Recent Attendance Records</div>
-              <div class="chart-sub">Latest individual student attendance entries</div>
-            </div>
-            <button class="btn btn-outline btn-sm" onclick="showPage('reports', null)">Full Reports</button>
-          </div>
-          <div class="table-responsive">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Student</th>
-                  <th>Roll No.</th>
-                  <th>Subject</th>
-                  <th>Status</th>
-                  <th>Marked At</th>
-                </tr>
-              </thead>
-              <tbody id="overview-records-body">
-                <!-- Populated by JS -->
-              </tbody>
-            </table>
+      <!-- Completed Sessions Log -->
+      <div class="card" style="padding: 20px 24px; border: 1px solid var(--border); background: var(--surface);">
+        <div class="chart-header" style="margin-bottom: 14px;">
+          <div>
+            <div class="chart-title">Completed Lecture Sessions</div>
+            <div class="chart-sub">Recent classroom attendance records for this section</div>
           </div>
         </div>
-
-        <!-- At-Risk Compliance Watchlist -->
-        <div class="card">
-          <div class="chart-header">
-            <div>
-              <div class="chart-title">At-Risk Students Watchlist</div>
-              <div class="chart-sub">Students requiring counseling (&lt; 75%)</div>
-            </div>
-            <span class="badge badge-risk">Compliance</span>
-          </div>
-          <div class="attention-list" id="overview-atrisk-list">
-            <!-- Populated by JS -->
-          </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Date &amp; Time</th>
+                <th>Period</th>
+                <th>Lecture</th>
+                <th>Present</th>
+                <th>Absent</th>
+                <th>Attendance %</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="watch-sessions-table-body">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
         </div>
       </div>
     </section>
@@ -1260,9 +966,15 @@
 
     <!-- ───────── PAGE 3: STUDENTS REGISTRY ───────── -->
     <section class="page" id="page-students">
-      <div class="page-header">
-        <h2 class="page-title-main">Student Registry</h2>
-        <div class="page-subtitle">Departmental enrolled student roster and academic attendance records &middot; 3rd Semester CSE (2026)</div>
+      <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+        <div>
+          <button class="btn btn-outline btn-sm" onclick="showPage('dashboard', null)" style="margin-bottom: 8px; display: inline-flex; align-items: center; gap: 6px;">
+            <i data-lucide="arrow-left" class="icon-xs"></i>
+            <span>Back to Dashboard</span>
+          </button>
+          <h2 class="page-title-main">Student Registry</h2>
+          <div class="page-subtitle">Departmental enrolled student roster and academic attendance records &middot; 3rd Semester CSE (2026)</div>
+        </div>
       </div>
 
       <div class="toolbar" style="flex-wrap: wrap; gap: 12px;">
@@ -1331,10 +1043,16 @@
     <section class="page" id="page-student-profile">
       <!-- Back to Roster Navigation Bar -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; flex-wrap: wrap; gap: 12px;">
-        <button class="btn btn-outline" onclick="showPage('students')" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600;">
-          <i data-lucide="arrow-left" class="icon-sm"></i>
-          <span>&larr; Back to Student Registry</span>
-        </button>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button class="btn btn-outline" onclick="showPage('dashboard')" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
+            <i data-lucide="home" class="icon-sm"></i>
+            <span>Dashboard</span>
+          </button>
+          <button class="btn btn-outline" onclick="showPage('students')" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600;">
+            <i data-lucide="arrow-left" class="icon-sm"></i>
+            <span>Back to Student Registry</span>
+          </button>
+        </div>
         <div style="display: flex; gap: 10px;">
           <button class="btn btn-outline btn-sm" onclick="window.print()" style="display: inline-flex; align-items: center; gap: 6px;">
             <i data-lucide="printer" class="icon-sm"></i>
@@ -1486,6 +1204,60 @@
           <div class="drawer-info-card" style="padding: 14px;">
             <div class="drawer-info-label">Live Attendance Rate</div>
             <div class="drawer-info-val" id="sp-pct" style="font-size: 18px; font-weight: 700;">--</div>
+        </div>
+      </div>
+
+      <!-- ── PHASE 8: STUDENT ATTENDANCE VISUALIZATIONS (REQUIREMENT 10) ──── -->
+      <div class="card" style="margin-bottom: 24px; padding: 24px; border: 1px solid var(--border); background: var(--surface);">
+        <div class="chart-header" style="margin-bottom: 16px;">
+          <div>
+            <h3 style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0;">Attendance Analytics &amp; Visualizations</h3>
+            <div class="chart-sub">Progress meter, present vs absent distribution, and monthly breakdown</div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+          <!-- A. Attendance Percentage Progress Bar -->
+          <div style="padding: 18px; background: var(--surface-muted); border-radius: var(--radius-md); border: 1px solid var(--border);">
+            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+              <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.04em;">Attendance Percentage</span>
+              <span id="sp-vis-pct-text" style="font-size: 22px; font-weight: 700; color: var(--primary);">--</span>
+            </div>
+            <div class="linear-progress-wrap">
+              <div class="linear-progress-fill" id="sp-vis-progress-bar" style="width: 0%;"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); margin-top: 6px;">
+              <span>Classes Attended: <strong id="sp-vis-classes-ratio">0 / 0</strong></span>
+              <span id="sp-vis-compliance-text" class="badge">Threshold: 75%</span>
+            </div>
+          </div>
+
+          <!-- B. Present vs Absent Visual Meter / Breakdown -->
+          <div style="padding: 18px; background: var(--surface-muted); border-radius: var(--radius-md); border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: space-between;">
+            <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.04em; margin-bottom: 10px;">Present vs Absent</div>
+            <div style="display: flex; align-items: center; justify-content: space-around; gap: 16px;">
+              <div style="text-align: center;">
+                <div id="sp-vis-present-count" style="font-size: 24px; font-weight: 700; color: var(--success);">0</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Present Classes</div>
+              </div>
+              <div style="height: 36px; width: 1px; background: var(--border);"></div>
+              <div style="text-align: center;">
+                <div id="sp-vis-absent-count" style="font-size: 24px; font-weight: 700; color: var(--danger);">0</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Absent Classes</div>
+              </div>
+            </div>
+            <div style="margin-top: 10px; height: 10px; background: var(--border); border-radius: var(--radius-full); overflow: hidden; display: flex;">
+              <div id="sp-vis-ratio-present-bar" style="height: 100%; background: var(--success); width: 0%;"></div>
+              <div id="sp-vis-ratio-absent-bar" style="height: 100%; background: var(--danger); width: 0%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- C. Monthly Attendance Breakdown (July, August, September, October, November, December) -->
+        <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border);">
+          <div style="font-size: 13px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px;">Monthly Attendance Record (Academic Session July&ndash;Dec 2026)</div>
+          <div class="monthly-attendance-grid" id="sp-monthly-attendance-grid">
+            <!-- Populated by JS for July, August, September, October, November, December -->
           </div>
         </div>
       </div>
@@ -2244,6 +2016,39 @@
       <div class="modal-footer">
         <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
         <button class="btn btn-primary" onclick="saveStudent()">Enroll Student</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TIMETABLE MODAL ────────────────────────────────────── -->
+  <div class="modal-overlay" id="timetable-modal-overlay" onclick="closeTimetableModal()" style="display: none;">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width: 840px; width: 95%;">
+      <div class="modal-header">
+        <div>
+          <span style="font-weight: 700; font-size: 16px;">Weekly Teaching Timetable</span>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;" id="tt-modal-fac-subtitle">Devbrat Sahu &middot; Operating System</div>
+        </div>
+        <button class="modal-close" onclick="closeTimetableModal()" aria-label="Close modal">
+          <i data-lucide="x" class="icon-sm"></i>
+        </button>
+      </div>
+      <div class="modal-body" style="max-height: 75vh; overflow-y: auto;">
+        <!-- Day Selector Tabs -->
+        <div class="schedule-day-tabs" style="display: flex; gap: 6px; margin-bottom: 16px; background: var(--surface-muted); padding: 4px; border-radius: var(--radius-sm);" id="tt-modal-day-tabs">
+          <button type="button" class="btn btn-ghost btn-xs sched-tab" data-day="Monday" onclick="selectModalScheduleDay('Monday')">Mon</button>
+          <button type="button" class="btn btn-ghost btn-xs sched-tab" data-day="Tuesday" onclick="selectModalScheduleDay('Tuesday')">Tue</button>
+          <button type="button" class="btn btn-ghost btn-xs sched-tab" data-day="Wednesday" onclick="selectModalScheduleDay('Wednesday')">Wed</button>
+          <button type="button" class="btn btn-ghost btn-xs sched-tab" data-day="Thursday" onclick="selectModalScheduleDay('Thursday')">Thu</button>
+          <button type="button" class="btn btn-ghost btn-xs sched-tab" data-day="Friday" onclick="selectModalScheduleDay('Friday')">Fri</button>
+          <button type="button" class="btn btn-ghost btn-xs sched-tab" data-day="Saturday" onclick="selectModalScheduleDay('Saturday')">Sat</button>
+        </div>
+        <div id="tt-modal-schedule-list" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px;">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 11.5px; color: var(--text-muted);">CSVTU Scheme 2024 &middot; Effective 17/08/2026</span>
+        <button class="btn btn-outline btn-sm" onclick="closeTimetableModal()">Close</button>
       </div>
     </div>
   </div>

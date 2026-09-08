@@ -947,6 +947,608 @@ function startAttendanceFromTimetable(subject, section, period, timeDisplay) {
   showToast(`Timetable context applied: ${period} (${timeDisplay}) · Section ${section}`);
 }
 
+// ── PHASE 8: FACULTY-FIRST SIMPLIFIED DASHBOARD & WATCH ATTENDANCE ENGINE ──
+
+/**
+ * Requirement 13: Real dynamic greeting generated from local time
+ * Time ranges:
+ *   05:00–11:59 -> Good morning
+ *   12:00–16:59 -> Good afternoon
+ *   17:00–20:59 -> Good evening
+ *   21:00–04:59 -> Good evening
+ */
+function getDynamicGreeting(facultyName) {
+  const now = new Date();
+  const h = now.getHours();
+  const m = now.getMinutes();
+  const totalMins = h * 60 + m;
+
+  let greetingWord = 'Good evening';
+  if (totalMins >= 5 * 60 && totalMins < 12 * 60) {
+    greetingWord = 'Good morning';
+  } else if (totalMins >= 12 * 60 && totalMins < 17 * 60) {
+    greetingWord = 'Good afternoon';
+  } else if (totalMins >= 17 * 60 && totalMins < 21 * 60) {
+    greetingWord = 'Good evening';
+  } else {
+    greetingWord = 'Good evening';
+  }
+
+  let formattedName = 'Sir';
+  if (facultyName) {
+    const raw = typeof facultyName === 'string' ? facultyName : (facultyName.name || facultyName.facultyName || '');
+    if (raw.includes('Devbrat')) formattedName = 'Devbrat Sir';
+    else if (raw.includes('Pranjali')) formattedName = 'Pranjali Ma\'am';
+    else if (raw.includes('Vaibhav')) formattedName = 'Vaibhav Sir';
+    else if (raw.includes('Suman')) formattedName = 'Suman Sir';
+    else if (raw.includes('Navdeep')) formattedName = 'Navdeep Sir';
+    else if (raw.includes('Anand')) formattedName = 'Anand Sir';
+    else {
+      const clean = raw.replace(/^(Dr\.|Mr\.|Mrs\.|Prof\.)\s*/i, '').trim();
+      const first = clean.split(' ')[0];
+      formattedName = first ? `${first} Sir` : 'Sir';
+    }
+  }
+
+  return `${greetingWord}, ${formattedName}`;
+}
+
+function updateDashboardGreeting() {
+  const titleEl = document.getElementById('dash-greeting-title');
+  if (!titleEl) return;
+  const facName = (CURRENT_USER && (CURRENT_USER.facultyName || CURRENT_USER.name)) || 'Devbrat Sahu';
+  titleEl.textContent = getDynamicGreeting(facName);
+}
+
+// Auto-refresh dynamic greeting across time boundaries without requiring page reload
+if (typeof window !== 'undefined' && !window._dashGreetingTimer) {
+  window._dashGreetingTimer = setInterval(() => {
+    updateDashboardGreeting();
+  }, 60000);
+}
+
+/**
+ * Match an attendance session to a scheduled slot
+ */
+function findSessionForSlot(slot, targetDateStr = null) {
+  if (!slot) return null;
+  const dateStr = targetDateStr || new Date().toISOString().split('T')[0];
+  return (SESSIONS_DATA || []).find(s => {
+    if (s.status !== 'completed') return false;
+    const secMatch = (s.sec || s.section) === slot.section;
+    const subjMatch = (s.course === slot.subjectName || s.subject === slot.subjectName || s.subjectCodeShort === slot.subjectCodeShort);
+    const periodMatch = (s.period === slot.period || s.period === `Period ${slot.period}` || s.timetableEntryId === slot.id);
+    const dateMatch = !s.date || s.date === dateStr || s.date === 'Today';
+    return secMatch && subjMatch && (periodMatch || dateMatch);
+  });
+}
+
+/**
+ * Requirement 4 & 5: Render today's scheduled lectures and visualize 7-period capacity
+ */
+function renderTodayLectures(selectedDay) {
+  if (!CURRENT_USER || CURRENT_USER.role !== 'faculty') return;
+
+  const now = new Date();
+  const day = selectedDay || CURRENT_SCHEDULE_DAY || getSystemDayOfWeek(now);
+  const facName = CURRENT_USER.facultyName;
+
+  // Day badge & date display
+  const dayBadge = document.getElementById('dash-today-day-badge');
+  if (dayBadge) {
+    const dateFormatted = now.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    dayBadge.textContent = `${day} · ${dateFormatted}`;
+  }
+
+  // Get timetable entries for today
+  const entries = getTimetableEntriesForFaculty(facName, day, null)
+    .sort((a, b) => timeStringToMinutes(a.startTime) - timeStringToMinutes(b.startTime));
+
+  const slotsBadge = document.getElementById('dash-today-slots-badge');
+  if (slotsBadge) {
+    slotsBadge.textContent = `${entries.length} Scheduled Slot${entries.length === 1 ? '' : 's'}`;
+  }
+
+  // Populate Daily Lecture Capacity Visualizer Pills [1] [2] [3] [4] [5] [6] [7]
+  const capacityContainer = document.getElementById('daily-capacity-pills');
+  if (capacityContainer) {
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    const periodMap = {
+      1: ['I', 9 * 60, 9 * 60 + 50],
+      2: ['II', 9 * 60 + 50, 10 * 60 + 40],
+      3: ['III', 10 * 60 + 40, 11 * 60 + 30],
+      4: ['IV', 11 * 60 + 30, 12 * 60 + 20],
+      5: ['V', 13 * 60 + 10, 14 * 60],
+      6: ['VI', 14 * 60, 14 * 60 + 50],
+      7: ['VII', 14 * 60 + 50, 15 * 60 + 40]
+    };
+
+    let pillsHtml = '';
+    for (let p = 1; p <= 7; p++) {
+      const [roman, pStart, pEnd] = periodMap[p];
+      const hasSlot = entries.find(e => {
+        if (e.period === roman) return true;
+        if (e.period === 'III–IV' && (p === 3 || p === 4)) return true;
+        return false;
+      });
+
+      let pillClass = 'capacity-pill free';
+      let pillTitle = `Period ${p}: Free`;
+      if (hasSlot) {
+        const completedSess = findSessionForSlot(hasSlot);
+        if (completedSess) {
+          pillClass = 'capacity-pill completed';
+          pillTitle = `Period ${p}: ${hasSlot.subjectCodeShort}-${hasSlot.section} (Completed)`;
+        } else if (pStart <= nowMin && nowMin < pEnd) {
+          pillClass = 'capacity-pill current';
+          pillTitle = `Period ${p}: ${hasSlot.subjectCodeShort}-${hasSlot.section} (Current)`;
+        } else {
+          pillClass = 'capacity-pill scheduled';
+          pillTitle = `Period ${p}: ${hasSlot.subjectCodeShort}-${hasSlot.section} (Scheduled)`;
+        }
+      }
+      pillsHtml += `<div class="${pillClass}" title="${escapeHtml(pillTitle)}">${p}</div>`;
+    }
+    capacityContainer.innerHTML = pillsHtml;
+  }
+
+  // Populate Today's Lecture Cards Grid
+  const grid = document.getElementById('today-lectures-grid');
+  if (!grid) return;
+
+  if (entries.length === 0) {
+    grid.innerHTML = `
+      <div style="grid-column: 1 / -1; padding: 32px 20px; text-align: center; background: var(--surface-muted); border-radius: var(--radius-md); border: 1px dashed var(--border); color: var(--text-muted); font-size: 13.5px;">
+        <i data-lucide="calendar-check" class="icon-md" style="margin-bottom: 8px; display: inline-block;"></i>
+        <div style="font-size: 15px; font-weight: 600; color: var(--text-primary);">No Scheduled Lectures for Today</div>
+        <div style="margin-top: 4px;">You have no instructional classes configured for <strong>${day}</strong> in the departmental timetable.</div>
+        <button class="btn btn-outline btn-sm" onclick="openTimetableModalOrView()" style="margin-top: 14px; display: inline-flex; align-items: center; gap: 6px;">
+          <i data-lucide="calendar" class="icon-xs"></i>
+          <span>View Weekly Timetable</span>
+        </button>
+      </div>
+    `;
+    refreshIcons();
+    return;
+  }
+
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+
+  grid.innerHTML = entries.map((e, index) => {
+    const sMin = timeStringToMinutes(e.startTime);
+    const eMin = timeStringToMinutes(e.endTime);
+    const completedSess = findSessionForSlot(e);
+    const isCompleted = !!completedSess;
+    const isCurrent = !isCompleted && (sMin <= nowMin && nowMin < eMin);
+
+    let cardStateClass = 'state-upcoming';
+    let badgeHtml = `<span class="badge" style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border); font-size: 11px;">UPCOMING</span>`;
+    let actionHtml = '';
+
+    if (isCompleted) {
+      cardStateClass = 'state-completed';
+      const presCount = completedSess ? completedSess.present : 0;
+      const totCount = completedSess ? completedSess.total : (e.section === 'A' ? 60 : 59);
+      badgeHtml = `<span class="badge" style="background: var(--success-subtle); color: var(--success); border: 1px solid var(--success-border); font-size: 11px; font-weight: 700;">COMPLETED</span>`;
+      actionHtml = `
+        <div class="slot-completed-badge">
+          <i data-lucide="check-circle-2" class="icon-xs"></i>
+          <span>Completed (${presCount}/${totCount} Present)</span>
+        </div>
+      `;
+    } else if (isCurrent) {
+      cardStateClass = 'state-current';
+      badgeHtml = `<span class="badge" style="background: var(--primary-subtle); color: var(--primary); border: 1px solid var(--primary-border); font-size: 11px; font-weight: 700;">CURRENT LECTURE</span>`;
+      actionHtml = `
+        <button type="button" class="btn btn-primary btn-take-lecture" onclick="startAttendanceFromTimetable('${escapeHtml(e.subjectName)}', '${escapeHtml(e.section)}', 'Period ${escapeHtml(e.period)}', '${escapeHtml(e.timeDisplay)}')">
+          <i data-lucide="check-square" class="icon-xs"></i>
+          <span>Take Attendance &rarr;</span>
+        </button>
+      `;
+    } else {
+      cardStateClass = 'state-upcoming';
+      actionHtml = `
+        <button type="button" class="btn btn-outline btn-take-lecture" onclick="startAttendanceFromTimetable('${escapeHtml(e.subjectName)}', '${escapeHtml(e.section)}', 'Period ${escapeHtml(e.period)}', '${escapeHtml(e.timeDisplay)}')">
+          <i data-lucide="check-square" class="icon-xs"></i>
+          <span>Take Attendance</span>
+        </button>
+      `;
+    }
+
+    return `
+      <div class="today-lecture-card ${cardStateClass}">
+        <div>
+          <div class="lecture-card-top">
+            <span class="lecture-slot-pill">[${index + 1}] Period ${escapeHtml(e.period)} &middot; ${escapeHtml(e.timeDisplay)}</span>
+            ${badgeHtml}
+          </div>
+          <h4 class="lecture-subject-title">${escapeHtml(e.subjectName)}</h4>
+          <div class="lecture-meta-line">
+            <span>Section <strong>${escapeHtml(e.section)}</strong></span>
+            <span>&middot;</span>
+            <span>Room: <strong>${escapeHtml(e.room)}</strong></span>
+            <span>&middot;</span>
+            <span style="text-transform: capitalize;">${escapeHtml(e.type)}</span>
+          </div>
+        </div>
+        <div class="lecture-action-wrap">
+          ${actionHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  refreshIcons();
+}
+
+/**
+ * Requirement 3 & 6: Fastest 1-click primary Take Attendance launcher
+ */
+function handlePrimaryTakeAttendance() {
+  if (!CURRENT_USER || CURRENT_USER.role !== 'faculty') {
+    showPage('take-attendance', null);
+    return;
+  }
+
+  const now = new Date();
+  const day = CURRENT_SCHEDULE_DAY || getSystemDayOfWeek(now);
+  const entries = getTimetableEntriesForFaculty(CURRENT_USER.facultyName, day, null)
+    .sort((a, b) => timeStringToMinutes(a.startTime) - timeStringToMinutes(b.startTime));
+
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+
+  // 1. Look for currently running slot that is uncompleted
+  const currentSlot = entries.find(e => {
+    const sMin = timeStringToMinutes(e.startTime);
+    const eMin = timeStringToMinutes(e.endTime);
+    return sMin <= nowMin && nowMin < eMin && !findSessionForSlot(e);
+  });
+
+  if (currentSlot) {
+    startAttendanceFromTimetable(currentSlot.subjectName, currentSlot.section, `Period ${currentSlot.period}`, currentSlot.timeDisplay);
+    return;
+  }
+
+  // 2. Look for next uncompleted upcoming slot
+  const nextSlot = entries.find(e => {
+    const sMin = timeStringToMinutes(e.startTime);
+    return sMin > nowMin && !findSessionForSlot(e);
+  });
+
+  if (nextSlot) {
+    startAttendanceFromTimetable(nextSlot.subjectName, nextSlot.section, `Period ${nextSlot.period}`, nextSlot.timeDisplay);
+    return;
+  }
+
+  // 3. Fallback: first uncompleted slot today
+  const anyPendingSlot = entries.find(e => !findSessionForSlot(e));
+  if (anyPendingSlot) {
+    startAttendanceFromTimetable(anyPendingSlot.subjectName, anyPendingSlot.section, `Period ${anyPendingSlot.period}`, anyPendingSlot.timeDisplay);
+    return;
+  }
+
+  // If all completed or no slots, open workspace
+  showPage('take-attendance', null);
+}
+
+/**
+ * Requirement 8, 11, 12: Watch Attendance in plain academic language
+ */
+let CURRENT_WATCH_SECTION = 'A';
+
+function onWatchSectionChange(sec) {
+  CURRENT_WATCH_SECTION = sec;
+  renderWatchAttendancePage(sec);
+}
+
+function renderWatchAttendancePage(selectedSec) {
+  const sec = selectedSec || CURRENT_WATCH_SECTION || 'A';
+  CURRENT_WATCH_SECTION = sec;
+
+  const subj = (CURRENT_USER && CURRENT_USER.subjectName) || 'Operating System';
+  const fac = (CURRENT_USER && CURRENT_USER.facultyName) || 'Devbrat Sahu';
+
+  const subjTitle = document.getElementById('watch-subject-title');
+  const facBadge = document.getElementById('watch-faculty-badge');
+  const secSelect = document.getElementById('watch-section-select');
+  const secTitle = document.getElementById('watch-roster-sec-title');
+
+  if (subjTitle) subjTitle.textContent = subj;
+  if (facBadge) facBadge.textContent = fac;
+  if (secSelect && secSelect.value !== sec) secSelect.value = sec;
+  if (secTitle) secTitle.textContent = sec;
+
+  const metrics = calculateLiveSectionMetrics(subj, sec);
+
+  const statPct = document.getElementById('watch-stat-pct');
+  const statConducted = document.getElementById('watch-stat-conducted');
+  const statPresent = document.getElementById('watch-stat-present');
+  const statAbsent = document.getElementById('watch-stat-absent');
+  const statRisk = document.getElementById('watch-stat-risk');
+  const statEnrolled = document.getElementById('watch-stat-enrolled');
+
+  if (statEnrolled) statEnrolled.textContent = metrics.studentStats.length;
+  if (statPct) statPct.textContent = metrics.avgPct !== null ? `${metrics.avgPct}%` : '—';
+  if (statConducted) statConducted.textContent = metrics.conductedCount;
+  if (statPresent) statPresent.textContent = metrics.presentToday !== null ? metrics.presentToday : (metrics.conductedCount > 0 ? metrics.studentStats.reduce((a, s) => a + s.attended, 0) : 0);
+  if (statAbsent) statAbsent.textContent = metrics.absentToday !== null ? metrics.absentToday : (metrics.conductedCount > 0 ? metrics.studentStats.reduce((a, s) => a + s.absent, 0) : 0);
+  if (statRisk) statRisk.textContent = metrics.atRiskCount !== null ? metrics.atRiskCount : 0;
+
+  renderWatchStudentsTable(metrics.studentStats, sec);
+  renderWatchSessionsList(subj, sec);
+  refreshIcons();
+}
+
+function renderWatchStudentsTable(studentStats, sec) {
+  const tbody = document.getElementById('watch-student-table-body');
+  const countBadge = document.getElementById('watch-roster-count-badge');
+  if (countBadge) countBadge.textContent = `${studentStats.length} Students`;
+  if (!tbody) return;
+
+  if (studentStats.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 24px; color: var(--text-muted);">No students enrolled in Section ${sec}.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = studentStats.map((s, idx) => {
+    const isCompliant = s.pct !== null ? s.pct >= ATTENDANCE_THRESHOLD : true;
+    const pctDisplay = s.pct !== null ? `${s.pct}%` : '—';
+    const attendedDisplay = s.total > 0 ? `${s.attended} / ${s.total}` : '— / 0';
+    const statusText = s.total === 0 ? 'Pending Sessions' : (isCompliant ? 'Eligible (≥ 75%)' : 'Below 75%');
+    const statusClass = s.total === 0 ? 'badge' : (isCompliant ? 'badge-ok' : 'badge-risk');
+
+    return `
+      <tr>
+        <td style="color: var(--text-muted); font-weight: 500;">${idx + 1}</td>
+        <td>
+          <button type="button" class="student-link-btn" onclick="openStudentProfile(${s.id || `'${s.roll}'`})" style="background: none; border: none; padding: 0; color: var(--text-primary); font-weight: 600; cursor: pointer; text-align: left;">
+            ${escapeHtml(s.name)}
+          </button>
+        </td>
+        <td><code>${escapeHtml(s.roll)}</code></td>
+        <td style="font-weight: 600;">${attendedDisplay}</td>
+        <td>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <strong style="color: ${s.pct !== null ? (isCompliant ? 'var(--text-primary)' : 'var(--danger)') : 'var(--text-muted)'}; min-width: 44px;">${pctDisplay}</strong>
+            ${s.pct !== null ? `<div style="width: 60px; height: 6px; background: var(--surface-muted); border-radius: var(--radius-full); overflow: hidden; border: 1px solid var(--border);"><div style="height: 100%; width: ${s.pct}%; background: ${isCompliant ? 'var(--success)' : 'var(--danger)'};"></div></div>` : ''}
+          </div>
+        </td>
+        <td><span class="badge ${statusClass}">${statusText}</span></td>
+        <td style="text-align: right;">
+          <button class="btn btn-outline btn-xs" onclick="openStudentProfile(${s.id || `'${s.roll}'`})" style="gap: 4px; padding: 4px 8px;">
+            <i data-lucide="eye" class="icon-xs"></i>
+            <span>Inspect</span>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderWatchSessionsList(subj, sec) {
+  const tbody = document.getElementById('watch-sessions-table-body');
+  if (!tbody) return;
+
+  const completed = (SESSIONS_DATA || []).filter(s =>
+    s.status === 'completed' &&
+    (s.sec === sec || s.section === sec) &&
+    (s.subject === subj || s.course === subj || s.subjectName === subj)
+  );
+
+  if (completed.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 24px; color: var(--text-muted);">No attendance sessions recorded yet for ${escapeHtml(subj)} Section ${sec}.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = completed.map(s => {
+    const pct = s.pct !== undefined ? `${s.pct}%` : '—';
+    return `
+      <tr>
+        <td><strong>${escapeHtml(s.date || 'Today')}</strong> <span style="color: var(--text-muted); font-size: 12px;">(${escapeHtml(s.time || '')})</span></td>
+        <td><span class="badge" style="background: var(--surface-muted); border: 1px solid var(--border); font-size: 11px;">Period ${escapeHtml(s.period || 'I')}</span></td>
+        <td><strong>Lecture ${escapeHtml(s.lectureNumber || s.lectureNo || 1)}</strong></td>
+        <td style="color: var(--success); font-weight: 600;">${s.present || 0}</td>
+        <td style="color: var(--danger); font-weight: 600;">${s.absent || 0}</td>
+        <td><strong>${pct}</strong></td>
+        <td><span class="badge badge-ok">COMPLETED</span></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function filterWatchStudents(searchVal) {
+  const query = (searchVal !== undefined ? searchVal : (document.getElementById('watch-roster-search')?.value || '')).toLowerCase().trim();
+  const filterType = document.getElementById('watch-roster-filter')?.value || 'all';
+  const sec = CURRENT_WATCH_SECTION || 'A';
+  const subj = (CURRENT_USER && CURRENT_USER.subjectName) || 'Operating System';
+  const metrics = calculateLiveSectionMetrics(subj, sec);
+
+  let filtered = metrics.studentStats;
+  if (query) {
+    filtered = filtered.filter(s =>
+      s.name.toLowerCase().includes(query) ||
+      s.roll.toLowerCase().includes(query)
+    );
+  }
+  if (filterType === 'compliant') {
+    filtered = filtered.filter(s => s.pct !== null && s.pct >= ATTENDANCE_THRESHOLD);
+  } else if (filterType === 'defaulter') {
+    filtered = filtered.filter(s => s.pct !== null && s.pct < ATTENDANCE_THRESHOLD);
+  }
+
+  renderWatchStudentsTable(filtered, sec);
+  refreshIcons();
+}
+
+/**
+ * Requirement 10: Student Attendance Visualizations
+ */
+function renderStudentAttendanceVisualizations(student, livePct, liveAttendedCount, liveMissedCount, totalCompleted) {
+  // A. Linear Progress Bar
+  const pctText = document.getElementById('sp-vis-pct-text');
+  const progressBar = document.getElementById('sp-vis-progress-bar');
+  const ratioText = document.getElementById('sp-vis-classes-ratio');
+  const complianceBadge = document.getElementById('sp-vis-compliance-text');
+
+  const isCompliant = livePct !== null && livePct >= ATTENDANCE_THRESHOLD;
+
+  if (pctText) pctText.textContent = livePct !== null ? `${livePct}%` : '--';
+  if (progressBar) {
+    progressBar.style.width = livePct !== null ? `${livePct}%` : '0%';
+    progressBar.className = `linear-progress-fill ${totalCompleted === 0 ? '' : (isCompliant ? 'status-ok' : 'status-low')}`;
+  }
+  if (ratioText) {
+    ratioText.textContent = totalCompleted > 0 ? `${liveAttendedCount} / ${totalCompleted}` : '-- / 0';
+  }
+  if (complianceBadge) {
+    if (totalCompleted === 0) {
+      complianceBadge.textContent = 'Pre-Commencement';
+      complianceBadge.className = 'badge';
+    } else if (isCompliant) {
+      complianceBadge.textContent = 'Eligible (≥ 75%)';
+      complianceBadge.className = 'badge badge-ok';
+    } else {
+      complianceBadge.textContent = 'Below Threshold (< 75%)';
+      complianceBadge.className = 'badge badge-risk';
+    }
+  }
+
+  // B. Present vs Absent Visual Breakdown
+  const presEl = document.getElementById('sp-vis-present-count');
+  const absEl = document.getElementById('sp-vis-absent-count');
+  const presBar = document.getElementById('sp-vis-ratio-present-bar');
+  const absBar = document.getElementById('sp-vis-ratio-absent-bar');
+
+  if (presEl) presEl.textContent = liveAttendedCount;
+  if (absEl) absEl.textContent = liveMissedCount;
+
+  if (presBar && absBar) {
+    if (totalCompleted > 0) {
+      const presPct = (liveAttendedCount / totalCompleted) * 100;
+      const absPct = (liveMissedCount / totalCompleted) * 100;
+      presBar.style.width = `${presPct}%`;
+      absBar.style.width = `${absPct}%`;
+    } else {
+      presBar.style.width = '0%';
+      absBar.style.width = '0%';
+    }
+  }
+
+  // C. Monthly Attendance Breakdown (July, August, September, October, November, December)
+  const monthlyGrid = document.getElementById('sp-monthly-attendance-grid');
+  if (monthlyGrid) {
+    const months = [
+      { name: 'July', monthNum: 7 },
+      { name: 'August', monthNum: 8 },
+      { name: 'September', monthNum: 9 },
+      { name: 'October', monthNum: 10 },
+      { name: 'November', monthNum: 11 },
+      { name: 'December', monthNum: 12 }
+    ];
+
+    const sectionSessions = (SESSIONS_DATA || []).filter(s => s.status === 'completed' && s.sec === student.sec);
+
+    monthlyGrid.innerHTML = months.map(m => {
+      const monthSessions = sectionSessions.filter(s => {
+        if (!s.date) return false;
+        const d = new Date(s.date);
+        return !isNaN(d.getTime()) ? (d.getMonth() + 1 === m.monthNum) : false;
+      });
+
+      const conducted = monthSessions.length;
+      let attended = 0;
+      monthSessions.forEach(sess => {
+        const liveRec = (typeof LIVE_ATTENDANCE_RECORDS !== 'undefined')
+          ? LIVE_ATTENDANCE_RECORDS.find(r => r.id === sess.id || (r.lectureNo === sess.lectureNo && r.subject === sess.subject && r.sec === sess.sec))
+          : null;
+        if (liveRec && liveRec.studentRecords) {
+          const sr = liveRec.studentRecords.find(r => r.roll === student.roll || r.studentId === student.roll);
+          if (sr && (sr.status || '').toUpperCase() === 'PRESENT') attended++;
+        }
+      });
+
+      const pct = conducted > 0 ? Number(((attended / conducted) * 100).toFixed(1)) : null;
+      const pctDisplay = pct !== null ? `${pct}%` : '—';
+      const countsDisplay = conducted > 0 ? `${attended} / ${conducted} Attended` : 'No Sessions';
+
+      return `
+        <div class="monthly-card">
+          <div class="monthly-name">${m.name}</div>
+          <div class="monthly-pct" style="color: ${pct !== null ? (pct >= ATTENDANCE_THRESHOLD ? 'var(--success)' : 'var(--danger)') : 'var(--text-muted)'};">${pctDisplay}</div>
+          <div class="monthly-counts">${countsDisplay}</div>
+        </div>
+      `;
+    }).join('');
+  }
+}
+
+/**
+ * Timetable Modal Management
+ */
+let CURRENT_MODAL_SCHEDULE_DAY = 'Monday';
+
+function openTimetableModalOrView(day) {
+  const modal = document.getElementById('timetable-modal-overlay');
+  if (!modal) return;
+  const targetDay = day || CURRENT_SCHEDULE_DAY || getSystemDayOfWeek();
+  CURRENT_MODAL_SCHEDULE_DAY = targetDay;
+  modal.style.display = 'flex';
+
+  const subEl = document.getElementById('tt-modal-fac-subtitle');
+  if (subEl && CURRENT_USER) {
+    subEl.textContent = `${CURRENT_USER.facultyName} · ${CURRENT_USER.subjectName} · Department of CSE`;
+  }
+
+  selectModalScheduleDay(targetDay);
+  refreshIcons();
+}
+
+function closeTimetableModal() {
+  const modal = document.getElementById('timetable-modal-overlay');
+  if (modal) modal.style.display = 'none';
+}
+
+function selectModalScheduleDay(day) {
+  CURRENT_MODAL_SCHEDULE_DAY = day;
+  document.querySelectorAll('#tt-modal-day-tabs .sched-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.day === day);
+  });
+
+  const listEl = document.getElementById('tt-modal-schedule-list');
+  if (!listEl) return;
+
+  const facName = (CURRENT_USER && CURRENT_USER.facultyName) || 'Devbrat Sahu';
+  const entries = getTimetableEntriesForFaculty(facName, day, null)
+    .sort((a, b) => timeStringToMinutes(a.startTime) - timeStringToMinutes(b.startTime));
+
+  if (entries.length === 0) {
+    listEl.innerHTML = `
+      <div style="grid-column: 1 / -1; padding: 24px; text-align: center; background: var(--surface-muted); border-radius: var(--radius-sm); border: 1px dashed var(--border); color: var(--text-muted); font-size: 13px;">
+        <i data-lucide="calendar-off" class="icon-sm" style="margin-bottom: 6px; display: inline-block;"></i>
+        <div>No instructional classes scheduled on <strong>${day}</strong>.</div>
+      </div>
+    `;
+    refreshIcons();
+    return;
+  }
+
+  listEl.innerHTML = entries.map(e => `
+    <div class="card" style="padding: 14px 16px; border: 1px solid var(--border); background: var(--surface); border-left: 3px solid ${e.type === 'lab' ? 'var(--warning)' : 'var(--primary)'};">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span class="badge" style="background: var(--primary-subtle); color: var(--primary); font-size: 11px; font-weight: 700;">Period ${escapeHtml(e.period)} (${escapeHtml(e.timeDisplay)})</span>
+        <span class="badge" style="background: var(--surface-muted); border: 1px solid var(--border); font-size: 11px;">Sec ${escapeHtml(e.section)}</span>
+      </div>
+      <div style="font-size: 14.5px; font-weight: 700; color: var(--text-primary); margin-top: 6px;">${escapeHtml(e.subjectName)}</div>
+      <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">Room: <strong>${escapeHtml(e.room)}</strong> &middot; ${escapeHtml(e.type)}</div>
+      <button class="btn btn-primary btn-xs" onclick="closeTimetableModal(); startAttendanceFromTimetable('${escapeHtml(e.subjectName)}', '${escapeHtml(e.section)}', 'Period ${escapeHtml(e.period)}', '${escapeHtml(e.timeDisplay)}')" style="margin-top: 10px; width: 100%; justify-content: center; gap: 6px;">
+        <i data-lucide="check-square" class="icon-xs"></i>
+        <span>Take Attendance &rarr;</span>
+      </button>
+    </div>
+  `).join('');
+  refreshIcons();
+}
+
 function getNextLectureNumber(subjectName, section) {
   return getCompletedLecturesCount(subjectName, section) + 1;
 }
@@ -1276,6 +1878,9 @@ function updateFacultyDashboardLiveMetrics() {
 
   // 6. Update Take Attendance header
   updateTakeAttendanceHeader();
+
+  // Phase 8: Refresh Today's Lectures & Capacity Visualizer
+  renderTodayLectures(CURRENT_SCHEDULE_DAY);
 }
 
 /**
@@ -1325,7 +1930,7 @@ function showPage(pageId, linkEl) {
 
   const titleMap = {
     dashboard: 'Dashboard',
-    attendance: 'Attendance Overview',
+    attendance: 'Watch Attendance',
     'take-attendance': 'Take Attendance',
     students: 'Student Registry',
     'student-profile': 'Student Profile',
@@ -1342,9 +1947,12 @@ function showPage(pageId, linkEl) {
 
   // Page lifecycle triggers
   if (pageId === 'dashboard') {
+    updateDashboardGreeting();
+    renderTodayLectures(CURRENT_SCHEDULE_DAY);
     initCharts();
   }
   if (pageId === 'attendance') {
+    renderWatchAttendancePage();
     renderAttendanceOverviewPage();
   }
   if (pageId === 'take-attendance') {
@@ -2232,17 +2840,17 @@ function renderSavedState() {
       </div>
 
       <div class="att-saved-actions">
-        <button class="btn btn-primary" onclick="resetAttendanceAction()">
+        <button class="btn btn-primary" onclick="showPage('dashboard', null)">
+          <i data-lucide="home" class="icon-sm"></i>
+          <span>Back to Dashboard</span>
+        </button>
+        <button class="btn btn-outline" onclick="resetAttendanceAction()">
           <i data-lucide="plus" class="icon-sm"></i>
           <span>Record Another Class</span>
         </button>
-        <button class="btn btn-outline" onclick="editCurrentAttendance()">
-          <i data-lucide="edit-3" class="icon-sm"></i>
-          <span>Review / Edit This Attendance</span>
-        </button>
         <button class="btn btn-outline" onclick="showPage('attendance', null)">
-          <i data-lucide="clipboard-check" class="icon-sm"></i>
-          <span>Go to Attendance Overview</span>
+          <i data-lucide="eye" class="icon-sm"></i>
+          <span>Watch Attendance</span>
         </button>
       </div>
     </div>
@@ -2875,6 +3483,9 @@ async function openStudentProfile(studentIdOrRoll) {
       }).join('');
     }
   }
+
+  // Phase 8 Requirement 10: Render Student Attendance Visualizations
+  renderStudentAttendanceVisualizations(student, livePct, liveAttendedCount, liveMissedCount, totalCompleted);
 
   // Navigate to full-screen profile page (NOT drawer/modal)
   showPage('student-profile', null);
@@ -4186,6 +4797,9 @@ function applySessionUI(session) {
     updateCurrentAndNextClassBanner();
     updateFacultyDashboardLiveMetrics();
     updateTakeAttendanceHeader();
+    updateDashboardGreeting();
+    renderTodayLectures(CURRENT_SCHEDULE_DAY);
+    renderWatchAttendancePage('A');
     showPage('dashboard', document.querySelector('#nav-group-faculty [data-page="dashboard"]'));
     initCharts();
   }
@@ -4996,6 +5610,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
   await initAuth();
   updateDate();
+  updateDashboardGreeting();
+  renderTodayLectures(CURRENT_SCHEDULE_DAY);
   renderStudents(STUDENTS);
   renderRecentAttendanceLogs();
   renderSessions();
