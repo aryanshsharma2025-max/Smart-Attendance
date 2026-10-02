@@ -260,7 +260,7 @@ const AcademicDataService = {
       assignedSubjects: dto.assignedSubjects || [finalSubject],
       assignedSections: dto.assignedSections || ['A', 'B'],
       sectionAllocationStatus: (dto.assignedSections && dto.assignedSections.length > 0)
-        ? `Sections ${dto.assignedSections.join(', ')} Confirmed (Sections C, D Pending)`
+        ? `Sections ${dto.assignedSections.join(', ')} Confirmed`
         : 'Section allocation pending'
     };
   },
@@ -270,7 +270,21 @@ const AcademicDataService = {
    * Preserves published tt-b-wed-55 entry exactly as supplied by backend without rewriting Anand Sir's conflict.
    */
   adaptTimetableEntry(dto) {
-    const initials = (dto.facultyName || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    const cleanName = (dto.facultyName || '').replace(/^(dr\.|mr\.|mrs\.|prof\.)\s+/i, '').trim();
+    let initials = '';
+    if (typeof AUTHORITATIVE_FACULTY !== 'undefined') {
+      const matchedFac = AUTHORITATIVE_FACULTY.find(f => 
+        (dto.facultyId && String(f.facultyId) === String(dto.facultyId)) ||
+        (f.name && f.name.toLowerCase() === (dto.facultyName || '').toLowerCase()) ||
+        (f.name && f.name.toLowerCase().replace(/^(dr\.|mr\.|mrs\.|prof\.)\s+/i, '').trim() === cleanName.toLowerCase())
+      );
+      if (matchedFac && matchedFac.shortCode) {
+        initials = matchedFac.shortCode;
+      }
+    }
+    if (!initials) {
+      initials = cleanName.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    }
     const cleanPeriod = (dto.period || '').replace(/\?+/g, '–');
     return {
       id: dto.timetableCode || `tt-${dto.id}`,
@@ -292,7 +306,7 @@ const AcademicDataService = {
       faculty: dto.facultyName,
       facultyName: dto.facultyName,
       facultyShort: initials,
-      facultyId: dto.facultyId,
+      facultyId: dto.facultyId ? String(dto.facultyId) : null,
       type: dto.type || 'lecture',
       room: dto.room || 'Room 201',
       effectiveDate: dto.effectiveDate || '17/08/2026'
@@ -481,6 +495,9 @@ const AcademicDataService = {
     try {
       return await apiClient.get(`/attendance/summary/student/${studentId}`);
     } catch (err) {
+      if (err && (err.status === 401 || err.status === 403)) {
+        throw err;
+      }
       console.warn(`[AcademicDataService] loadStudentSummary failed for student ${studentId}:`, err);
       return null;
     }
@@ -495,6 +512,9 @@ const AcademicDataService = {
       const data = await apiClient.get(`/attendance/history/student/${studentId}`);
       return Array.isArray(data) ? data : [];
     } catch (err) {
+      if (err && (err.status === 401 || err.status === 403)) {
+        throw err;
+      }
       console.warn(`[AcademicDataService] loadStudentHistory failed for student ${studentId}:`, err);
       return [];
     }
@@ -509,6 +529,9 @@ const AcademicDataService = {
       const query = courseId ? `?courseId=${courseId}` : '';
       return await apiClient.get(`/attendance/summary/section/${sectionParam}${query}`);
     } catch (err) {
+      if (err && (err.status === 401 || err.status === 403)) {
+        throw err;
+      }
       console.warn(`[AcademicDataService] loadSectionSummary failed for section ${sectionParam}:`, err);
       return null;
     }
@@ -753,14 +776,13 @@ function timeStringToMinutes(timeStr) {
 function getTimetableEntriesForFaculty(facultyNameOrId, day, section) {
   if (typeof TIMETABLE_ENTRIES === 'undefined') return [];
   const faculty = (typeof AUTHORITATIVE_FACULTY !== 'undefined')
-    ? AUTHORITATIVE_FACULTY.find(f => f.id === facultyNameOrId || f.name === facultyNameOrId || f.shortCode === facultyNameOrId)
+    ? AUTHORITATIVE_FACULTY.find(f => f.id === facultyNameOrId || f.name === facultyNameOrId || f.shortCode === facultyNameOrId || String(f.facultyId) === String(facultyNameOrId))
     : null;
 
-  const targetName = faculty ? faculty.name : facultyNameOrId;
-  const targetShort = faculty ? faculty.shortCode : facultyNameOrId;
+  const targetFac = faculty || (CURRENT_USER && CURRENT_USER.role === 'faculty' ? CURRENT_USER : { facultyName: facultyNameOrId, name: facultyNameOrId });
 
   return TIMETABLE_ENTRIES.filter(e => {
-    const matchFac = (e.facultyName === targetName) || (e.facultyShort === targetShort) || (e.facultyId === facultyNameOrId);
+    const matchFac = isFacultySlotAssigned(e, targetFac);
     const matchDay = !day || e.day.toLowerCase() === day.toLowerCase();
     const matchSec = !section || e.section.toUpperCase() === section.toUpperCase();
     return matchFac && matchDay && matchSec;
@@ -1671,24 +1693,45 @@ function isFacultySlotAssigned(entry, faculty) {
   if (!entry) return false;
   const fac = faculty || CURRENT_USER;
   if (!fac) return false;
+
   const facName = (fac.facultyName || fac.name || '').trim();
   const facShort = (fac.shortCode || fac.facultyShort || '').trim();
-  const facId = String(fac.facultyId || fac.id || '').trim();
+  const facId = String(fac.facultyId || '').trim();
+  const facCode = String(fac.facultyCode || fac.id || '').replace(/^faculty[-_]/i, '').trim();
 
-  // 1. Match by short code (e.g. DS, PS, VC, SS, NK)
-  if (entry.facultyShort && facShort && entry.facultyShort.toUpperCase() === facShort.toUpperCase()) return true;
+  const entryId = String(entry.facultyId || '').trim();
+  const entryName = (entry.facultyName || '').trim();
+  const entryShort = (entry.facultyShort || '').trim();
 
-  // 2. Match by faculty ID
-  if (entry.facultyId && facId && (entry.facultyId === facId || entry.facultyId === `faculty-${facId}` || String(entry.facultyId).replace('faculty-', '') === facId)) return true;
-
-  // 3. Match by faculty name (case-insensitive, ignoring honorific titles)
-  if (entry.facultyName && facName) {
-    const cleanEntry = entry.facultyName.toLowerCase().replace(/^(dr\.|mr\.|mrs\.|prof\.)\s*/i, '').trim();
-    const cleanFac = facName.toLowerCase().replace(/^(dr\.|mr\.|mrs\.|prof\.)\s*/i, '').trim();
-    if (cleanEntry === cleanFac || (cleanFac.length > 3 && cleanEntry.includes(cleanFac)) || (cleanEntry.length > 3 && cleanFac.includes(cleanEntry))) {
-      return true;
-    }
+  // 1. Authoritative numeric Faculty ID check
+  if (entryId && facId) {
+    const cleanEntryId = entryId.replace(/^faculty[-_]/i, '');
+    const cleanFacId = facId.replace(/^faculty[-_]/i, '');
+    if (cleanEntryId === cleanFacId) return true;
+    // Both have explicit faculty IDs and they do not match
+    return false;
   }
+
+  // 2. Authoritative facultyCode check (e.g. 'os', 'dm', 'web')
+  if (entryId && facCode) {
+    const cleanEntryId = entryId.replace(/^faculty[-_]/i, '');
+    if (cleanEntryId.toLowerCase() === facCode.toLowerCase()) return true;
+  }
+
+  // 3. Normalized Name Match (strip honorifics: Dr., Mr., Mrs., Prof.)
+  if (entryName && facName) {
+    const cleanEntry = entryName.toLowerCase().replace(/^(dr\.|mr\.|mrs\.|prof\.)\s*/i, '').trim();
+    const cleanFac = facName.toLowerCase().replace(/^(dr\.|mr\.|mrs\.|prof\.)\s*/i, '').trim();
+    if (cleanEntry === cleanFac) return true;
+    // Names are present and do not match
+    return false;
+  }
+
+  // 4. Short Code fallback (only if names/IDs were absent)
+  if (entryShort && facShort && entryShort.toUpperCase() === facShort.toUpperCase()) {
+    return true;
+  }
+
   return false;
 }
 
@@ -2762,7 +2805,12 @@ async function loadStudentsAction() {
     let roster = [];
     try {
       roster = await AcademicDataService.loadStudentsBySection(sec);
-    } catch (_) {}
+    } catch (err) {
+      if (err && (err.status === 401 || err.status === 403)) {
+        throw err;
+      }
+      console.warn('Backend student roster fetch failed, using fallback:', err);
+    }
     if (!roster || roster.length === 0) {
       roster = getRosterForClass(dept, sem, sec);
     }
@@ -3703,6 +3751,17 @@ function editCurrentAttendance() {
 
 // ── 9. FULL-SCREEN STUDENT PROFILE & DETAIL ENGINE ───────────
 async function openStudentProfile(studentIdOrRoll) {
+  // Authorization check: If logged in as student, can only view own profile
+  if (CURRENT_USER && CURRENT_USER.role === 'student') {
+    const myId = String(CURRENT_USER.studentId || CURRENT_USER.id || '').trim();
+    const myRoll = String(CURRENT_USER.rollNumber || CURRENT_USER.roll || CURRENT_USER.username || '').trim();
+    const target = String(studentIdOrRoll || '').trim();
+    if (target && target !== myId && target !== myRoll) {
+      showToast('Access Denied: Students are only authorized to view their own profile.', 'danger');
+      return;
+    }
+  }
+
   let student = null;
   if (typeof studentIdOrRoll === 'string') {
     const sIdStr = studentIdOrRoll.trim();
@@ -3714,9 +3773,9 @@ async function openStudentProfile(studentIdOrRoll) {
     student = ATTENDANCE_STATE.students.find(s => s.id === studentIdOrRoll || s.roll === studentIdOrRoll);
   }
   if (!student) {
-    student = STUDENTS[0];
+    showToast('Student record not found.', 'danger');
+    return;
   }
-  if (!student) return;
 
   // Set avatar initials
   const initials = student.name.split(' ').filter(Boolean).map(w => w[0]).join('').substring(0, 2).toUpperCase();
@@ -3826,6 +3885,10 @@ async function openStudentProfile(studentIdOrRoll) {
       try {
         backendSummary = await AcademicDataService.loadStudentSummary(student.id);
       } catch (err) {
+        if (err && (err.status === 403 || err.status === 401)) {
+          showToast('403 Forbidden: You are not authorized to view this student profile.', 'danger');
+          return;
+        }
         console.warn('Backend student summary read failed in profile:', err);
       }
     }
@@ -3833,6 +3896,10 @@ async function openStudentProfile(studentIdOrRoll) {
       try {
         studentHistory = await AcademicDataService.loadStudentHistory(student.id);
       } catch (err) {
+        if (err && (err.status === 403 || err.status === 401)) {
+          showToast('403 Forbidden: You are not authorized to view this student profile.', 'danger');
+          return;
+        }
         console.warn('Backend student history read failed in profile:', err);
       }
     }
@@ -4019,6 +4086,23 @@ async function openStudentProfile(studentIdOrRoll) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
   refreshIcons();
 }
+
+// Authoritative self-profile opener for authenticated student
+function openMyProfile() {
+  if (!CURRENT_USER) {
+    showToast('Please sign in to view your profile.', 'danger');
+    return;
+  }
+  if (CURRENT_USER.role === 'student') {
+    const idOrRoll = CURRENT_USER.studentId || CURRENT_USER.rollNumber || CURRENT_USER.roll || CURRENT_USER.username;
+    if (idOrRoll) {
+      openStudentProfile(idOrRoll);
+      return;
+    }
+  }
+  showToast('My Profile is only available for student accounts.', 'info');
+}
+window.openMyProfile = openMyProfile;
 
 // Redirect old drawer invocation directly to full-screen student profile
 function openStudentDrawer(studentIdOrRoll) {
@@ -4732,7 +4816,7 @@ const DEMO_ACCOUNTS = {
     dept: 'CSE',
     assignedSubject: 'Operating System',
     assignedSections: ['A', 'B'],
-    sectionAllocationStatus: 'Sections A, B Confirmed (Sections C, D Pending)'
+    sectionAllocationStatus: 'Sections A, B Confirmed'
   },
   faculty_dm: {
     id: 'faculty_dm',
@@ -4742,7 +4826,7 @@ const DEMO_ACCOUNTS = {
     dept: 'CSE',
     assignedSubject: 'Discrete Mathematics',
     assignedSections: ['A', 'B'],
-    sectionAllocationStatus: 'Sections A, B Confirmed (Sections C, D Pending)'
+    sectionAllocationStatus: 'Sections A, B Confirmed'
   },
   faculty_oops: {
     id: 'faculty_oops',
@@ -4752,7 +4836,7 @@ const DEMO_ACCOUNTS = {
     dept: 'CSE',
     assignedSubject: 'OOPS in C++',
     assignedSections: ['A', 'B'],
-    sectionAllocationStatus: 'Sections A, B Confirmed (Sections C, D Pending)'
+    sectionAllocationStatus: 'Sections A, B Confirmed'
   },
   faculty_wt: {
     id: 'faculty_wt',
@@ -4762,7 +4846,7 @@ const DEMO_ACCOUNTS = {
     dept: 'CSE',
     assignedSubject: 'Web Technology',
     assignedSections: ['A', 'B'],
-    sectionAllocationStatus: 'Sections A, B Confirmed (Sections C, D Pending)'
+    sectionAllocationStatus: 'Sections A, B Confirmed'
   },
   faculty_de: {
     id: 'faculty_de',
@@ -4772,7 +4856,7 @@ const DEMO_ACCOUNTS = {
     dept: 'CSE',
     assignedSubject: 'Digital Electronics',
     assignedSections: ['A', 'B'],
-    sectionAllocationStatus: 'Sections A, B Confirmed (Sections C, D Pending)'
+    sectionAllocationStatus: 'Sections A, B Confirmed'
   },
   hod: {
     id: 'hod_cse',
@@ -4948,7 +5032,7 @@ async function handleLoginSubmit(event) {
         subjectCodeShort: (matchedFac && matchedFac.subjectCodeShort) || 'OS',
         shortCode: (matchedFac && matchedFac.shortCode) || 'DS',
         assignedSections: (matchedFac && matchedFac.assignedSections) || ['A', 'B'],
-        sectionAllocationStatus: (matchedFac && matchedFac.sectionAllocationStatus) || 'Sections A, B Confirmed (Sections C, D Pending)',
+        sectionAllocationStatus: (matchedFac && matchedFac.sectionAllocationStatus) || 'Sections A, B Confirmed',
         dept: 'CSE',
         isBackendAuthenticated: true
       };
@@ -5065,6 +5149,57 @@ function switchSession(roleKey) {
 }
 window.switchSession = switchSession;
 
+// Scopes Take Attendance subject and section selectors strictly to faculty allocations
+function populateFacultyTakeAttendanceSelectors(faculty, dynamicAllocations = null) {
+  const attSubjectSelect = document.getElementById('att-subject');
+  const attSectionSelect = document.getElementById('att-section');
+  if (!faculty) return;
+
+  if (attSubjectSelect) {
+    attSubjectSelect.innerHTML = '';
+    let subjects = [];
+    if (Array.isArray(dynamicAllocations) && dynamicAllocations.length > 0) {
+      subjects = [...new Set(dynamicAllocations.map(a => a.courseName).filter(Boolean))];
+    }
+    if (subjects.length === 0) {
+      subjects = (faculty.assignedSubjects && faculty.assignedSubjects.length > 0)
+        ? faculty.assignedSubjects
+        : [faculty.subjectName || 'Operating System'];
+    }
+    const uniqueSubjects = [...new Set(subjects)].filter(Boolean);
+    uniqueSubjects.forEach((subj, idx) => {
+      const opt = document.createElement('option');
+      opt.value = subj;
+      opt.textContent = `${subj} (${faculty.name || faculty.facultyName || 'Faculty'})`;
+      if (idx === 0) opt.selected = true;
+      attSubjectSelect.appendChild(opt);
+    });
+  }
+
+  if (attSectionSelect) {
+    let sections = [];
+    if (Array.isArray(dynamicAllocations) && dynamicAllocations.length > 0) {
+      sections = [...new Set(dynamicAllocations.map(a => a.sectionName || a.section).filter(Boolean))];
+    }
+    if (sections.length === 0) {
+      sections = (faculty.assignedSections && faculty.assignedSections.length > 0)
+        ? faculty.assignedSections
+        : ['A', 'B'];
+    }
+    const uniqueSections = [...new Set(sections)].filter(Boolean);
+    attSectionSelect.innerHTML = '';
+    uniqueSections.forEach((sec, idx) => {
+      const opt = document.createElement('option');
+      opt.value = sec;
+      const count = sec === 'A' ? 60 : (sec === 'B' ? 59 : '');
+      opt.textContent = `Section ${sec} (Confirmed${count ? ' · ' + count + ' Students' : ''})`;
+      if (idx === 0) opt.selected = true;
+      attSectionSelect.appendChild(opt);
+    });
+  }
+}
+window.populateFacultyTakeAttendanceSelectors = populateFacultyTakeAttendanceSelectors;
+
 function applySessionUI(session) {
   document.body.classList.remove('landing-mode');
   document.body.classList.add('app-mode');
@@ -5144,8 +5279,11 @@ function applySessionUI(session) {
       subjectCodeShort: faculty.subjectCodeShort || 'OS',
       shortCode: faculty.shortCode || 'DS',
       assignedSections: faculty.assignedSections || ['A', 'B'],
-      sectionAllocationStatus: faculty.sectionAllocationStatus || 'Sections A, B Confirmed (Sections C, D Pending)'
+      sectionAllocationStatus: faculty.sectionAllocationStatus || 'Sections A, B Confirmed'
     };
+
+    // Scopes Take Attendance subject and section selectors strictly to faculty allocations
+    populateFacultyTakeAttendanceSelectors(CURRENT_USER);
 
     // Step 6: Dynamic allocations query (GET /api/faculty/{id}/allocations)
     const backendFacId = faculty.facultyId || (typeof session.facultyId === 'number' ? session.facultyId : null);
@@ -5155,10 +5293,11 @@ function applySessionUI(session) {
           const confirmedSecs = [...new Set(allocations.map(a => a.sectionName || a.section))].filter(Boolean);
           if (confirmedSecs.length > 0) {
             CURRENT_USER.assignedSections = confirmedSecs;
-            CURRENT_USER.sectionAllocationStatus = `Sections ${confirmedSecs.join(', ')} Confirmed (Sections C, D Pending)`;
+            CURRENT_USER.sectionAllocationStatus = `Sections ${confirmedSecs.join(', ')} Confirmed`;
             const dashSecStatus = document.getElementById('dash-fac-sec-status');
             if (dashSecStatus) dashSecStatus.textContent = CURRENT_USER.sectionAllocationStatus;
           }
+          populateFacultyTakeAttendanceSelectors(CURRENT_USER, allocations);
         }
       }).catch(err => {
         console.warn('Could not fetch faculty allocations from backend:', err);
@@ -5179,10 +5318,6 @@ function applySessionUI(session) {
     if (userRole) userRole.textContent = `Faculty · ${faculty.subjectName}`;
     if (breadcrumbPrefix) breadcrumbPrefix.textContent = 'Faculty Workspace';
 
-    // Topbar switch faculty button
-    const topbarSwitchBtn = document.getElementById('topbar-switch-faculty-btn');
-    if (topbarSwitchBtn) topbarSwitchBtn.style.display = 'inline-flex';
-
     // Faculty Dashboard Identity Header elements
     const dashTitle = document.getElementById('dash-greeting-title');
     if (dashTitle) dashTitle.textContent = `Good morning, ${faculty.name}`;
@@ -5197,7 +5332,7 @@ function applySessionUI(session) {
     if (dashFacSubject) dashFacSubject.textContent = faculty.subjectName;
 
     const dashFacSecStatus = document.getElementById('dash-fac-sec-status');
-    if (dashFacSecStatus) dashFacSecStatus.textContent = faculty.sectionAllocationStatus || 'Section allocation pending';
+    if (dashFacSecStatus) dashFacSecStatus.textContent = faculty.sectionAllocationStatus || 'Sections A, B Confirmed';
 
     // 4 Initial Dashboard Shell Cards (Section 6 Specification)
     const cardSubject = document.getElementById('card-fac-subject');
@@ -5218,17 +5353,6 @@ function applySessionUI(session) {
 
     const mySubCardFaculty = document.getElementById('my-subject-card-faculty');
     if (mySubCardFaculty) mySubCardFaculty.textContent = faculty.name;
-
-    // Set default in Take Attendance subject select
-    const attSubjectSelect = document.getElementById('att-subject');
-    if (attSubjectSelect) {
-      for (let i = 0; i < attSubjectSelect.options.length; i++) {
-        if (attSubjectSelect.options[i].value === faculty.subjectName) {
-          attSubjectSelect.selectedIndex = i;
-          break;
-        }
-      }
-    }
 
     CURRENT_SCHEDULE_DAY = getSystemDayOfWeek();
     renderFacultySchedule(CURRENT_SCHEDULE_DAY);
@@ -5303,7 +5427,7 @@ async function initAuth() {
             subjectCodeShort: (matchedFac && matchedFac.subjectCodeShort) || 'OS',
             shortCode: (matchedFac && matchedFac.shortCode) || 'DS',
             assignedSections: (matchedFac && matchedFac.assignedSections) || ['A', 'B'],
-            sectionAllocationStatus: (matchedFac && matchedFac.sectionAllocationStatus) || 'Sections A, B Confirmed (Sections C, D Pending)',
+            sectionAllocationStatus: (matchedFac && matchedFac.sectionAllocationStatus) || 'Sections A, B Confirmed',
             dept: 'CSE',
             isBackendAuthenticated: true
           };
@@ -5333,149 +5457,7 @@ async function initAuth() {
   refreshIcons();
 }
 
-// ── 19. STUDENT DASHBOARD RENDERER ───────────────────────────
-function renderStudentDashboard(rollOrId) {
-  let student = STUDENTS.find(s => s.roll === rollOrId || s.id === rollOrId || s.studentId === rollOrId) ||
-                STUDENTS.find(s => s.roll === '303302225048') || STUDENTS[0];
-  if (!student) return;
-
-  const titleEl = document.getElementById('stu-welcome-title');
-  const subEl = document.getElementById('stu-welcome-subtitle');
-  if (titleEl) titleEl.textContent = `Good morning, ${student.name.split(' ')[0]}`;
-  if (subEl) subEl.textContent = `Roll No: ${student.roll} · Department of Computer Science & Engineering · Semester ${student.sem} (Section ${student.sec || 'A'})`;
-
-  const total = student.total || 0;
-  const attended = student.attended || 0;
-  const missed = student.absent || 0;
-  const pct = student.pct !== null ? student.pct : null;
-
-  const bannerEl = document.getElementById('stu-compliance-banner');
-  if (bannerEl) {
-    if (total === 0) {
-      const hasHist = student.historicalSnapshot && student.historicalSnapshot.available;
-      bannerEl.style.background = 'var(--surface-muted)';
-      bannerEl.style.borderColor = 'var(--border)';
-      bannerEl.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
-          <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-            <i data-lucide="info" class="icon-sm"></i>
-          </div>
-          <div style="flex: 1;">
-            <div style="font-weight: 700; font-size: 14.5px; color: var(--text-primary);">
-              Academic Session Status: Pre-Commencement / Registered
-            </div>
-            <div style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">
-              Enrolled in B.Tech CSE Semester 3 (Session July–Dec 2026, W.E.F. 27/07/2026). ${
-                hasHist
-                  ? `Previous Attendance Snapshot: <strong>${student.historicalSnapshot.attendancePercent}%</strong> (Section A Attendance Sheet).`
-                  : 'Attendance compliance monitoring will begin after the first instructional lecture is recorded.'
-              }
-            </div>
-          </div>
-          <span class="badge" style="background: var(--surface); border: 1px solid var(--border); font-size: 12px; padding: 5px 10px;">
-            ${hasHist ? 'SNAPSHOT: ' + student.historicalSnapshot.attendancePercent + '%' : 'PRE-COMMENCEMENT'}
-          </span>
-        </div>
-      `;
-    } else {
-      const isCompliant = pct >= ATTENDANCE_THRESHOLD;
-      const margin = (pct - ATTENDANCE_THRESHOLD).toFixed(1);
-      bannerEl.style.background = isCompliant ? 'var(--success-subtle)' : 'var(--danger-subtle)';
-      bannerEl.style.borderColor = isCompliant ? 'var(--success-border)' : 'var(--danger-border)';
-      bannerEl.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
-          <div style="width: 36px; height: 36px; border-radius: 50%; background: ${isCompliant ? 'var(--success)' : 'var(--danger)'}; color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-            <i data-lucide="${isCompliant ? 'check' : 'alert-circle'}" class="icon-sm"></i>
-          </div>
-          <div style="flex: 1;">
-            <div style="font-weight: 700; font-size: 14.5px; color: ${isCompliant ? 'var(--success-hover)' : 'var(--danger)'};">
-              Examination Eligibility Status: ${isCompliant ? 'Eligible (≥ 75%)' : 'Below Threshold (< 75%)'}
-            </div>
-            <div style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">
-              ${isCompliant
-                ? `Your aggregate attendance rate of <strong>${pct}%</strong> complies with criteria. Safety margin: <strong>+${margin}%</strong>.`
-                : `Your attendance rate of <strong>${pct}%</strong> is below the 75% threshold.`
-              }
-            </div>
-          </div>
-          <span class="badge ${isCompliant ? 'badge-ok' : 'badge-risk'}" style="font-size: 12px; padding: 5px 10px;">
-            ${isCompliant ? 'IN COMPLIANCE' : 'BELOW THRESHOLD'}
-          </span>
-        </div>
-      `;
-    }
-  }
-
-  const gaugePct = document.getElementById('stu-gauge-pct');
-  const gaugeCircle = document.getElementById('stu-circle-prog');
-  const attCount = document.getElementById('stu-attended-count');
-  const missCount = document.getElementById('stu-missed-count');
-  const totCount = document.getElementById('stu-total-count');
-  const threshFill = document.getElementById('stu-threshold-fill');
-
-  if (gaugePct) gaugePct.textContent = pct !== null ? `${pct}%` : '--';
-  if (gaugeCircle) {
-    gaugeCircle.setAttribute('stroke-dasharray', pct !== null ? `${pct}, 100` : '0, 100');
-    gaugeCircle.setAttribute('stroke', (pct !== null && pct >= ATTENDANCE_THRESHOLD) ? 'var(--primary)' : 'var(--text-muted)');
-  }
-  if (attCount) attCount.textContent = attended;
-  if (missCount) missCount.textContent = missed;
-  if (totCount) totCount.textContent = total;
-  if (threshFill) {
-    threshFill.style.width = pct !== null ? `${Math.min(100, pct)}%` : '0%';
-    threshFill.style.background = (pct !== null && pct >= ATTENDANCE_THRESHOLD) ? 'var(--success)' : 'var(--primary)';
-  }
-
-  // Dynamic Academic Advisory
-  const advEl = document.getElementById('stu-advisory-desc');
-  if (advEl) {
-    if (total === 0) {
-      advEl.innerHTML = `<strong>Term Advisory:</strong> Departmental lectures for 3rd Semester 2026 are preparing to commence. Attend all upcoming instructional sessions in your 5 core modules (<strong>Operating System, Discrete Mathematics, OOPS in C++, Web Technology, Digital Electronics</strong>) to build a solid compliance record early in the term.`;
-    } else if (pct >= ATTENDANCE_THRESHOLD) {
-      advEl.innerHTML = `Based on your attendance consistency over <strong>${total} completed instructional sessions</strong>, you maintain an aggregate safety margin above the 75% threshold.`;
-    } else {
-      advEl.innerHTML = `<strong>Attention Required:</strong> Your current attendance is below the 75% threshold. Regular attendance is required before semester examination registration.`;
-    }
-  }
-
-  // Render Subject Cards strictly from 5 official subjects and faculty
-  const subContainer = document.getElementById('stu-subjects-container');
-  if (subContainer) {
-    subContainer.innerHTML = OFFICIAL_SUBJECTS.map((subj, idx) => {
-      const fac = getFacultyForSubject(subj);
-      return `
-        <div class="student-sub-card">
-          <div class="sub-card-top">
-            <div>
-              <span class="sub-card-code">CSE-30${idx + 1}</span>
-              <div class="sub-card-name">${escapeHtml(subj)}</div>
-              <div class="sub-card-faculty">Faculty: <strong>${escapeHtml(fac)}</strong></div>
-            </div>
-            <span class="badge" style="background: var(--surface-muted); color: var(--text-secondary); border: 1px solid var(--border);">PENDING SESSIONS</span>
-          </div>
-          <div class="sub-prog-wrap">
-            <div class="sub-prog-meta">
-              <span>0 Attended / 0 Held</span>
-              <strong style="color: var(--text-muted);">--</strong>
-            </div>
-            <div class="sub-prog-track">
-              <div class="sub-prog-fill" style="width: 0%; background: var(--primary);"></div>
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('');
-  }
-
-  // Render Student History Table
-  const histBody = document.getElementById('stu-history-body');
-  if (histBody) {
-    histBody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 24px; color: var(--text-muted);">No attendance history recorded yet for 3rd Semester 2026.</td></tr>`;
-  }
-  refreshIcons();
-}
-
-// ── 20. HOD OVERVIEW RENDERER ────────────────────────────────
+// ── 19. HOD OVERVIEW RENDERER ────────────────────────────────
 function renderHodOverview() {
   const statStudents = document.getElementById('hod-stat-students');
   if (statStudents) statStudents.textContent = STUDENTS.length; // 252
@@ -5682,12 +5664,17 @@ function validateAcademicUniverse() {
 
 async function renderStudentDashboard(roll) {
   let student = null;
-  if (roll) {
-    student = (STUDENTS || []).find(s => s.roll === roll || s.studentId === roll || s.id === roll);
-  } else if (CURRENT_USER && CURRENT_USER.role === 'student') {
-    student = (STUDENTS || []).find(s => s.id === CURRENT_USER.studentId || s.roll === CURRENT_USER.rollNumber || s.roll === CURRENT_USER.userId);
+  if (CURRENT_USER && CURRENT_USER.role === 'student') {
+    const myId = String(CURRENT_USER.studentId || CURRENT_USER.id || '').trim();
+    const myRoll = String(CURRENT_USER.rollNumber || CURRENT_USER.roll || CURRENT_USER.username || '').trim();
+    if (roll && String(roll).trim() !== myId && String(roll).trim() !== myRoll) {
+      showToast('Access Denied: Students are only authorized to view their own dashboard.', 'danger');
+      return;
+    }
+    student = (STUDENTS || []).find(s => String(s.id) === myId || s.roll === myRoll || s.studentId === myRoll);
+  } else if (roll) {
+    student = (STUDENTS || []).find(s => s.roll === roll || s.studentId === roll || String(s.id) === String(roll));
   }
-  if (!student) student = (STUDENTS || [])[0];
   if (!student) return;
 
   const welcomeTitle = document.getElementById('stu-welcome-title');
@@ -5699,6 +5686,7 @@ async function renderStudentDashboard(roll) {
   let backendSummary = null;
   let backendHistory = null;
   const token = getStoredAuthToken();
+  let authDenied = false;
 
   if (token && student.id && typeof AcademicDataService !== 'undefined') {
     try {
@@ -5706,11 +5694,45 @@ async function renderStudentDashboard(roll) {
         AcademicDataService.loadStudentSummary(student.id),
         AcademicDataService.loadStudentHistory(student.id)
       ]);
-      if (sumRes.status === 'fulfilled') backendSummary = sumRes.value;
-      if (histRes.status === 'fulfilled') backendHistory = histRes.value;
+      if (sumRes.status === 'fulfilled') {
+        backendSummary = sumRes.value;
+      } else if (sumRes.reason && (sumRes.reason.status === 403 || sumRes.reason.status === 401)) {
+        authDenied = true;
+      }
+      if (histRes.status === 'fulfilled') {
+        backendHistory = histRes.value;
+      } else if (histRes.reason && (histRes.reason.status === 403 || histRes.reason.status === 401)) {
+        authDenied = true;
+      }
     } catch (e) {
       console.warn('Backend student attendance read failed:', e);
     }
+  }
+
+  if (authDenied) {
+    const bannerEl = document.getElementById('stu-compliance-banner');
+    if (bannerEl) {
+      bannerEl.style.background = 'var(--danger-subtle)';
+      bannerEl.style.borderColor = 'var(--danger-border)';
+      bannerEl.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+          <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--danger); color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <i data-lucide="alert-triangle" class="icon-sm"></i>
+          </div>
+          <div style="flex: 1;">
+            <div style="font-weight: 700; font-size: 14.5px; color: var(--danger);">
+              403 Forbidden: Academic Data Access Denied
+            </div>
+            <div style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">
+              You are not authorized to view this student record under departmental privacy policy.
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    showToast('403 Forbidden: You are not authorized to view this student attendance.', 'danger');
+    refreshIcons();
+    return;
   }
 
   let totalCompleted = 0;

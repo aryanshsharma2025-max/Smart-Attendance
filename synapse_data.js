@@ -11630,7 +11630,7 @@ const AUTHORITATIVE_FACULTY = [
     "assignedSubject": "Operating System",
     "assignedSubjectId": 1,
     "assignedSections": ["A", "B"],
-    "sectionAllocationStatus": "Sections A, B Confirmed (Sections C, D Pending)"
+    "sectionAllocationStatus": "Sections A, B Confirmed"
   },
   {
     "id": "faculty-dm",
@@ -11645,7 +11645,7 @@ const AUTHORITATIVE_FACULTY = [
     "assignedSubject": "Discrete Mathematics",
     "assignedSubjectId": 2,
     "assignedSections": ["A", "B"],
-    "sectionAllocationStatus": "Sections A, B Confirmed (Sections C, D Pending)"
+    "sectionAllocationStatus": "Sections A, B Confirmed"
   },
   {
     "id": "faculty-oops",
@@ -11660,7 +11660,7 @@ const AUTHORITATIVE_FACULTY = [
     "assignedSubject": "OOPS in C++",
     "assignedSubjectId": 3,
     "assignedSections": ["A", "B"],
-    "sectionAllocationStatus": "Sections A, B Confirmed (Sections C, D Pending)"
+    "sectionAllocationStatus": "Sections A, B Confirmed"
   },
   {
     "id": "faculty-web",
@@ -11675,7 +11675,7 @@ const AUTHORITATIVE_FACULTY = [
     "assignedSubject": "Web Technology",
     "assignedSubjectId": 4,
     "assignedSections": ["A", "B"],
-    "sectionAllocationStatus": "Sections A, B Confirmed (Sections C, D Pending)"
+    "sectionAllocationStatus": "Sections A, B Confirmed"
   },
   {
     "id": "faculty-de",
@@ -11690,7 +11690,7 @@ const AUTHORITATIVE_FACULTY = [
     "assignedSubject": "Digital Electronics",
     "assignedSubjectId": 5,
     "assignedSections": ["A", "B"],
-    "sectionAllocationStatus": "Sections A, B Confirmed (Sections C, D Pending)"
+    "sectionAllocationStatus": "Sections A, B Confirmed"
   }
 ];
 

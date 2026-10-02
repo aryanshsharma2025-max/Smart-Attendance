@@ -437,7 +437,7 @@
             <i data-lucide="history" class="nav-icon"></i>
             <span>Attendance History</span>
           </a>
-          <a href="#" class="nav-item" data-page="student-dashboard" onclick="showPage('student-dashboard',this); openStudentDrawer(32); toggleSidebar(false);">
+          <a href="#" class="nav-item" data-page="student-dashboard" onclick="showPage('student-dashboard',this); openMyProfile(); toggleSidebar(false);">
             <i data-lucide="user" class="nav-icon"></i>
             <span>My Profile</span>
           </a>
@@ -473,11 +473,7 @@
             <div class="user-role" id="sidebar-user-role">Faculty · Operating System</div>
           </div>
         </div>
-        <button class="btn btn-ghost btn-sm" id="sidebar-switch-faculty-btn" onclick="openFacultyArea(); toggleSidebar(false);" title="Switch Faculty Profile" style="margin-top: 8px; width: 100%; justify-content: flex-start; color: var(--primary); gap: 8px; font-weight: 600;">
-          <i data-lucide="arrow-left-right" class="icon-sm"></i>
-          <span>Switch Faculty</span>
-        </button>
-        <button class="btn btn-ghost btn-sm" onclick="doSignOut(); toggleSidebar(false);" title="Sign Out of SmartAttend" style="margin-top: 2px; width: 100%; justify-content: flex-start; color: var(--text-muted); gap: 8px;">
+        <button class="btn btn-ghost btn-sm" onclick="doSignOut(); toggleSidebar(false);" title="Sign Out of SmartAttend" style="margin-top: 8px; width: 100%; justify-content: flex-start; color: var(--text-muted); gap: 8px;">
           <i data-lucide="log-out" class="icon-sm"></i>
           <span>Sign Out</span>
         </button>
@@ -520,10 +516,6 @@
           <i data-lucide="check-square" class="icon-sm"></i>
           <span>Take Attendance</span>
         </button>
-        <button class="btn btn-outline btn-sm" id="topbar-switch-faculty-btn" onclick="openFacultyArea()" title="Switch Faculty Profile" style="display: none;">
-          <i data-lucide="arrow-left-right" class="icon-sm"></i>
-          <span>Switch Faculty</span>
-        </button>
         <!-- SIGN OUT ACTION -->
         <button class="btn btn-outline btn-sm topbar-signout-btn" onclick="doSignOut()" title="Sign Out of SmartAttend" style="display: inline-flex; align-items: center; gap: 6px;">
           <i data-lucide="log-out" class="icon-sm"></i>
@@ -549,10 +541,6 @@
           </div>
         </div>
         <div class="dash-header-actions">
-          <button type="button" class="btn btn-outline btn-sm" onclick="openFacultyArea()" title="Switch Faculty Profile" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
-            <i data-lucide="arrow-left-right" class="icon-xs"></i>
-            <span>Switch Faculty</span>
-          </button>
           <button type="button" class="btn btn-ghost btn-sm" onclick="doSignOut()" title="Sign Out" style="display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted);">
             <i data-lucide="log-out" class="icon-xs"></i>
             <span>Sign Out</span>
@@ -939,19 +927,13 @@
             <select id="att-section" class="form-control" onchange="onAttendanceFilterChange()">
               <option value="A" selected>Section A (Confirmed · 60 Students)</option>
               <option value="B">Section B (Confirmed · 59 Students)</option>
-              <option value="C" disabled>Section C (Allocation Pending)</option>
-              <option value="D" disabled>Section D (Allocation Pending)</option>
             </select>
           </div>
 
           <div class="form-group att-subject-group">
             <label for="att-subject" class="form-label">Subject / Course Module</label>
             <select id="att-subject" class="form-control" onchange="onAttendanceFilterChange()">
-              <option value="Operating System" selected>Operating System (Devbrat Sahu)</option>
-              <option value="Discrete Mathematics">Discrete Mathematics (Pranjali Sharma)</option>
-              <option value="OOPS in C++">OOPS in C++ (Vaibhav Chandrakar)</option>
-              <option value="Web Technology">Web Technology (Suman K. Swarnkar)</option>
-              <option value="Digital Electronics">Digital Electronics (Navdeep Khare)</option>
+              <option value="" disabled selected>Loading allocated course...</option>
             </select>
           </div>
 
