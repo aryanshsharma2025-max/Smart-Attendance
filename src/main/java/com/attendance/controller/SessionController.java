@@ -20,6 +20,7 @@ import java.util.List;
 public class SessionController {
 
     private final AttendanceSessionService sessionService;
+    private final com.attendance.service.AcademicAuthorizationService authService;
 
     @PostMapping
     @PreAuthorize("hasAnyRole('FACULTY', 'HOD')")
@@ -57,7 +58,10 @@ public class SessionController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<SessionDto> getSession(@PathVariable Long id) {
+    public ResponseEntity<SessionDto> getSession(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        authService.checkSessionAccess(principal, id);
         return ResponseEntity.ok(sessionService.getSessionById(id));
     }
 
@@ -92,22 +96,37 @@ public class SessionController {
     }
 
     @GetMapping("/{id}/attendance")
-    public ResponseEntity<List<AttendanceRecordDto>> getSessionAttendance(@PathVariable Long id) {
+    public ResponseEntity<List<AttendanceRecordDto>> getSessionAttendance(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        authService.checkSessionAccess(principal, id);
         return ResponseEntity.ok(sessionService.getSessionAttendance(id));
     }
 
     @GetMapping("/{id}/records")
-    public ResponseEntity<List<AttendanceRecordDto>> getSessionRecordsAlias(@PathVariable Long id) {
-        return getSessionAttendance(id);
+    public ResponseEntity<List<AttendanceRecordDto>> getSessionRecordsAlias(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return getSessionAttendance(id, principal);
     }
 
     @GetMapping("/active")
-    public ResponseEntity<List<SessionDto>> getActiveSessions() {
+    public ResponseEntity<List<SessionDto>> getActiveSessions(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        if (principal == null) {
+            throw new UnauthorizedActionException("401 Unauthorized: Authentication required");
+        }
+        if ("STUDENT".equalsIgnoreCase(principal.getRole())) {
+            throw new org.springframework.security.access.AccessDeniedException("403 Forbidden: Students cannot access active session telemetry");
+        }
         return ResponseEntity.ok(sessionService.getActiveSessions());
     }
 
     @GetMapping("/faculty/{facultyId}")
-    public ResponseEntity<List<SessionDto>> getFacultySessions(@PathVariable Long facultyId) {
+    public ResponseEntity<List<SessionDto>> getFacultySessions(
+            @PathVariable Long facultyId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        authService.checkFacultySessionsAccess(principal, facultyId);
         return ResponseEntity.ok(sessionService.getSessionsForFaculty(facultyId));
     }
 }

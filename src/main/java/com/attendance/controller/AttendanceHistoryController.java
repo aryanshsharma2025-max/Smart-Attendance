@@ -3,11 +3,11 @@ package com.attendance.controller;
 import com.attendance.dto.*;
 import com.attendance.exception.UnauthorizedActionException;
 import com.attendance.security.UserPrincipal;
+import com.attendance.service.AcademicAuthorizationService;
 import com.attendance.service.AttendanceCalculationService;
 import com.attendance.service.AttendanceSessionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +20,7 @@ public class AttendanceHistoryController {
 
     private final AttendanceCalculationService calculationService;
     private final AttendanceSessionService sessionService;
+    private final AcademicAuthorizationService authService;
 
     // Student summary (canonical & aliases)
     @GetMapping({"/api/students/{id}/attendance", "/api/attendance/summary/student/{id}"})
@@ -27,16 +28,7 @@ public class AttendanceHistoryController {
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal principal) {
         
-        // Authorization & Identity Spoofing Protection:
-        if (principal == null) {
-            throw new UnauthorizedActionException("401 Unauthorized: Authentication required to access student attendance summary");
-        }
-        if ("STUDENT".equalsIgnoreCase(principal.getRole())) {
-            if (principal.getStudentId() != null && !principal.getStudentId().equals(id)) {
-                throw new AccessDeniedException("403 Forbidden: Students are restricted from accessing attendance records of other students");
-            }
-        }
-
+        authService.checkStudentAccess(principal, id);
         return ResponseEntity.ok(calculationService.getStudentSummary(id));
     }
 
@@ -46,16 +38,7 @@ public class AttendanceHistoryController {
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal principal) {
         
-        // Authorization & Identity Spoofing Protection:
-        if (principal == null) {
-            throw new UnauthorizedActionException("401 Unauthorized: Authentication required to access student attendance history");
-        }
-        if ("STUDENT".equalsIgnoreCase(principal.getRole())) {
-            if (principal.getStudentId() != null && !principal.getStudentId().equals(id)) {
-                throw new AccessDeniedException("403 Forbidden: Students are restricted from accessing attendance records of other students");
-            }
-        }
-
+        authService.checkStudentAccess(principal, id);
         return ResponseEntity.ok(calculationService.getStudentHistory(id));
     }
 
@@ -65,14 +48,7 @@ public class AttendanceHistoryController {
             @PathVariable Long subjectId,
             @AuthenticationPrincipal UserPrincipal principal) {
         
-        if (principal == null) {
-            throw new UnauthorizedActionException("401 Unauthorized: Authentication required to access student attendance summary");
-        }
-        if ("STUDENT".equalsIgnoreCase(principal.getRole())) {
-            if (principal.getStudentId() != null && !principal.getStudentId().equals(id)) {
-                throw new AccessDeniedException("403 Forbidden: Students are restricted from accessing attendance records of other students");
-            }
-        }
+        authService.checkStudentAccess(principal, id);
 
         StudentAttendanceSummaryDto summary = calculationService.getStudentSummary(id);
         return summary.getCourses().stream()
@@ -87,13 +63,21 @@ public class AttendanceHistoryController {
     public ResponseEntity<SectionAttendanceStatsDto> getSectionSubjectStats(
             @PathVariable(required = false) Long subjectId,
             @PathVariable String section,
-            @RequestParam(required = false) Long courseId) {
+            @RequestParam(required = false) Long courseId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        
+        authService.checkSectionAccess(principal, section);
+
         Long resolvedCourseId = (courseId != null) ? courseId : subjectId;
         return ResponseEntity.ok(calculationService.getSectionSubjectStats(resolvedCourseId, section));
     }
 
     @GetMapping("/api/faculty/{facultyId}/sessions")
-    public ResponseEntity<List<SessionDto>> getFacultySessions(@PathVariable Long facultyId) {
+    public ResponseEntity<List<SessionDto>> getFacultySessions(
+            @PathVariable Long facultyId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        
+        authService.checkFacultySessionsAccess(principal, facultyId);
         return ResponseEntity.ok(sessionService.getSessionsForFaculty(facultyId));
     }
 }

@@ -50,6 +50,33 @@ public class StudentService {
     }
 
     @Transactional(readOnly = true)
+    public List<StudentDto> getStudentsForFaculty(Long facultyId) {
+        List<CourseAllocation> allocations = allocationRepo.findByFacultyFacultyId(facultyId);
+        Set<Long> sectionIds = allocations.stream()
+            .filter(a -> a.getStatus() == CourseAllocation.AllocationStatus.CONFIRMED)
+            .map(a -> a.getSection().getSectionId())
+            .collect(Collectors.toSet());
+
+        return studentRepo.findAll().stream()
+            .filter(s -> s.getSection() != null && sectionIds.contains(s.getSection().getSectionId()))
+            .map(this::toDto)
+            .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public Long resolveStudentId(String identifier) {
+        try {
+            Long num = Long.parseLong(identifier);
+            if (studentRepo.existsById(num)) {
+                return num;
+            }
+        } catch (NumberFormatException ignored) {}
+        return studentRepo.findByRollNumber(identifier.trim())
+            .map(Student::getStudentId)
+            .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + identifier));
+    }
+
+    @Transactional(readOnly = true)
     public StudentDto getStudentById(Long id) {
         return studentRepo.findById(id).map(this::toDto)
             .orElseThrow(() -> new ResourceNotFoundException("Student not found with ID: " + id));
