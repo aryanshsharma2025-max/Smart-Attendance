@@ -108,6 +108,7 @@ async function runBrowserVerification() {
   ]);
 
   let cdp = null;
+  let createdSessionId = null;
   try {
     // Wait for CDP endpoint to become ready
     let targets = null;
@@ -256,6 +257,10 @@ async function runBrowserVerification() {
       })()
     `);
 
+    if (step8 && step8.activeLecture && typeof step8.activeLecture.id === 'number') {
+      createdSessionId = step8.activeLecture.id;
+    }
+
     report(8, 'Confirm Load Students works (Real Backend Session Created)',
       step8.status === 'loaded' &&
       step8.studentsCount === 60 &&
@@ -343,6 +348,16 @@ async function runBrowserVerification() {
   } finally {
     if (cdp) cdp.close();
     chromeProc.kill('SIGTERM');
+    if (createdSessionId) {
+      console.log(`\n[TEARDOWN] Cleaning up verification session ${createdSessionId} from attendance_db...`);
+      const { execSync } = require('child_process');
+      try {
+        execSync(`"D:\\tools\\mysql\\PFiles64\\MySQL\\MySQL Server 8.4\\bin\\mysql.exe" -u root -proot attendance_db -e "DELETE FROM attendance_sessions WHERE session_id = ${createdSessionId};"`);
+        console.log(`[TEARDOWN] Cleaned up verification session ${createdSessionId}. Database returned to clean state.`);
+      } catch (e) {
+        console.error('[TEARDOWN ERROR]', e.message);
+      }
+    }
   }
 
   console.log('\n' + '='.repeat(70));

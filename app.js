@@ -2742,7 +2742,12 @@ async function loadStudentsAction() {
       endTime: ttEntry ? ttEntry.endTime : '09:50 AM'
     };
 
-    const sessionDto = await apiClient.post('/sessions/start', sessionReq);
+    let sessionDto = null;
+    if (ACTIVE_LECTURE && ACTIVE_LECTURE.subjectId === subjectId && ACTIVE_LECTURE.section === sec && ACTIVE_LECTURE.date === date && ACTIVE_LECTURE.status === 'recording' && typeof ACTIVE_LECTURE.id === 'number') {
+      sessionDto = ACTIVE_LECTURE;
+    } else {
+      sessionDto = await apiClient.post('/sessions/start', sessionReq);
+    }
     if (!sessionDto || !sessionDto.id) {
       throw new Error('Failed to create session on backend: Missing session ID');
     }
