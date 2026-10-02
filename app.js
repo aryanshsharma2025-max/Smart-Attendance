@@ -35,6 +35,29 @@ function clearAuthTokens() {
   sessionStorage.removeItem(AUTH_SESSION_KEY);
 }
 
+function handleSessionExpired() {
+  clearAuthTokens();
+  CURRENT_USER = null;
+  document.body.classList.remove('app-mode');
+  document.body.classList.add('landing-mode');
+  const pInput = document.getElementById('login-password');
+  const errEl = document.getElementById('login-error-msg');
+  if (pInput) pInput.value = '';
+  if (errEl) {
+    errEl.textContent = 'Authentication required. Please log in again.';
+    errEl.style.display = 'block';
+  }
+  if (typeof showToast === 'function') {
+    showToast('Authentication required. Please log in again.', 'danger');
+  }
+  if (typeof scrollToLogin === 'function') {
+    scrollToLogin();
+  }
+  if (typeof refreshIcons === 'function') {
+    refreshIcons();
+  }
+}
+
 /**
  * Centralized API Client
  * Supports: GET, POST, PUT, DELETE
@@ -77,9 +100,7 @@ const apiClient = {
 
     // 401 Unauthorized: token expired or invalid credentials
     if (response.status === 401) {
-      if (token) {
-        clearAuthTokens();
-      }
+      handleSessionExpired();
       let errPayload = null;
       try { errPayload = await response.json(); } catch (_) {}
       const err = new Error((errPayload && errPayload.message) || 'Unauthorized: Invalid credentials or session expired.');
@@ -646,18 +667,8 @@ const RECENT_ATTENDANCE_LOGS = [];
 // Instructional Sessions Dataset (Initially empty: populated as faculty conducts sessions)
 const SESSIONS_DATA = [];
 
-// Phase 4 & 5: Centralized Current User Context with Confirmed Sections A & B
-let CURRENT_USER = {
-  role: 'faculty',
-  facultyId: 'faculty-os',
-  facultyName: 'Devbrat Sahu',
-  subjectId: 'operating-system',
-  subjectName: 'Operating System',
-  subjectCodeShort: 'OS',
-  shortCode: 'DS',
-  assignedSections: ['A', 'B'],
-  sectionAllocationStatus: 'Sections A, B Confirmed (Sections C, D Pending)'
-};
+// Phase 2 Hardened: Authoritative Current User Context (strictly null when unauthenticated)
+let CURRENT_USER = null;
 
 let CURRENT_SCHEDULE_DAY = 'Thursday';
 
@@ -995,8 +1006,8 @@ function getDynamicGreeting(facultyName) {
 
 function updateDashboardGreeting() {
   const titleEl = document.getElementById('dash-greeting-title');
-  if (!titleEl) return;
-  const facName = (CURRENT_USER && (CURRENT_USER.facultyName || CURRENT_USER.name)) || 'Devbrat Sahu';
+  if (!titleEl || !CURRENT_USER) return;
+  const facName = CURRENT_USER.facultyName || CURRENT_USER.name || 'Faculty Member';
   titleEl.textContent = getDynamicGreeting(facName);
 }
 
@@ -1185,8 +1196,9 @@ function renderTodayLectures(selectedDay) {
  * Requirement 3 & 6: Fastest 1-click primary Take Attendance launcher
  */
 function handlePrimaryTakeAttendance() {
-  if (!CURRENT_USER || CURRENT_USER.role !== 'faculty') {
-    showPage('take-attendance', null);
+  const token = getStoredAuthToken();
+  if (!token || !CURRENT_USER || CURRENT_USER.role !== 'faculty') {
+    handleSessionExpired();
     return;
   }
 
@@ -1242,11 +1254,12 @@ function onWatchSectionChange(sec) {
 }
 
 function renderWatchAttendancePage(selectedSec) {
+  if (!CURRENT_USER || CURRENT_USER.role !== 'faculty') return;
   const sec = selectedSec || CURRENT_WATCH_SECTION || 'A';
   CURRENT_WATCH_SECTION = sec;
 
-  const subj = (CURRENT_USER && CURRENT_USER.subjectName) || 'Operating System';
-  const fac = (CURRENT_USER && CURRENT_USER.facultyName) || 'Devbrat Sahu';
+  const subj = CURRENT_USER.subjectName || 'Operating System';
+  const fac = CURRENT_USER.facultyName || 'Faculty Member';
 
   const subjTitle = document.getElementById('watch-subject-title');
   const facBadge = document.getElementById('watch-faculty-badge');
@@ -2355,6 +2368,14 @@ const ATTENDANCE_STATE = {
 function showPage(pageId, linkEl) {
   if (pageId === 'live') pageId = 'take-attendance';
 
+  const token = getStoredAuthToken();
+  if (!token || !CURRENT_USER) {
+    document.body.classList.remove('app-mode');
+    document.body.classList.add('landing-mode');
+    if (typeof scrollToLogin === 'function') scrollToLogin();
+    return;
+  }
+
   // Ensure modal overlays and drawer menu close cleanly on page navigation
   if (typeof closeTimetableModal === 'function') closeTimetableModal();
   if (typeof toggleSidebar === 'function') toggleSidebar(false);
@@ -2696,151 +2717,107 @@ async function loadStudentsAction() {
   updateFacultyDashboardLiveMetrics();
 
   const token = getStoredAuthToken();
+  if (!token || !CURRENT_USER) {
+    ATTENDANCE_STATE.status = 'initial';
+    ACTIVE_LECTURE = null;
+    renderAttendanceView();
+    updateTakeAttendanceHeader();
+    showToast('Authentication required. Please log in again.', 'danger');
+    handleSessionExpired();
+    return;
+  }
 
-  if (token) {
-    try {
-      const sessionReq = {
-        facultyCode: (CURRENT_USER && (CURRENT_USER.facultyCode || CURRENT_USER.userId)) || undefined,
-        facultyId: (CURRENT_USER && typeof CURRENT_USER.facultyId === 'number') ? CURRENT_USER.facultyId : undefined,
-        subjectCodeShort: subjectShort,
-        subjectId: subjectId,
-        section: sec,
-        sectionId: sectionId,
-        sessionDate: date,
-        timetableCode: ttEntry ? ttEntry.timetableCode : undefined,
-        timetableEntryId: ttEntry && typeof ttEntry.id === 'number' ? ttEntry.id : undefined,
-        startTime: ttEntry ? ttEntry.startTime : '09:00 AM',
-        endTime: ttEntry ? ttEntry.endTime : '09:50 AM'
-      };
-
-      const sessionDto = await apiClient.post('/sessions/start', sessionReq);
-      if (!sessionDto || !sessionDto.id) {
-        throw new Error('Failed to create session on backend: Missing session ID');
-      }
-
-      // Authoritative section roster from backend
-      let roster = [];
-      try {
-        roster = await AcademicDataService.loadStudentsBySection(sec);
-      } catch (_) {}
-      if (!roster || roster.length === 0) {
-        roster = getRosterForClass(dept, sem, sec);
-      }
-
-      ACTIVE_LECTURE = {
-        id: sessionDto.id,
-        sessionId: sessionDto.id,
-        backendSessionId: sessionDto.id,
-        subject: sessionDto.subjectName || effectiveSubject,
-        subjectName: sessionDto.subjectName || effectiveSubject,
-        subjectId: sessionDto.subjectId || subjectId,
-        subjectCodeShort: sessionDto.subjectCode || subjectShort,
-        faculty: sessionDto.facultyName || faculty,
-        facultyId: sessionDto.facultyId || facultyId,
-        facultyCode: sessionDto.facultyCode,
-        section: sessionDto.section || sec,
-        sec: sessionDto.section || sec,
-        semester: sessionDto.semester || parseInt(sem) || 3,
-        date: sessionDto.date || date,
-        timetableEntryId: ttEntry ? ttEntry.id : null,
-        period: ttEntry ? ttEntry.period : 'I',
-        periodStart: ttEntry ? ttEntry.periodStart : 1,
-        periodEnd: ttEntry ? ttEntry.periodEnd : 1,
-        startTime: ttEntry ? ttEntry.startTime : '09:00 AM',
-        endTime: ttEntry ? ttEntry.endTime : '09:50 AM',
-        lectureNumber: sessionDto.lectureNumber,
-        lectureNo: sessionDto.lectureNumber,
-        status: 'recording',
-        completedAt: null,
-        startedAt: sessionDto.startedAt ? new Date(sessionDto.startedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : nowTimeStr,
-        startTimeTs: Date.now()
-      };
-
-      ATTENDANCE_STATE.classInfo = {
-        date: sessionDto.date || date,
-        dept,
-        deptName: deptNameMap[dept] || dept,
-        sem: String(sessionDto.semester || sem),
-        sec: sessionDto.section || sec,
-        subject: sessionDto.subjectName || effectiveSubject,
-        faculty: sessionDto.facultyName || faculty,
-        lectureNumber: sessionDto.lectureNumber,
-        lectureNoDisplay: `Lecture No. ${sessionDto.lectureNumber}`
-      };
-
-      ATTENDANCE_STATE.students = roster.map(s => ({
-        ...s,
-        status: 'pending'
-      }));
-      ATTENDANCE_STATE.searchQuery = '';
-      ATTENDANCE_STATE.status = 'loaded';
-
-      renderAttendanceView();
-      updateTakeAttendanceHeader();
-      updateFacultyDashboardLiveMetrics();
-      showToast(`Lecture No. ${sessionDto.lectureNumber} started: ${ATTENDANCE_STATE.students.length} students rostered (Recording)`);
-      refreshIcons();
-
-    } catch (err) {
-      console.error('Failed to start attendance session:', err);
-      ATTENDANCE_STATE.status = 'initial';
-      ACTIVE_LECTURE = null;
-      renderAttendanceView();
-      updateTakeAttendanceHeader();
-      showToast(err.message || 'Failed to start session on backend', 'danger');
-      return;
-    }
-  } else {
-    // Offline / Demo evaluation fallback
-    const lectureNo = getNextLectureNumber(effectiveSubject, sec);
-    ACTIVE_LECTURE = {
-      id: `sess-${Date.now()}`,
-      subject: effectiveSubject,
-      subjectName: effectiveSubject,
-      subjectId: (CURRENT_USER && CURRENT_USER.subjectId) || 'operating-system',
-      subjectCodeShort: (CURRENT_USER && CURRENT_USER.subjectCodeShort) || 'OS',
-      faculty: faculty,
-      facultyId: facultyId,
-      facultyName: faculty,
+  try {
+    const sessionReq = {
+      facultyCode: (CURRENT_USER && (CURRENT_USER.facultyCode || CURRENT_USER.userId)) || undefined,
+      facultyId: (CURRENT_USER && typeof CURRENT_USER.facultyId === 'number') ? CURRENT_USER.facultyId : undefined,
+      subjectCodeShort: subjectShort,
+      subjectId: subjectId,
       section: sec,
-      sec: sec,
-      semester: parseInt(sem) || 3,
-      date: date,
+      sectionId: sectionId,
+      sessionDate: date,
+      timetableCode: ttEntry ? ttEntry.timetableCode : undefined,
+      timetableEntryId: ttEntry && typeof ttEntry.id === 'number' ? ttEntry.id : undefined,
+      startTime: ttEntry ? ttEntry.startTime : '09:00 AM',
+      endTime: ttEntry ? ttEntry.endTime : '09:50 AM'
+    };
+
+    const sessionDto = await apiClient.post('/sessions/start', sessionReq);
+    if (!sessionDto || !sessionDto.id) {
+      throw new Error('Failed to create session on backend: Missing session ID');
+    }
+
+    // Authoritative section roster from backend
+    let roster = [];
+    try {
+      roster = await AcademicDataService.loadStudentsBySection(sec);
+    } catch (_) {}
+    if (!roster || roster.length === 0) {
+      roster = getRosterForClass(dept, sem, sec);
+    }
+
+    ACTIVE_LECTURE = {
+      id: sessionDto.id,
+      sessionId: sessionDto.id,
+      backendSessionId: sessionDto.id,
+      subject: sessionDto.subjectName || effectiveSubject,
+      subjectName: sessionDto.subjectName || effectiveSubject,
+      subjectId: sessionDto.subjectId || subjectId,
+      subjectCodeShort: sessionDto.subjectCode || subjectShort,
+      faculty: sessionDto.facultyName || faculty,
+      facultyId: sessionDto.facultyId || facultyId,
+      facultyCode: sessionDto.facultyCode,
+      section: sessionDto.section || sec,
+      sec: sessionDto.section || sec,
+      semester: sessionDto.semester || parseInt(sem) || 3,
+      date: sessionDto.date || date,
       timetableEntryId: ttEntry ? ttEntry.id : null,
       period: ttEntry ? ttEntry.period : 'I',
       periodStart: ttEntry ? ttEntry.periodStart : 1,
       periodEnd: ttEntry ? ttEntry.periodEnd : 1,
       startTime: ttEntry ? ttEntry.startTime : '09:00 AM',
       endTime: ttEntry ? ttEntry.endTime : '09:50 AM',
-      lectureNumber: lectureNo,
+      lectureNumber: sessionDto.lectureNumber,
+      lectureNo: sessionDto.lectureNumber,
       status: 'recording',
       completedAt: null,
-      startedAt: nowTimeStr,
+      startedAt: sessionDto.startedAt ? new Date(sessionDto.startedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : nowTimeStr,
       startTimeTs: Date.now()
     };
 
     ATTENDANCE_STATE.classInfo = {
-      date,
+      date: sessionDto.date || date,
       dept,
       deptName: deptNameMap[dept] || dept,
-      sem,
-      sec,
-      subject: effectiveSubject,
-      faculty,
-      lectureNumber: lectureNo,
-      lectureNoDisplay: `Lecture No. ${lectureNo}`
+      sem: String(sessionDto.semester || sem),
+      sec: sessionDto.section || sec,
+      subject: sessionDto.subjectName || effectiveSubject,
+      faculty: sessionDto.facultyName || faculty,
+      lectureNumber: sessionDto.lectureNumber,
+      lectureNoDisplay: `Lecture No. ${sessionDto.lectureNumber}`
     };
 
-    setTimeout(() => {
-      ATTENDANCE_STATE.students = getRosterForClass(dept, sem, sec);
-      ATTENDANCE_STATE.searchQuery = '';
-      ATTENDANCE_STATE.status = 'loaded';
-      renderAttendanceView();
-      updateTakeAttendanceHeader();
-      updateFacultyDashboardLiveMetrics();
-      showToast(`Lecture No. ${lectureNo} started: ${ATTENDANCE_STATE.students.length} students rostered (Recording)`);
-      refreshIcons();
-    }, 200);
+    ATTENDANCE_STATE.students = roster.map(s => ({
+      ...s,
+      status: 'pending'
+    }));
+    ATTENDANCE_STATE.searchQuery = '';
+    ATTENDANCE_STATE.status = 'loaded';
+
+    renderAttendanceView();
+    updateTakeAttendanceHeader();
+    updateFacultyDashboardLiveMetrics();
+    showToast(`Lecture No. ${sessionDto.lectureNumber} started: ${ATTENDANCE_STATE.students.length} students rostered (Recording)`);
+    refreshIcons();
+
+  } catch (err) {
+    console.error('Failed to start attendance session:', err);
+    ATTENDANCE_STATE.status = 'initial';
+    ACTIVE_LECTURE = null;
+    renderAttendanceView();
+    updateTakeAttendanceHeader();
+    showToast(err.message || 'Failed to start session on backend', 'danger');
+    return;
   }
 }
 
@@ -3516,7 +3493,12 @@ async function saveAttendanceAction() {
   const completedDate = ATTENDANCE_STATE.classInfo.date || 'Today';
 
   const token = getStoredAuthToken();
-  const isBackendSession = typeof ACTIVE_LECTURE.id === 'number';
+  const isBackendSession = ACTIVE_LECTURE && typeof ACTIVE_LECTURE.id === 'number';
+  if (!token || !CURRENT_USER || !isBackendSession) {
+    showToast('Authentication required. Session cannot be submitted offline.', 'danger');
+    handleSessionExpired();
+    return;
+  }
   let backendResponse = null;
 
   if (token && isBackendSession) {
@@ -4975,45 +4957,6 @@ async function handleLoginSubmit(event) {
   } catch (err) {
     console.error('handleLoginSubmit error:', err);
 
-    // If network connection error, support offline demo mode for evaluation accounts
-    if (err.isNetworkError) {
-      console.warn('Backend unavailable; checking evaluation demo accounts...');
-      let matchedDemo = null;
-      for (const [key, d] of Object.entries(DEMO_ACCOUNTS)) {
-        const isHodAlias = (currentLoginRole === 'hod' && ['hod_cse', 'anand_sir', 'anand', 'anandsir', 'hod'].includes(username.toLowerCase()) && key === 'hod');
-        if (
-          (isHodAlias ||
-           d.id.toLowerCase() === username.toLowerCase() ||
-           (d.roll && d.roll.toUpperCase() === username.toUpperCase()) ||
-           (d.name && d.name.toLowerCase() === username.toLowerCase())) &&
-          d.role === currentLoginRole &&
-          password === d.pass
-        ) {
-          matchedDemo = d;
-          break;
-        }
-      }
-
-      if (matchedDemo) {
-        const sessionData = {
-          role: matchedDemo.role,
-          userId: matchedDemo.id,
-          displayName: matchedDemo.name,
-          dept: matchedDemo.dept,
-          roll: matchedDemo.roll || null,
-          sem: matchedDemo.sem || null,
-          sec: matchedDemo.sec || null,
-          assignedSubject: matchedDemo.assignedSubject || null,
-          isBackendAuthenticated: false
-        };
-        localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(sessionData));
-        if (errEl) errEl.style.display = 'none';
-        applySessionUI(sessionData);
-        showToast(`Offline Demo Mode: Signed in as ${sessionData.displayName} (${sessionData.role.toUpperCase()})`);
-        return;
-      }
-    }
-
     // Specific error messages
     let msg = 'Invalid credentials. Please verify your Institutional User ID and password.';
     if (err.status === 401) {
@@ -5070,35 +5013,20 @@ function closeFacultyArea() {
 }
 
 function selectFacultyProfile(facultyId) {
-  // Normalize ID (support both hyphens and underscores)
-  const normId = (facultyId || '').replace('_', '-');
-  const faculty = AUTHORITATIVE_FACULTY.find(f => f.id === normId || f.id.replace('-', '_') === facultyId) || AUTHORITATIVE_FACULTY[0];
-
-  CURRENT_USER = {
-    role: 'faculty',
-    facultyId: faculty.id,
-    facultyName: faculty.name,
-    subjectId: faculty.subjectId,
-    subjectName: faculty.subjectName,
-    sectionAllocationStatus: faculty.sectionAllocationStatus || 'Section allocation pending'
-  };
-
-  const sessionData = {
-    role: 'faculty',
-    userId: faculty.id,
-    facultyId: faculty.id,
-    displayName: faculty.name,
-    facultyName: faculty.name,
-    subjectId: faculty.subjectId,
-    subjectName: faculty.subjectName,
-    assignedSubject: faculty.subjectName,
-    sectionAllocationStatus: faculty.sectionAllocationStatus || 'Section allocation pending',
-    dept: 'CSE'
-  };
-
-  localStorage.setItem('smartattend_session', JSON.stringify(sessionData));
-  applySessionUI(sessionData);
-  showToast(`Active Faculty Profile: ${faculty.name} (${faculty.subjectName})`);
+  closeFacultyArea();
+  setLoginRole('faculty');
+  const normId = (facultyId || '').replace('-', '_');
+  const uInput = document.getElementById('login-username');
+  const pInput = document.getElementById('login-password');
+  if (uInput) {
+    uInput.value = normId;
+  }
+  if (pInput) {
+    pInput.value = '';
+    pInput.focus();
+  }
+  scrollToLogin();
+  showToast(`Please sign in with credentials for ${normId}.`);
 }
 
 function doSignOut() {
@@ -5118,48 +5046,11 @@ function doSignOut() {
 }
 
 function switchSession(roleKey) {
-  const account = DEMO_ACCOUNTS[roleKey] || DEMO_ACCOUNTS.faculty;
-  let sessionData;
-  if (roleKey === 'student') {
-    sessionData = {
-      role: 'student',
-      userId: account.id,
-      displayName: account.name,
-      roll: account.id,
-      dept: 'CSE',
-      sem: 3,
-      sec: 'A'
-    };
-  } else if (roleKey === 'hod') {
-    sessionData = {
-      role: 'hod',
-      name: 'Anand Sir',
-      userId: account.id,
-      displayName: 'Anand Sir',
-      department: 'Computer Science & Engineering',
-      institution: 'SSIPMT, Raipur'
-    };
-  } else {
-    // faculty
-    const facId = (account.facultyId || account.id || 'faculty-os').replace('_', '-');
-    const fac = AUTHORITATIVE_FACULTY.find(f => f.id === facId || f.name === account.name) || AUTHORITATIVE_FACULTY[0];
-    sessionData = {
-      role: 'faculty',
-      userId: fac.id,
-      facultyId: fac.id,
-      facultyName: fac.name,
-      name: fac.name,
-      displayName: fac.name,
-      subjectName: fac.subjectName,
-      subjectId: fac.subjectId,
-      subjectCodeShort: fac.subjectCodeShort || 'OS',
-      shortCode: fac.shortCode || 'DS',
-      assignedSections: ['A', 'B'],
-      sectionAllocationStatus: 'Sections A, B Confirmed (Sections C, D Pending)'
-    };
-  }
-  applySessionUI(sessionData);
-  return sessionData;
+  doSignOut();
+  setLoginRole(roleKey === 'student' ? 'student' : (roleKey === 'hod' ? 'hod' : 'faculty'));
+  quickFillDemo(roleKey);
+  scrollToLogin();
+  showToast('Please sign in with backend credentials.');
 }
 window.switchSession = switchSession;
 
@@ -5416,39 +5307,15 @@ async function initAuth() {
 
         applySessionUI(session);
         return;
-      } else {
-        clearAuthTokens();
       }
     } catch (err) {
       console.warn('Authentication verification via /me failed:', err);
-      // Clear token & session if unauthorized / invalid
-      clearAuthTokens();
-      // If network error occurred, check if there was a cached offline demo session
-      if (err.isNetworkError && sessionStr) {
-        try {
-          const cachedSession = JSON.parse(sessionStr);
-          if (cachedSession && cachedSession.role && !cachedSession.isBackendAuthenticated) {
-            applySessionUI(cachedSession);
-            return;
-          }
-        } catch (_) {}
-      }
-    }
-  } else if (sessionStr) {
-    // No token, check if there is an active offline demo session
-    try {
-      const session = JSON.parse(sessionStr);
-      if (session && session.role && !session.isBackendAuthenticated) {
-        applySessionUI(session);
-        return;
-      }
-    } catch (e) {
-      clearAuthTokens();
     }
   }
 
-  // Not authenticated -> return to landing
+  // Not authenticated or token invalid -> strictly clear all state and enforce landing mode
   clearAuthTokens();
+  CURRENT_USER = null;
   document.body.classList.remove('app-mode');
   document.body.classList.add('landing-mode');
   setLoginRole('faculty');
@@ -6137,21 +6004,16 @@ function renderHodMasterTimetable(section = 'A') {
 
 // ── 22. DOM READY INITIALIZATION ─────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
-  try {
-    if (typeof AcademicDataService !== 'undefined') {
-      await AcademicDataService.loadAllAcademicData();
-    }
-  } catch (err) {
-    console.warn('[SmartAttend] Backend data load failed, using fallback:', err);
-  }
   await initAuth();
   updateDate();
-  updateDashboardGreeting();
-  renderTodayLectures(CURRENT_SCHEDULE_DAY);
-  renderStudents(STUDENTS);
-  renderRecentAttendanceLogs();
-  renderSessions();
-  generateReport();
+  if (getStoredAuthToken() && CURRENT_USER) {
+    updateDashboardGreeting();
+    renderTodayLectures(CURRENT_SCHEDULE_DAY);
+    renderStudents(STUDENTS);
+    renderRecentAttendanceLogs();
+    renderSessions();
+    generateReport();
+  }
   validateAcademicUniverse();
   refreshIcons();
 });

@@ -46,7 +46,10 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // 1. Public Authentication endpoints
+                // 1. Static Web Resources (Same-Origin Frontend)
+                .requestMatchers("/", "/index.html", "/app.js", "/style.css", "/synapse_data.js", "/Assets/**", "/favicon.ico", "/*.html", "/*.js", "/*.css").permitAll()
+
+                // 2. Public Authentication endpoints
                 .requestMatchers("/api/auth/**").permitAll()
 
                 // 2. Read-only Academic Discovery (Public or authenticated)
