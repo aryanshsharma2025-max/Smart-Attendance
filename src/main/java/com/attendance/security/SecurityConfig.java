@@ -45,6 +45,14 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .exceptionHandling(exceptions -> exceptions
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json");
+                    response.setCharacterEncoding("UTF-8");
+                    response.getWriter().write("{\"timestamp\":\"" + java.time.LocalDateTime.now() + "\",\"status\":401,\"error\":\"Unauthorized\",\"message\":\"Authentication required to access this resource\"}");
+                })
+            )
             .authorizeHttpRequests(auth -> auth
                 // 1. Static Web Resources (Same-Origin Frontend)
                 .requestMatchers("/", "/index.html", "/app.js", "/style.css", "/synapse_data.js", "/Assets/**", "/favicon.ico", "/*.html", "/*.js", "/*.css").permitAll()
@@ -52,23 +60,25 @@ public class SecurityConfig {
                 // 2. Public Authentication endpoints
                 .requestMatchers("/api/auth/**").permitAll()
 
-                // 2. Read-only Academic Discovery (Public or authenticated)
+                // 3. Read-only Academic Discovery (Public Curriculum, Timetable, Faculty Directory)
                 .requestMatchers(HttpMethod.GET, "/api/subjects/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/timetable/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/faculty/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/students/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/sessions/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/attendance/**").permitAll()
 
-                // 3. Student Roster Management (HOD only)
+                // 4. Sensitive Student and Attendance Data (Authentication Required)
+                .requestMatchers(HttpMethod.GET, "/api/students/**").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/sessions/**").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/attendance/**").authenticated()
+
+                // 5. Student Roster Management (HOD only)
                 .requestMatchers(HttpMethod.POST, "/api/students/**").hasRole("HOD")
                 .requestMatchers(HttpMethod.PUT, "/api/students/**").hasRole("HOD")
                 .requestMatchers(HttpMethod.DELETE, "/api/students/**").hasRole("HOD")
 
-                // 4. Session Operations (FACULTY and HOD)
+                // 6. Session Operations (FACULTY and HOD)
                 .requestMatchers(HttpMethod.POST, "/api/sessions/**").hasAnyRole("FACULTY", "HOD")
 
-                // 5. Default
+                // 7. Default
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

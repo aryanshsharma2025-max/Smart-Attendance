@@ -311,20 +311,26 @@ const AcademicDataService = {
     this.isLoading = true;
 
     try {
-      // 1. Fetch Authoritative Students (GET /api/students)
-      const studentsData = await apiClient.get('/students');
-      if (Array.isArray(studentsData) && studentsData.length > 0) {
-        STUDENTS.length = 0;
-        studentsData.forEach((s, idx) => STUDENTS.push(this.adaptStudent(s, idx)));
+      // 1. Fetch Authoritative Students (GET /api/students) - Only when authenticated
+      if (getStoredAuthToken()) {
+        try {
+          const studentsData = await apiClient.get('/students');
+          if (Array.isArray(studentsData) && studentsData.length > 0) {
+            STUDENTS.length = 0;
+            studentsData.forEach((s, idx) => STUDENTS.push(this.adaptStudent(s, idx)));
 
-        // Rebuild student lookup map in-place
-        for (const k in STUDENT_MAP) delete STUDENT_MAP[k];
-        STUDENTS.forEach(s => {
-          if (s.roll) STUDENT_MAP[s.roll] = s;
-          if (s.id !== undefined) STUDENT_MAP[s.id] = s;
-          if (s.studentId) STUDENT_MAP[s.studentId] = s;
-        });
-        console.log(`[AcademicDataService] Loaded ${STUDENTS.length} authoritative students from Spring Boot`);
+            // Rebuild student lookup map in-place
+            for (const k in STUDENT_MAP) delete STUDENT_MAP[k];
+            STUDENTS.forEach(s => {
+              if (s.roll) STUDENT_MAP[s.roll] = s;
+              if (s.id !== undefined) STUDENT_MAP[s.id] = s;
+              if (s.studentId) STUDENT_MAP[s.studentId] = s;
+            });
+            console.log(`[AcademicDataService] Loaded ${STUDENTS.length} authoritative students from Spring Boot`);
+          }
+        } catch (err) {
+          console.warn('[AcademicDataService] Authenticated student roster fetch deferred or failed:', err);
+        }
       }
 
       // 2. Fetch Authoritative Faculty (GET /api/faculty)

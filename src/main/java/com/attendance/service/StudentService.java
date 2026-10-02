@@ -8,6 +8,8 @@ import com.attendance.exception.ResourceNotFoundException;
 import com.attendance.model.Department;
 import com.attendance.model.Section;
 import com.attendance.model.Student;
+import com.attendance.model.CourseAllocation;
+import com.attendance.repository.CourseAllocationRepository;
 import com.attendance.repository.DepartmentRepository;
 import com.attendance.repository.SectionRepository;
 import com.attendance.repository.StudentRepository;
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,6 +28,7 @@ public class StudentService {
     private final StudentRepository studentRepo;
     private final SectionRepository sectionRepo;
     private final DepartmentRepository departmentRepo;
+    private final CourseAllocationRepository allocationRepo;
 
     @Transactional(readOnly = true)
     public List<StudentDto> getAllStudents(String sectionName) {
