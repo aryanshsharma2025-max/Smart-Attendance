@@ -1,0 +1,6 @@
+# GitHub Linguist Language Overrides
+# Ensure Java is detected as the primary language for this Spring Boot backend repository
+frontend/** linguist-vendored=true
+docs/** linguist-documentation=true
+scripts/** linguist-documentation=true
+*.sql linguist-detectable=false

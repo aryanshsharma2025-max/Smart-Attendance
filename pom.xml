@@ -91,7 +91,7 @@
                 <directory>src/main/resources</directory>
             </resource>
             <resource>
-                <directory>.</directory>
+                <directory>frontend</directory>
                 <targetPath>static</targetPath>
                 <includes>
                     <include>index.html</include>

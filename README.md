@@ -143,10 +143,53 @@ mvn spring-boot:run
 
 ---
 
+## 📁 Repository Structure
+
+```
+Smart-Attendance/
+├── src/
+│   ├── main/
+│   │   ├── java/com/attendance/     # Spring Boot application layers
+│   │   │   ├── controller/          # REST API endpoints (Auth, Students, Sessions, etc.)
+│   │   │   ├── dto/                 # Request & Response Data Transfer Objects
+│   │   │   ├── exception/           # Global exception handler & custom exceptions
+│   │   │   ├── model/               # JPA Entities with relational constraints
+│   │   │   ├── repository/          # Spring Data JPA repositories
+│   │   │   ├── security/            # JWT authentication filter & UserPrincipal
+│   │   │   └── service/             # Domain business logic & authorization rules
+│   │   └── resources/               # application.properties
+│   └── test/java/com/attendance/    # JUnit 5 integration & authorization tests
+├── frontend/                        # Static UI assets served via Spring Boot
+│   ├── index.html                   # Interactive dashboard
+│   ├── app.js                       # Frontend client logic
+│   ├── style.css                    # UI styles
+│   └── synapse_data.js              # Initial seed datasets
+├── docs/                            # Documentation & institutional audit reports
+│   └── audits/                      # Security audits & hardening reports
+├── scripts/                         # Verification scripts
+├── attendance_schema.sql            # Authoritative MySQL 8.0 schema & seed data
+├── pom.xml                          # Maven build specification
+├── .env.example                     # Environment configuration template
+└── README.md
+```
+
+---
+
 ## 🧪 Verification & Test Suites
 
-The repository contains automated, zero-external-dependency test harnesses executing against in-memory relational databases with foreign key and transaction constraints:
+The backend includes comprehensive JUnit 5 integration tests and verification harnesses covering security boundaries, role-based access control, and transaction integrity:
 
+### 1. Spring Boot & JUnit 5 Test Suites
+- **`OwnershipAuthorizationTests.java`**: Verifies BOLA / IDOR protection across faculty sessions and student records.
+- **`SecurityBoundaryTests.java`**: Validates role access rules (HOD vs Faculty vs Student boundaries).
+- **`AttendanceBackendTests.java`**: Verifies relational mapping, session state transitions, and roster accounting.
+
+```bash
+# Compile and verify test suite
+mvn clean test-compile
+```
+
+### 2. Standalone Verification Harnesses
 ```bash
 # Run Phase 7A Foundation & Contract Verification (19 Tests)
 python scripts/test_phase7a_verification.py
@@ -154,5 +197,3 @@ python scripts/test_phase7a_verification.py
 # Run Phase 7B Full Verification & Security Suite (30 Tests)
 python scripts/test_phase7b_verification.py
 ```
-
-Both verification suites run in < 2 seconds and verify 100% pass rates on schema integrity, BCrypt hashing, role-based authorization, scoped lecture numbering, atomic rollbacks, and session lifecycle.

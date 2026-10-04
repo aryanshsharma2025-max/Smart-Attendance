@@ -40,6 +40,11 @@ function handleSessionExpired() {
   CURRENT_USER = null;
   document.body.classList.remove('app-mode');
   document.body.classList.add('landing-mode');
+  try {
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  } catch (_) {}
   const pInput = document.getElementById('login-password');
   const errEl = document.getElementById('login-error-msg');
   if (pInput) pInput.value = '';
@@ -1225,8 +1230,17 @@ function renderTodayLectures(selectedDay) {
  */
 function handlePrimaryTakeAttendance() {
   const token = getStoredAuthToken();
-  if (!token || !CURRENT_USER || CURRENT_USER.role !== 'faculty') {
+  if (!token || !CURRENT_USER) {
     handleSessionExpired();
+    return;
+  }
+  if (CURRENT_USER.role !== 'faculty') {
+    if (typeof showToast === 'function') {
+      showToast('Take Attendance workspace is restricted to faculty accounts.', 'warning');
+    }
+    if (typeof navigateToRoleHome === 'function') {
+      navigateToRoleHome();
+    }
     return;
   }
 
@@ -2413,7 +2427,50 @@ const ATTENDANCE_STATE = {
   savedSummary: null
 };
 
-// ── 5. PAGE ROUTER ───────────────────────────────────────────
+// ── 5. PAGE ROUTER & ROLE NAVIGATION ───────────────────────────
+const ROLE_PAGE_PERMISSIONS = {
+  student: ['student-dashboard', 'student-profile'],
+  faculty: ['dashboard', 'take-attendance', 'attendance', 'students', 'student-profile', 'faculty-subject'],
+  hod: ['hod-overview', 'reports', 'students', 'student-profile', 'attendance', 'analytics', 'sessions']
+};
+
+function getRoleHome(role) {
+  const normRole = (role || (CURRENT_USER && CURRENT_USER.role) || '').toLowerCase();
+  if (normRole === 'student') return 'student-dashboard';
+  if (normRole === 'hod') return 'hod-overview';
+  if (normRole === 'faculty') return 'dashboard';
+  return null;
+}
+
+function isPageAuthorizedForRole(role, pageId) {
+  if (!role || !pageId) return false;
+  const normRole = role.toLowerCase();
+  const allowed = ROLE_PAGE_PERMISSIONS[normRole];
+  return Array.isArray(allowed) && allowed.includes(pageId);
+}
+
+function navigateToRoleHome() {
+  const token = getStoredAuthToken();
+  if (!token || !CURRENT_USER) {
+    document.body.classList.remove('app-mode');
+    document.body.classList.add('landing-mode');
+    if (typeof scrollToLogin === 'function') scrollToLogin();
+    return;
+  }
+  const homePage = getRoleHome(CURRENT_USER.role);
+  if (homePage) {
+    showPage(homePage, null);
+  } else {
+    document.body.classList.remove('app-mode');
+    document.body.classList.add('landing-mode');
+    if (typeof scrollToLogin === 'function') scrollToLogin();
+  }
+}
+window.navigateToRoleHome = navigateToRoleHome;
+window.getRoleHome = getRoleHome;
+window.isPageAuthorizedForRole = isPageAuthorizedForRole;
+window.ROLE_PAGE_PERMISSIONS = ROLE_PAGE_PERMISSIONS;
+
 function showPage(pageId, linkEl) {
   if (pageId === 'live') pageId = 'take-attendance';
 
@@ -2422,6 +2479,20 @@ function showPage(pageId, linkEl) {
     document.body.classList.remove('app-mode');
     document.body.classList.add('landing-mode');
     if (typeof scrollToLogin === 'function') scrollToLogin();
+    return;
+  }
+
+  // Phase 4E Hardened Role Boundary: Verify authenticated user has permission for pageId
+  const role = (CURRENT_USER.role || '').toLowerCase();
+  if (!isPageAuthorizedForRole(role, pageId)) {
+    console.warn(`[Router] Access Denied: User role '${role}' is not authorized to access page '${pageId}'`);
+    if (typeof showToast === 'function') {
+      showToast('Access Denied: You do not have permission to access this page.', 'danger');
+    }
+    const safeHome = getRoleHome(role);
+    if (safeHome && safeHome !== pageId && isPageAuthorizedForRole(role, safeHome)) {
+      return showPage(safeHome, null);
+    }
     return;
   }
 
@@ -2434,6 +2505,13 @@ function showPage(pageId, linkEl) {
 
   const pageEl = document.getElementById('page-' + pageId);
   if (pageEl) pageEl.classList.add('active');
+
+  // Synchronize URL hash for browser history & reload preservation
+  try {
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState(null, '', '#' + pageId);
+    }
+  } catch (_) {}
 
   // Handle active navigation styling
   if (linkEl) {
@@ -2659,6 +2737,16 @@ function launchTakeAttendanceForClass(dept, sem, sec, course) {
 let takeAttendanceInitialized = false;
 
 function initTakeAttendancePage() {
+  if (!CURRENT_USER || CURRENT_USER.role !== 'faculty') {
+    if (typeof showToast === 'function') {
+      showToast('Take Attendance workspace is restricted to faculty accounts.', 'warning');
+    }
+    if (typeof navigateToRoleHome === 'function') {
+      navigateToRoleHome();
+    }
+    return;
+  }
+
   const dateInput = document.getElementById('att-date');
   if (dateInput && !dateInput.value) {
     dateInput.value = new Date().toISOString().split('T')[0];
@@ -2773,6 +2861,20 @@ async function loadStudentsAction() {
     updateTakeAttendanceHeader();
     showToast('Authentication required. Please log in again.', 'danger');
     handleSessionExpired();
+    return;
+  }
+
+  if (CURRENT_USER.role !== 'faculty') {
+    ATTENDANCE_STATE.status = 'initial';
+    ACTIVE_LECTURE = null;
+    renderAttendanceView();
+    updateTakeAttendanceHeader();
+    if (typeof showToast === 'function') {
+      showToast('Take Attendance workspace is restricted to faculty accounts.', 'warning');
+    }
+    if (typeof navigateToRoleHome === 'function') {
+      navigateToRoleHome();
+    }
     return;
   }
 
@@ -3335,9 +3437,9 @@ function renderSavedState() {
       </div>
 
       <div class="att-saved-actions">
-        <button class="btn btn-primary" onclick="showPage('dashboard', null)">
+        <button class="btn btn-primary" onclick="navigateToRoleHome()">
           <i data-lucide="home" class="icon-sm"></i>
-          <span>Back to Dashboard</span>
+          <span>Back to Home</span>
         </button>
         <button class="btn btn-outline" onclick="resetAttendanceAction()">
           <i data-lucide="plus" class="icon-sm"></i>
@@ -3556,6 +3658,13 @@ async function saveAttendanceAction() {
   if (!token || !CURRENT_USER || !isBackendSession) {
     showToast('Authentication required. Session cannot be submitted offline.', 'danger');
     handleSessionExpired();
+    return;
+  }
+  if (CURRENT_USER.role !== 'faculty') {
+    showToast('Recording attendance is restricted to faculty accounts.', 'danger');
+    if (typeof navigateToRoleHome === 'function') {
+      navigateToRoleHome();
+    }
     return;
   }
   let backendResponse = null;
@@ -4080,6 +4189,17 @@ async function openStudentProfile(studentIdOrRoll) {
 
   // Phase 8 Requirement 10: Render Student Attendance Visualizations
   renderStudentAttendanceVisualizations(student, livePct, liveAttendedCount, liveMissedCount, totalCompleted);
+
+  // Phase 4E: Adapt profile header navigation buttons to authenticated role
+  const homeBtnText = document.getElementById('profile-nav-home-text');
+  const rosterBtn = document.getElementById('profile-nav-roster-btn');
+  if (CURRENT_USER && CURRENT_USER.role === 'student') {
+    if (homeBtnText) homeBtnText.textContent = 'My Attendance';
+    if (rosterBtn) rosterBtn.style.display = 'none';
+  } else {
+    if (homeBtnText) homeBtnText.textContent = CURRENT_USER && CURRENT_USER.role === 'hod' ? 'Overview' : 'Dashboard';
+    if (rosterBtn) rosterBtn.style.display = 'inline-flex';
+  }
 
   // Navigate to full-screen profile page (NOT drawer/modal)
   showPage('student-profile', null);
@@ -5137,6 +5257,11 @@ function doSignOut() {
     errEl.style.display = 'none';
   }
   showToast('Signed out of SmartAttend');
+  try {
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  } catch (_) {}
   refreshIcons();
 }
 
@@ -5200,7 +5325,7 @@ function populateFacultyTakeAttendanceSelectors(faculty, dynamicAllocations = nu
 }
 window.populateFacultyTakeAttendanceSelectors = populateFacultyTakeAttendanceSelectors;
 
-function applySessionUI(session) {
+function applySessionUI(session, initialTargetPage = null) {
   document.body.classList.remove('landing-mode');
   document.body.classList.add('app-mode');
 
@@ -5220,6 +5345,13 @@ function applySessionUI(session) {
 
   if (takeAttBtn) takeAttBtn.style.display = session.role === 'faculty' ? 'inline-flex' : 'none';
 
+  const topbarHomeBtn = document.getElementById('topbar-home-btn');
+  if (topbarHomeBtn) {
+    if (session.role === 'student') topbarHomeBtn.title = 'Return to Student Dashboard';
+    else if (session.role === 'hod') topbarHomeBtn.title = 'Return to Department Overview';
+    else topbarHomeBtn.title = 'Return to Faculty Dashboard';
+  }
+
   if (session.role === 'student') {
     CURRENT_USER = {
       role: 'student',
@@ -5237,7 +5369,8 @@ function applySessionUI(session) {
     if (breadcrumbPrefix) breadcrumbPrefix.textContent = 'Student Academic Portal';
     const topbarSwitchBtnStu = document.getElementById('topbar-switch-faculty-btn');
     if (topbarSwitchBtnStu) topbarSwitchBtnStu.style.display = 'none';
-    showPage('student-dashboard', document.querySelector('#nav-group-student [data-page="student-dashboard"]'));
+    const targetPageStu = (initialTargetPage && isPageAuthorizedForRole('student', initialTargetPage)) ? initialTargetPage : 'student-dashboard';
+    showPage(targetPageStu, document.querySelector(`#nav-group-student [data-page="${targetPageStu}"]`));
     renderStudentDashboard(session.roll);
   } else if (session.role === 'hod') {
     CURRENT_USER = {
@@ -5260,9 +5393,10 @@ function applySessionUI(session) {
     const hodGreeting = document.getElementById('hod-greeting-title');
     if (hodGreeting) hodGreeting.textContent = 'Good morning, Anand Sir';
 
-    showPage('hod-overview', document.querySelector('#nav-group-hod [data-page="hod-overview"]'));
     renderHodMasterTimetable('A');
     renderHodOverview();
+    const targetPageHod = (initialTargetPage && isPageAuthorizedForRole('hod', initialTargetPage)) ? initialTargetPage : 'hod-overview';
+    showPage(targetPageHod, document.querySelector(`#nav-group-hod [data-page="${targetPageHod}"]`));
   } else {
     // Faculty (Phase 4 Real Faculty Context)
     const normId = String(session.facultyCode || session.userId || session.facultyId || 'faculty-os').replace('_', '-');
@@ -5362,7 +5496,8 @@ function applySessionUI(session) {
     updateDashboardGreeting();
     renderTodayLectures(CURRENT_SCHEDULE_DAY);
     renderWatchAttendancePage('A');
-    showPage('dashboard', document.querySelector('#nav-group-faculty [data-page="dashboard"]'));
+    const targetPageFac = (initialTargetPage && isPageAuthorizedForRole('faculty', initialTargetPage)) ? initialTargetPage : 'dashboard';
+    showPage(targetPageFac, document.querySelector(`#nav-group-faculty [data-page="${targetPageFac}"]`));
     initCharts();
   }
   refreshIcons();
@@ -5440,7 +5575,11 @@ async function initAuth() {
           sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
         }
 
-        applySessionUI(session);
+        // Restore authorized deep link or subpage on refresh (capture before applySessionUI updates history)
+        const rawHash = (window.location.hash || '').replace('#', '').replace('page-', '');
+        const targetPage = (rawHash && isPageAuthorizedForRole(session.role, rawHash)) ? rawHash : null;
+
+        applySessionUI(session, targetPage);
         return;
       }
     } catch (err) {
@@ -5456,6 +5595,75 @@ async function initAuth() {
   setLoginRole('faculty');
   refreshIcons();
 }
+
+// ── 18B. AUTHORITATIVE HISTORICAL ATTENDANCE REFERENCE DATASET ────
+/**
+ * Authoritative Historical Attendance Reference Dataset — Flagged Students (< 75%)
+ * Directly consumes the historical register driving the Student Profile historical snapshot.
+ * Zero substitution of live data, zero merging, zero recalculation from live sessions.
+ */
+function getHistoricalFlaggedStudents() {
+  const flagged = [];
+
+  // Check STUDENTS (which preserves historicalSnapshot from authoritative dataset)
+  if (typeof STUDENTS !== 'undefined' && Array.isArray(STUDENTS) && STUDENTS.length > 0) {
+    STUDENTS.forEach(s => {
+      const snap = s.historicalSnapshot;
+      if (snap && snap.available && typeof snap.attendancePercent === 'number') {
+        if (snap.attendancePercent < ATTENDANCE_THRESHOLD) {
+          flagged.push({
+            id: s.id,
+            roll: s.roll || s.rollNumber,
+            rollNumber: s.rollNumber || s.roll,
+            name: s.name,
+            section: s.sec || s.section || 'A',
+            dept: s.dept || s.department || 'CSE',
+            historicalPercent: snap.attendancePercent,
+            source: snap.source || 'Section-A historical attendance sheet',
+            status: 'Below Attendance Threshold — Historical Snapshot'
+          });
+        }
+      }
+    });
+  }
+
+  // Fallback to HISTORICAL_ATTENDANCE_SECA directly if STUDENTS not populated
+  if (flagged.length === 0 && typeof HISTORICAL_ATTENDANCE_SECA !== 'undefined' && Array.isArray(HISTORICAL_ATTENDANCE_SECA)) {
+    HISTORICAL_ATTENDANCE_SECA.forEach(h => {
+      if (typeof h.attendancePercent === 'number' && h.attendancePercent < ATTENDANCE_THRESHOLD) {
+        flagged.push({
+          id: h.id,
+          roll: h.rollNumber,
+          rollNumber: h.rollNumber,
+          name: h.authoritativeName || h.imagePrintedName,
+          section: h.section || 'A',
+          dept: h.department || 'CSE',
+          historicalPercent: h.attendancePercent,
+          source: h.source || 'Section-A historical attendance sheet',
+          status: 'Below Attendance Threshold — Historical Snapshot'
+        });
+      }
+    });
+  }
+
+  return flagged;
+}
+window.getHistoricalFlaggedStudents = getHistoricalFlaggedStudents;
+
+function dispatchHodHistoricalNotices() {
+  const flagged = getHistoricalFlaggedStudents();
+  if (!flagged || flagged.length === 0) {
+    showToast('No students flagged for historical attendance notices.', 'info');
+    return;
+  }
+  showToast(`Historical Attendance notices prepared for all ${flagged.length} flagged students (<75% Historical Register)`, 'success');
+}
+window.dispatchHodHistoricalNotices = dispatchHodHistoricalNotices;
+
+function sendHistoricalNotice(roll, name, percent) {
+  showToast(`Historical Attendance warning notice prepared for ${name} (${roll}) — Historical Attendance: ${percent}% (Threshold: 75%)`, 'info');
+}
+window.sendHistoricalNotice = sendHistoricalNotice;
 
 // ── 19. HOD OVERVIEW RENDERER ────────────────────────────────
 function renderHodOverview() {
@@ -5494,15 +5702,25 @@ function renderHodOverview() {
     }).join('');
   }
 
-  // Flagged Students At Risk table
+  // Update Historical KPI stat and dispatch button label if elements exist
+  const flaggedStudents = getHistoricalFlaggedStudents();
+  const kpiHistRisk = document.getElementById('hod-kpi-historical-risk');
+  if (kpiHistRisk) {
+    kpiHistRisk.textContent = flaggedStudents.length;
+  }
+
+  const dispatchBtnLabel = document.getElementById('hod-dispatch-btn-label');
+  if (dispatchBtnLabel) {
+    dispatchBtnLabel.textContent = `Dispatch Notices to All Flagged (${flaggedStudents.length})`;
+  }
+
+  // Flagged Students Below 75% Historical Attendance Watchlist
   const riskBody = document.getElementById('hod-risk-body');
   if (riskBody) {
-    const atRiskStudents = STUDENTS.filter(s => s.pct !== null && s.pct < ATTENDANCE_THRESHOLD);
-    if (atRiskStudents.length === 0) {
-      riskBody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 24px; color: var(--text-muted);">No students currently flagged at risk. Department attendance register is in pre-commencement status.</td></tr>`;
+    if (flaggedStudents.length === 0) {
+      riskBody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 24px; color: var(--text-muted);">No students currently flagged below 75% in the authoritative historical attendance register.</td></tr>`;
     } else {
-      riskBody.innerHTML = atRiskStudents.map(s => {
-        const needed = calculateSessionsNeededToReachThreshold(s.attended, s.total);
+      riskBody.innerHTML = flaggedStudents.map(s => {
         return `
           <tr>
             <td>
@@ -5512,12 +5730,12 @@ function renderHodOverview() {
               </button>
             </td>
             <td><code>${escapeHtml(s.roll)}</code></td>
-            <td>${escapeHtml(s.dept)} &middot; Section ${escapeHtml(s.sec || 'A')}</td>
-            <td><span style="font-weight:700; color: var(--danger);">${s.pct}%</span></td>
-            <td>${needed} sessions needed</td>
-            <td><span class="badge badge-risk">${s.risk}</span></td>
+            <td>${escapeHtml(s.dept)} &middot; Section ${escapeHtml(s.section)}</td>
+            <td><span style="font-weight:700; color: var(--danger);">${s.historicalPercent}%</span></td>
+            <td><span class="badge" style="background:var(--surface-muted); color:var(--text-secondary); border:1px solid var(--border); font-size:11px;">Historical Register</span></td>
+            <td><span class="badge badge-risk">BELOW THRESHOLD (&lt;75%)</span></td>
             <td style="text-align: right;">
-              <button class="btn btn-outline btn-sm" onclick="showToast('Notice prepared for ${escapeHtml(s.name)} (${s.roll})')">
+              <button class="btn btn-outline btn-sm" onclick="sendHistoricalNotice('${escapeHtml(s.roll)}', '${escapeHtml(s.name)}', ${s.historicalPercent})">
                 <i data-lucide="send" class="icon-sm"></i>
                 <span>Send Notice</span>
               </button>
@@ -6049,4 +6267,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
   validateAcademicUniverse();
   refreshIcons();
+});
+
+// Phase 4E: Support browser back/forward and hash navigation
+window.addEventListener('hashchange', () => {
+  const hash = (window.location.hash || '').replace('#', '').replace('page-', '');
+  if (hash && CURRENT_USER) {
+    showPage(hash, null);
+  }
 });

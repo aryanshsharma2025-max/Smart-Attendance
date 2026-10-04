@@ -489,7 +489,7 @@
         <button class="hamburger-btn" id="topbar-hamburger-btn" onclick="toggleSidebar()" aria-label="Toggle navigation menu" title="Open Navigation Menu">
           <i data-lucide="menu"></i>
         </button>
-        <a href="#" class="topbar-brand-link" id="topbar-brand-link" onclick="event.preventDefault(); showPage('dashboard', null);" title="SYNAPSE - Return to Dashboard" style="display: flex; align-items: center; gap: 8px; text-decoration: none; color: inherit; cursor: pointer;">
+        <a href="#" class="topbar-brand-link" id="topbar-brand-link" onclick="event.preventDefault(); navigateToRoleHome();" title="SYNAPSE - Return to Home" style="display: flex; align-items: center; gap: 8px; text-decoration: none; color: inherit; cursor: pointer;">
           <div class="logo-icon" style="width: 28px; height: 28px; border-radius: var(--radius-sm);"><i data-lucide="check-check" style="width:16px;height:16px;"></i></div>
           <span class="topbar-brand-text" style="font-weight: 800; font-size: 15px; letter-spacing: -0.02em; color: var(--text-primary);">SYNAPSE</span>
         </a>
@@ -500,7 +500,7 @@
       </div>
       <div class="topbar-right" style="display: flex; align-items: center; gap: 8px;">
         <!-- Dedicated Home Action Button (Requirement Part O, P, R) -->
-        <button class="btn btn-outline btn-sm topbar-home-btn" id="topbar-home-btn" onclick="showPage('dashboard', null);" title="Return to Faculty Dashboard" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
+        <button class="btn btn-outline btn-sm topbar-home-btn" id="topbar-home-btn" onclick="navigateToRoleHome();" title="Return to Home" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
           <i data-lucide="home" class="icon-xs"></i>
           <span>Home</span>
         </button>
@@ -669,7 +669,7 @@
       <!-- Header bar with back button -->
       <div class="watch-att-header-bar">
         <div>
-          <button class="btn btn-outline btn-sm" onclick="showPage('dashboard', null)" style="margin-bottom: 8px; display: inline-flex; align-items: center; gap: 6px;">
+          <button class="btn btn-outline btn-sm" onclick="navigateToRoleHome()" style="margin-bottom: 8px; display: inline-flex; align-items: center; gap: 6px;">
             <i data-lucide="arrow-left" class="icon-xs"></i>
             <span>Back to Dashboard</span>
           </button>
@@ -817,7 +817,7 @@
           <h2 class="page-title-main">Take Attendance</h2>
           <div class="page-subtitle">Record attendance for a class session &middot; Real-time lecture counter</div>
         </div>
-        <button class="btn btn-outline btn-sm" onclick="showPage('dashboard', null)">
+        <button class="btn btn-outline btn-sm" onclick="navigateToRoleHome()">
           <i data-lucide="arrow-left" class="icon-sm"></i>
           <span>Back to Faculty Dashboard</span>
         </button>
@@ -957,7 +957,7 @@
     <section class="page" id="page-students">
       <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
         <div>
-          <button class="btn btn-outline btn-sm" onclick="showPage('dashboard', null)" style="margin-bottom: 8px; display: inline-flex; align-items: center; gap: 6px;">
+          <button class="btn btn-outline btn-sm" onclick="navigateToRoleHome()" style="margin-bottom: 8px; display: inline-flex; align-items: center; gap: 6px;">
             <i data-lucide="arrow-left" class="icon-xs"></i>
             <span>Back to Dashboard</span>
           </button>
@@ -1033,11 +1033,11 @@
       <!-- Back to Roster Navigation Bar -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; flex-wrap: wrap; gap: 12px;">
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <button class="btn btn-outline" onclick="showPage('dashboard')" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
+          <button class="btn btn-outline" id="profile-nav-home-btn" onclick="navigateToRoleHome()" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
             <i data-lucide="home" class="icon-sm"></i>
-            <span>Dashboard</span>
+            <span id="profile-nav-home-text">Dashboard</span>
           </button>
-          <button class="btn btn-outline" onclick="showPage('students')" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600;">
+          <button class="btn btn-outline" id="profile-nav-roster-btn" onclick="showPage('students')" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600;">
             <i data-lucide="arrow-left" class="icon-sm"></i>
             <span>Back to Student Registry</span>
           </button>
@@ -1773,9 +1773,9 @@
           <div class="hod-kpi-sub">Pre-commencement (0 sessions)</div>
         </div>
         <div class="hod-kpi-card">
-          <div class="hod-kpi-lbl">Live Students At Risk</div>
-          <div class="hod-kpi-val" style="color: var(--danger);">0</div>
-          <div class="hod-kpi-sub">&lt; 75% threshold (0 live lectures)</div>
+          <div class="hod-kpi-lbl">Historical Students At Risk</div>
+          <div class="hod-kpi-val" id="hod-kpi-historical-risk" style="color: var(--danger);">40</div>
+          <div class="hod-kpi-sub">&lt; 75% Historical Register Snapshot</div>
         </div>
         <div class="hod-kpi-card">
           <div class="hod-kpi-lbl">Live Sessions Held</div>
@@ -1874,16 +1874,16 @@
         </div>
       </div>
 
-      <!-- Flagged Students At Risk Department Governance -->
+      <!-- Historical Attendance Flagged Students Department Governance -->
       <div class="card">
         <div class="chart-header">
           <div>
-            <div class="chart-title">Flagged Students Below 75% Attendance</div>
-            <div class="chart-sub">Academic warning review &amp; examination eligibility intervention</div>
+            <div class="chart-title">Historical Attendance &middot; Flagged Students Below 75%</div>
+            <div class="chart-sub">Authoritative Historical Attendance Reference Dataset &middot; Section A Register Snapshot (July–Aug 2026)</div>
           </div>
-          <button class="btn btn-primary btn-sm" onclick="showToast('Demo notices prepared for all 14 flagged students', 'info')">
+          <button class="btn btn-primary btn-sm" id="hod-dispatch-all-notices-btn" onclick="dispatchHodHistoricalNotices()">
             <i data-lucide="send" class="icon-sm"></i>
-            <span>Dispatch Notices to All Flagged</span>
+            <span id="hod-dispatch-btn-label">Dispatch Notices to All Flagged (40)</span>
           </button>
         </div>
         <div class="table-responsive">
@@ -1893,9 +1893,9 @@
                 <th>Student</th>
                 <th>Roll Number</th>
                 <th>Branch / Section</th>
-                <th>Attendance %</th>
-                <th>Shortfall Sessions</th>
-                <th>Risk Level</th>
+                <th>Historical Attendance %</th>
+                <th>Evaluation Basis</th>
+                <th>Threshold Status</th>
                 <th style="text-align: right;">Action</th>
               </tr>
             </thead>
@@ -2070,7 +2070,7 @@
         </div>
         <div style="display: flex; align-items: center; gap: 10px;">
           <!-- Dedicated Return to Home / Dashboard Button (Requirement Part O, P, Q) -->
-          <button type="button" class="btn btn-outline btn-sm tt-modal-home-btn" id="tt-modal-home-btn" onclick="closeTimetableModal(); showPage('dashboard', null);" title="Return to Faculty Dashboard" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
+          <button type="button" class="btn btn-outline btn-sm tt-modal-home-btn" id="tt-modal-home-btn" onclick="closeTimetableModal(); navigateToRoleHome();" title="Return to Home" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
             <i data-lucide="home" class="icon-xs"></i>
             <span>Home</span>
           </button>
@@ -2137,9 +2137,9 @@
       <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; border-top: 1px solid var(--border);">
         <span style="font-size: 11.5px; color: var(--text-muted);">CSVTU Scheme 2024 &middot; Effective: 17/08/2026 &middot; SSIPMT Raipur</span>
         <div style="display: flex; gap: 8px;">
-          <button type="button" class="btn btn-outline btn-sm tt-modal-home-footer-btn" onclick="closeTimetableModal(); showPage('dashboard', null);" title="Return to Dashboard">
+          <button type="button" class="btn btn-outline btn-sm tt-modal-home-footer-btn" onclick="closeTimetableModal(); navigateToRoleHome();" title="Return to Home">
             <i data-lucide="home" class="icon-xs"></i>
-            <span>Back to Dashboard</span>
+            <span>Back to Home</span>
           </button>
           <button type="button" class="btn btn-secondary btn-sm" onclick="closeTimetableModal()">Close</button>
         </div>
